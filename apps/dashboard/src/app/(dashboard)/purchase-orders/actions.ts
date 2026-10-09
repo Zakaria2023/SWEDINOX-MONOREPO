@@ -402,6 +402,9 @@ export type PurchaseOrderDetail = SelectPurchaseOrders & {
   agentName: SelectCompanies["companyName"] | null;
   contactFirstName: SelectContacts["firstName"] | null;
   contactLastName: SelectContacts["lastName"] | null;
+  /** Where `Send…` would go — named on the dialog, greyed when blank. */
+  contactEmail: SelectContacts["email"] | null;
+  contactFax: SelectContacts["fax"] | null;
   items: PurchaseOrderItemDetail[];
   // What has actually arrived against this order.
   receipts: PurchaseReceiptDocument[];
@@ -419,16 +422,12 @@ export type PurchaseOrderDetail = SelectPurchaseOrders & {
   communication: SelectCommunicationSettings[];
 };
 
-export type PurchaseOrderHeaderEdit = Pick<
-  PurchaseOrderFields,
-  | "reference"
-  | "ourReference"
-  | "orderCategory"
-  | "paymentTerms"
-  | "deliveryDate"
-  | "deliveryRemark"
-  | "remarks"
->;
+/**
+ * Every header field the Edit screen offers — the same fields as New. The
+ * status is not one of them: it moves through Make final, Cancel and the
+ * receipts, never through a header save.
+ */
+export type PurchaseOrderHeaderEdit = Partial<Omit<PurchaseOrderFields, "status">>;
 
 /**
  * One entry in the `Selecteer` picker behind `Nieuwe interne Charge`.
@@ -866,9 +865,15 @@ export const createPurchaseOrder = async (
       // a blank `Order date` — and the receivals overview, which repeats it off
       // the order, showed a dash where the reference shows a `Creation date`
       // on every row. A date filter cannot find a row that has no date.
-      await tx
-        .insert(PurchaseOrders)
-        .values({ orderDate: todayDateString(), ...fields, uuid });
+      // `Bewaar` leaves the order Provisional; `Make final` releases it
+      // (404355, 9-10-2026). Its lines start provisional with it, and the
+      // receptions raised below then start New.
+      await tx.insert(PurchaseOrders).values({
+        orderDate: todayDateString(),
+        ...fields,
+        status: "provisional",
+        uuid,
+      });
 
       // A purchase order only records the intent to buy — no stock exists yet.
       // Stock (and the "in" movement) is created later, when the matching
@@ -906,6 +911,7 @@ export const createPurchaseOrder = async (
           quantity: item.quantity,
           qtyPlanned: item.quantity,
           unit,
+          status: "provisional",
           lineNumber: index + 1,
           sourceType:
             item.sourceType ||
@@ -937,16 +943,10 @@ export const createPurchaseOrder = async (
       await refreshPurchaseOrderTotals(tx, uuid);
     });
 
-    // The supplier is told what we ordered as soon as the order stands. Sent
-    // after the transaction commits so a rolled back order leaves no email
-    // behind, and a failed send never rolls a placed order back.
-    await mailDocument(
-      () => sendPurchaseOrderEmail(uuid),
-      `Purchase order ${uuid}`,
-    );
-
+    // Nothing is sent on save: a provisional order goes to the supplier
+    // through `Send…` once it is made final, as the reference's toolbar has
+    // it.
     revalidatePath("/purchase-orders");
-    return { success: true, purchaseOrderUuid: uuid };
   } catch (error) {
     return {
       error:
@@ -955,6 +955,9 @@ export const createPurchaseOrder = async (
           : "Failed to create purchase order",
     };
   }
+
+  // The reference stays on the order it just saved, panels now filled.
+  redirect(`/purchase-orders/${uuid}`);
 };
 
 export const getPurchaseOrderDetail = async (
@@ -966,6 +969,8 @@ export const getPurchaseOrderDetail = async (
       supplierName: Companies.companyName,
       contactFirstName: Contacts.firstName,
       contactLastName: Contacts.lastName,
+      contactEmail: Contacts.email,
+      contactFax: Contacts.fax,
     })
     .from(PurchaseOrders)
     .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
@@ -1358,9 +1363,12 @@ export const makePurchaseOrderFinal = async (
     }
 
     await db.transaction(async (tx) => {
+      // `Make final` on the reference releases the order and opens the
+      // printed document, so the banner reads `Released, Printed` (404355,
+      // 9-10-2026). Whether it is then sent is asked, not assumed.
       await tx
         .update(PurchaseOrders)
-        .set({ status: "released" })
+        .set({ status: "released", isPrinted: true })
         .where(eq(PurchaseOrders.uuid, uuid));
 
       // The lines follow the header out of provisional, and the order is now
@@ -1373,13 +1381,6 @@ export const makePurchaseOrderFinal = async (
         })
         .where(eq(PurchaseOrderItems.purchaseOrderUuid, uuid));
     });
-
-    // Only now is the order with the supplier, so this is when they get it.
-    // A provisional order from a quote has not been sent before this point.
-    await mailDocument(
-      () => sendPurchaseOrderEmail(uuid),
-      `Purchase order ${uuid}`,
-    );
 
     revalidatePath("/purchase-orders");
     revalidatePath(`/purchase-orders/${uuid}`);
@@ -1442,6 +1443,11 @@ export const sendPurchaseOrder = async (
           "Nothing was sent: the supplier has no e-mail address on the order's contact or the company.",
       };
     }
+
+    await db
+      .update(PurchaseOrders)
+      .set({ isMailed: true })
+      .where(eq(PurchaseOrders.uuid, uuid));
 
     revalidatePath(`/purchase-orders/${uuid}`);
     return { success: true, purchaseOrderUuid: uuid };

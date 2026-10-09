@@ -8,6 +8,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Mail,
+  Printer,
   Undo2,
   Warehouse,
 } from "lucide-react";
@@ -17,7 +18,6 @@ import {
   reportExWorksProcessorReceipt,
   makePurchaseOrderFinal,
   PurchaseOrderDetail,
-  sendPurchaseOrder,
 } from "@/app/(dashboard)/purchase-orders/actions";
 import { ConfirmPurchaseOrderDialog } from "@/components/purchase-orders/confirm-purchase-order-dialog";
 import { PreNotifyDialog } from "@/components/purchase-orders/pre-notify-dialog";
@@ -26,6 +26,16 @@ import {
   PurchaseOrderSuppliesPanel,
 } from "@/components/purchase-orders/purchase-order-processing-panels";
 import { ReceiptDocumentsPanel } from "@/components/purchase-orders/receipt-documents-panel";
+import { PurchaseOrderForm } from "@/components/purchase-orders/purchase-order-form";
+import {
+  panelsNamed,
+  PurchaseOrderNewPanels,
+  WORK_ORDER_PANELS,
+} from "@/components/purchase-orders/purchase-order-new-panels";
+import { SendPurchaseOrderDialog } from "@/components/purchase-orders/send-purchase-order-dialog";
+import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { YardDeliveryAddress } from "@/app/(dashboard)/purchase-orders/actions";
+import { ClerkUserOption } from "@/lib/server/clerk";
 import { startPurchaseReturnFromOrder } from "@/app/(dashboard)/purchase-return-orders/actions";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -68,11 +78,22 @@ import {
 
 type Props = {
   purchaseOrder: PurchaseOrderDetail;
+  companies: CompanyOption[];
+  clerkUsers: ClerkUserOption[];
+  currentUserId: string;
+  yardAddress: YardDeliveryAddress | null;
 };
 
-export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
+export const PurchaseOrderDetailView = ({
+  purchaseOrder,
+  companies,
+  clerkUsers,
+  currentUserId,
+  yardAddress,
+}: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isSendOpen, setIsSendOpen] = useState(false);
   const [isConfirmLinesOpen, setIsConfirmLinesOpen] = useState(false);
   const [isPreNotifyOpen, setIsPreNotifyOpen] = useState(false);
   const [raised, setRaised] = useState(false);
@@ -96,15 +117,6 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
     canCancel &&
     purchaseOrder.items.some((item) => Number(item.qtyReceived ?? 0) > 0);
 
-  const runAction = (action: () => Promise<{ error?: string }>) => {
-    setError(undefined);
-    startTransition(async () => {
-      const result = await action();
-      if (result.error) {
-        setError(result.error);
-      }
-    });
-  };
 
   const handlePartReturn = () => {
     setError(undefined);
@@ -167,9 +179,25 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
           {isProvisional && (
             <Button
               type="button"
-              onClick={() =>
-                runAction(() => makePurchaseOrderFinal(purchaseOrder.uuid))
-              }
+              onClick={() => {
+                setError(undefined);
+                startTransition(async () => {
+                  const result = await makePurchaseOrderFinal(
+                    purchaseOrder.uuid,
+                  );
+                  if (result.error) {
+                    setError(result.error);
+                    return;
+                  }
+                  // The reference opens the printed order and then asks
+                  // whether to send it (9-10-2026).
+                  window.open(
+                    `/purchase-orders/${purchaseOrder.uuid}/print`,
+                    "_blank",
+                  );
+                  setIsSendOpen(true);
+                });
+              }}
               disabled={isPending}
             >
               <BadgeCheck className="me-1.5 size-4" />
@@ -177,9 +205,22 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
             </Button>
           )}
           <Button
+            variant="outline"
+            nativeButton={false}
+            render={
+              <Link
+                href={`/purchase-orders/${purchaseOrder.uuid}/print`}
+                target="_blank"
+              />
+            }
+          >
+            <Printer className="me-1.5 size-4" />
+            Print…
+          </Button>
+          <Button
             type="button"
             variant="outline"
-            onClick={() => runAction(() => sendPurchaseOrder(purchaseOrder.uuid))}
+            onClick={() => setIsSendOpen(true)}
             disabled={isPending || isProvisional}
           >
             <Mail className="me-1.5 size-4" />
@@ -215,6 +256,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
           {purchaseOrder.supplierUuid && (
             <Button
               variant="outline"
+              nativeButton={false}
               render={
                 <Link href={`/companies/${purchaseOrder.supplierUuid}`} />
               }
@@ -243,14 +285,6 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
             </Button>
           )}
           <Button
-            variant="outline"
-            render={
-              <Link href={`/purchase-orders/${purchaseOrder.uuid}/edit`} />
-            }
-          >
-            Edit details
-          </Button>
-          <Button
             type="button"
             variant="destructive"
             onClick={() => setIsConfirmOpen(true)}
@@ -275,70 +309,20 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-4 rounded-lg border p-4 sm:grid-cols-3">
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Supplier
-          </p>
-          <p className="text-sm">{purchaseOrder.supplierName ?? "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Agent
-          </p>
-          <p className="text-sm">{purchaseOrder.agentName ?? "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Contact
-          </p>
-          <p className="text-sm">
-            {[purchaseOrder.contactFirstName, purchaseOrder.contactLastName]
-              .filter(Boolean)
-              .join(" ") || "—"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Status
-          </p>
-          <p className="text-sm">
-            {PURCHASE_ORDER_STATUS_LABELS[purchaseOrder.status]}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Order Date
-          </p>
-          <p className="text-sm">{purchaseOrder.orderDate ?? "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Reference
-          </p>
-          <p className="text-sm">{purchaseOrder.reference ?? "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Confirmed
-          </p>
-          <p className="text-sm">{formatDateColumn(purchaseOrder.confirmedAt)}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Pre-notified
-          </p>
-          <p className="text-sm">
-            {formatDateColumn(purchaseOrder.preNotifiedAt)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Mailed
-          </p>
-          <p className="text-sm">{purchaseOrder.isMailed ? "Yes" : "No"}</p>
-        </div>
-      </div>
+      {/* The header is the form it was typed on, as the reference has it;
+          while the order is provisional it is edited here and saved. */}
+      <PurchaseOrderForm
+        companies={companies}
+        clerkUsers={clerkUsers}
+        currentUserId={currentUserId}
+        yardAddress={yardAddress}
+        existing={purchaseOrder}
+      />
+
+      <section className="space-y-2">
+        <h2 className="border-b pb-2 text-base font-semibold">Workorders</h2>
+        <PurchaseOrderNewPanels panels={WORK_ORDER_PANELS} />
+      </section>
 
       <div className="space-y-3">
         <h2 className="border-b pb-2 text-base font-semibold">Lines</h2>
@@ -523,6 +507,23 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
       </div>
 
       <div className="space-y-2">
+        {/* The reference's last panel on the order, under `Previous orders`:
+            where a certificate or DoP is stored (C19). */}
+        {/* A processing order buys a step, not metal: the lots it sends out
+            (C8) and the options it pays for (C10). */}
+        {purchaseOrder.purchaseOrderType === "processing" && (
+          <PurchaseOrderSuppliesPanel
+            purchaseOrderUuid={purchaseOrder.uuid}
+            supplies={purchaseOrder.supplies}
+            receipts={purchaseOrder.receipts}
+          />
+        )}
+        <PurchaseOrderOptionsPanel
+          purchaseOrderUuid={purchaseOrder.uuid}
+          options={purchaseOrder.options}
+          items={purchaseOrder.items}
+        />
+
         {/* What has actually arrived. Booked against the order since receivals
             existed and never shown on it. */}
         <CollapsibleSection
@@ -653,6 +654,22 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
           )}
         </CollapsibleSection>
 
+        <PurchaseOrderNewPanels
+          panels={panelsNamed([
+            "Pricing",
+            "Text lines",
+            "Stock",
+            "Stock other affiliates",
+            "Previous orders",
+          ])}
+        />
+        {/* Where a certificate or DoP is stored (C19). */}
+        <ReceiptDocumentsPanel
+          purchaseOrderUuid={purchaseOrder.uuid}
+          documents={purchaseOrder.receiptDocuments}
+          items={purchaseOrder.items}
+          receipts={purchaseOrder.receipts}
+        />
         {/* The link has been in the schema since contracts existed; no screen
             followed it, so an order bought under an agreement never said so. */}
         <CollapsibleSection
@@ -714,6 +731,44 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
           )}
         </CollapsibleSection>
 
+        <PurchaseOrderNewPanels panels={panelsNamed(["Invoice lines","Complaints"])} />
+        <CollapsibleSection title="Logistics">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-1 p-3 text-sm sm:grid-cols-4">
+            <div>
+              <dt className="text-xs text-muted-foreground">Complete delivery</dt>
+              <dd>{purchaseOrder.completeDelivery ? "Yes" : "No"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Transport blockage</dt>
+              <dd>{purchaseOrder.transportBlockage ? "Yes" : "No"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Vehicle with crane</dt>
+              <dd>{purchaseOrder.vehicleWithCrane ? "Yes" : "No"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Vehicle with canopy</dt>
+              <dd>{purchaseOrder.vehicleWithCanopy ? "Yes" : "No"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Bundling separate</dt>
+              <dd>{purchaseOrder.bundlingSeparate ? "Yes" : "No"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Transport region</dt>
+              <dd>{orDash(purchaseOrder.transportRegion)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Max. length (mm)</dt>
+              <dd>{orDash(purchaseOrder.maxLengthMm)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Transport mode</dt>
+              <dd>{orDash(purchaseOrder.transportMode)}</dd>
+            </div>
+          </dl>
+        </CollapsibleSection>
+        <PurchaseOrderNewPanels panels={panelsNamed(["Texts"])} />
         <CollapsibleSection
           title="Return lines"
           summary={pluralize(purchaseOrder.returnLines.length, "return line")}
@@ -794,6 +849,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
           )}
         </CollapsibleSection>
 
+        <PurchaseOrderNewPanels panels={panelsNamed(["Surcharges","Documents"])} />
         {/* Where each document type actually goes for this supplier. Routing is
             held per company, and this is the screen where somebody asks whether
             the order reached them and at which address. */}
@@ -850,31 +906,14 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
           )}
         </CollapsibleSection>
 
-        {/* The reference's last panel on the order, under `Previous orders`:
-            where a certificate or DoP is stored (C19). */}
-        {/* A processing order buys a step, not metal: the lots it sends out
-            (C8) and the options it pays for (C10). */}
-        {purchaseOrder.purchaseOrderType === "processing" && (
-          <PurchaseOrderSuppliesPanel
-            purchaseOrderUuid={purchaseOrder.uuid}
-            supplies={purchaseOrder.supplies}
-            receipts={purchaseOrder.receipts}
-          />
-        )}
-        <PurchaseOrderOptionsPanel
-          purchaseOrderUuid={purchaseOrder.uuid}
-          options={purchaseOrder.options}
-          items={purchaseOrder.items}
-        />
-
-        <ReceiptDocumentsPanel
-          purchaseOrderUuid={purchaseOrder.uuid}
-          documents={purchaseOrder.receiptDocuments}
-          items={purchaseOrder.items}
-          receipts={purchaseOrder.receipts}
-        />
+        <PurchaseOrderNewPanels panels={panelsNamed(["PDF Files"])} />
       </div>
 
+      <SendPurchaseOrderDialog
+        purchaseOrder={purchaseOrder}
+        open={isSendOpen}
+        onOpenChange={setIsSendOpen}
+      />
       <PreNotifyDialog
         purchaseOrderUuid={purchaseOrder.uuid}
         purchaseOrderId={purchaseOrder.id}

@@ -2,7 +2,10 @@
 
 import { FormProvider, useWatch } from "react-hook-form";
 import { usePurchaseOrderSubmit } from "@/app/(dashboard)/purchase-orders/use-purchase-order-submit";
-import { YardDeliveryAddress } from "@/app/(dashboard)/purchase-orders/actions";
+import {
+  PurchaseOrderDetail,
+  YardDeliveryAddress,
+} from "@/app/(dashboard)/purchase-orders/actions";
 import { PurchaseOrderFormValues } from "@/app/(dashboard)/purchase-orders/validation";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
@@ -17,8 +20,8 @@ import { PurchaseOrderLogisticsSection } from "./sections/purchase-order-logisti
 import {
   NEW_ORDER_PANELS_AFTER_LOGISTICS,
   NEW_ORDER_PANELS_BEFORE_LOGISTICS,
-  NewOrderPanel,
   PurchaseOrderNewPanels,
+  WORK_ORDER_PANELS,
 } from "./purchase-order-new-panels";
 import { PurchaseOrderRemarksSection } from "./sections/purchase-order-remarks-section";
 import {
@@ -32,42 +35,13 @@ import {
 import { PURCHASE_ORDER_STATUS_LABELS } from "@/lib/labels";
 import { ClerkUserOption } from "@/lib/server/clerk";
 
-// The reference's `Workorders` block — three grids, empty on a new order.
-const WORK_ORDER_PANELS: NewOrderPanel[] = [
-  {
-    title: "Warehouse workorders",
-    columns: [
-      "Number",
-      "Planned",
-      "Type",
-      "Warehouse",
-      "Status",
-      "Lines",
-      "Qty planned",
-      "Qty actual",
-      "Kg planned",
-      "Kg actual",
-      "Created",
-    ],
-    empty: "None — raised once the order is saved and released.",
-  },
-  {
-    title: "Production workorders",
-    columns: ["Number", "Machine", "Option", "Planned date", "Status"],
-    empty: "None — raised once the order is saved and released.",
-  },
-  {
-    title: "Transport workorders",
-    columns: ["Trip", "Date", "Vehicle", "Status", "Bill of lading"],
-    empty: "None — raised once the order is saved and released.",
-  },
-];
-
 type Props = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
   currentUserId: string;
   yardAddress: YardDeliveryAddress | null;
+  /** The saved order: the Edit screen is this same screen, prefilled. */
+  existing?: PurchaseOrderDetail | null;
 };
 
 type SummaryProps = {
@@ -140,6 +114,7 @@ export const PurchaseOrderForm = ({
   clerkUsers,
   currentUserId,
   yardAddress,
+  existing = null,
 }: Props) => {
   const {
     form,
@@ -170,6 +145,7 @@ export const PurchaseOrderForm = ({
     clerkUsers,
     currentUserId,
     yardAddress,
+    existing,
   });
 
   const items = useWatch({ control: form.control, name: "items" });
@@ -183,7 +159,7 @@ export const PurchaseOrderForm = ({
   // Tel: 06 5065 6338, Fax: - Provisional`. The number is handed out on save
   // here, so until then the banner says so.
   const banner = [
-    "Purchase order (new)",
+    existing ? `Purchase order ${existing.id}` : "Purchase order (new)",
     supplierDefaults?.companyName,
     supplierDefaults
       ? `Tel: ${supplierDefaults.telephone ?? "-"}, Fax: ${supplierDefaults.fax ?? "-"}`
@@ -202,10 +178,14 @@ export const PurchaseOrderForm = ({
         <section className="space-y-4 rounded-lg border p-4">
           <div className="space-y-1">
             <h1 className="text-lg font-semibold">
-              {banner} - {PURCHASE_ORDER_STATUS_LABELS.provisional}
+              {banner} -{" "}
+              {PURCHASE_ORDER_STATUS_LABELS[existing?.status ?? "provisional"]}
+              {existing?.isPrinted ? ", Printed" : ""}
+              {existing?.isMailed ? ", Mailed" : ""}
             </h1>
             <p className="text-sm text-muted-foreground">
-              Creation date: {formatDateValue(todayDateString())}
+              Creation date:{" "}
+              {formatDateValue(existing?.orderDate ?? todayDateString())}
             </p>
           </div>
 
@@ -244,15 +224,22 @@ export const PurchaseOrderForm = ({
           </div>
         </section>
 
+        {/* On a saved order the work orders, the lines and the panels are
+            the order page's own, under this header; here they are typed. */}
+        {!existing && (
+          <>
         <section className="space-y-2">
           <h2 className="border-b pb-2 text-base font-semibold">Workorders</h2>
           <PurchaseOrderNewPanels panels={WORK_ORDER_PANELS} />
         </section>
 
+        {/* Lines are typed on a new order; on a saved one they are the order
+            page's, where each has its receipts and stock behind it. */}
         <PurchaseOrderItemsSection
           itemFields={itemFields}
           appendItem={appendItem}
           removeItem={removeItem}
+          readOnly={existing !== null}
         />
 
         {/* Everything the reference stacks under the lines, in its order, empty
@@ -266,12 +253,14 @@ export const PurchaseOrderForm = ({
           </CollapsibleSection>
           <PurchaseOrderNewPanels panels={NEW_ORDER_PANELS_AFTER_LOGISTICS} />
         </div>
+          </>
+        )}
 
         <PurchaseOrderRemarksSection />
 
         <FormActions
-          submitLabel="Create Purchase Order"
-          pendingLabel="Creating..."
+          submitLabel={existing ? "Save changes" : "Create Purchase Order"}
+          pendingLabel={existing ? "Saving..." : "Creating..."}
           isPending={isPending}
           onCancel={handleCancel}
         />

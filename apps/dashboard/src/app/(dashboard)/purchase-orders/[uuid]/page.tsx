@@ -1,22 +1,37 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { getPurchaseOrderDetail } from "@/app/(dashboard)/purchase-orders/actions";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
+import {
+  getPurchaseOrderDetail,
+  getYardDeliveryAddress,
+} from "@/app/(dashboard)/purchase-orders/actions";
+import { requireAuth } from "@/lib/auth";
+import { getClerkUsersForSelect } from "@/lib/server/clerk";
 import { PurchaseOrderDetailView } from "@/components/purchase-orders/purchase-order-detail";
-import { PageHeading } from "@/components/layout/page-heading";
 
 type Props = {
   params: Promise<{ uuid: string }>;
 };
 
+/**
+ * One screen, as the reference has it: the toolbar, the header as the form it
+ * was typed on, then the work orders, the lines and every panel.
+ */
 const PurchaseOrderDetailPage = async ({ params }: Props) => {
   const { uuid } = await params;
+  const currentUserId = await requireAuth();
 
+  // Sequential rather than concurrent: this database caps connections.
   const purchaseOrder = await getPurchaseOrderDetail(uuid);
 
   if (!purchaseOrder) {
     notFound();
   }
+
+  const companies = await getCompaniesForSelect();
+  const yardAddress = await getYardDeliveryAddress();
+  const clerkUsers = await getClerkUsersForSelect();
 
   return (
     <div className="space-y-4">
@@ -29,8 +44,13 @@ const PurchaseOrderDetailPage = async ({ params }: Props) => {
           Purchase Orders
         </Link>
       </div>
-      <PageHeading title={`Purchase Order #${purchaseOrder.id}`} />
-      <PurchaseOrderDetailView purchaseOrder={purchaseOrder} />
+      <PurchaseOrderDetailView
+        purchaseOrder={purchaseOrder}
+        companies={companies}
+        clerkUsers={clerkUsers}
+        currentUserId={currentUserId}
+        yardAddress={yardAddress}
+      />
     </div>
   );
 };

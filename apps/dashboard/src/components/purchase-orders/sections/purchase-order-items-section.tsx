@@ -91,11 +91,14 @@ type Props = {
   itemFields: FieldArrayWithId<PurchaseOrderFormValues, "items", "id">[];
   appendItem: UseFieldArrayAppend<PurchaseOrderFormValues, "items">;
   removeItem: UseFieldArrayRemove;
+  /** On the Edit screen the lines are shown as saved, not retyped here. */
+  readOnly?: boolean;
 };
 
 type LineProps = {
   index: number;
   selected: boolean;
+  readOnly: boolean;
   onSelect: () => void;
 };
 
@@ -112,7 +115,12 @@ const cell = "h-8 w-20 px-2 text-right tabular-nums";
  * result rather than something anyone enters — and it is the only way a buyer
  * can tell a € 606,02 line from a € 0,00 one before saving it.
  */
-const PurchaseOrderLineRow = ({ index, selected, onSelect }: LineProps) => {
+const PurchaseOrderLineRow = ({
+  index,
+  selected,
+  readOnly,
+  onSelect,
+}: LineProps) => {
   const {
     control,
     register,
@@ -188,6 +196,7 @@ const PurchaseOrderLineRow = ({ index, selected, onSelect }: LineProps) => {
                 initialLabel={getValues(`items.${index}.productLabel`)}
                 sources={["catalogue", "purchase"]}
                 invalid={!!lineErrors?.productUuid}
+                disabled={readOnly}
                 onChange={(choice) => {
                   productField.onChange(choice.productUuid);
                   // The article's own measurements travel onto the line, so the
@@ -251,6 +260,7 @@ const PurchaseOrderLineRow = ({ index, selected, onSelect }: LineProps) => {
                 columnHeaders={{ left: "Code", right: "EN" }}
                 onValueChange={field.onChange}
                 className="h-8"
+                disabled={readOnly}
               />
             )}
           />
@@ -260,6 +270,7 @@ const PurchaseOrderLineRow = ({ index, selected, onSelect }: LineProps) => {
             type="number"
             min="0"
             aria-label="Length (mm)"
+            disabled={readOnly}
             className={cell}
             {...register(`items.${index}.lengthMm`)}
           />
@@ -269,6 +280,7 @@ const PurchaseOrderLineRow = ({ index, selected, onSelect }: LineProps) => {
             type="number"
             min="0"
             aria-label="Width (mm)"
+            disabled={readOnly}
             className={cell}
             {...register(`items.${index}.widthMm`)}
           />
@@ -279,6 +291,7 @@ const PurchaseOrderLineRow = ({ index, selected, onSelect }: LineProps) => {
             step="0.01"
             min="0"
             aria-label="Thickness (mm)"
+            disabled={readOnly}
             className={cell}
             {...register(`items.${index}.thicknessMm`)}
           />
@@ -290,6 +303,7 @@ const PurchaseOrderLineRow = ({ index, selected, onSelect }: LineProps) => {
             min="0"
             placeholder="0"
             aria-label="Qty (p)"
+            disabled={readOnly}
             aria-invalid={!!lineErrors?.quantity}
             className={cell}
             {...register(`items.${index}.quantity`)}
@@ -311,6 +325,7 @@ const PurchaseOrderLineRow = ({ index, selected, onSelect }: LineProps) => {
             min="0"
             placeholder="0,00"
             aria-label="Net price"
+            disabled={readOnly}
             aria-invalid={!!lineErrors?.netPrice}
             className={cn(cell, "w-24")}
             {...register(`items.${index}.netPrice`)}
@@ -327,6 +342,7 @@ const PurchaseOrderLineRow = ({ index, selected, onSelect }: LineProps) => {
                 options={priceUnitOptions}
                 onValueChange={unitField.onChange}
                 className="h-8"
+                disabled={readOnly}
               />
             )}
           />
@@ -349,6 +365,7 @@ const PurchaseOrderLineRow = ({ index, selected, onSelect }: LineProps) => {
                 options={sourceTypeOptions}
                 onValueChange={typeField.onChange}
                 className="h-8"
+                disabled={readOnly}
               />
             )}
           />
@@ -379,6 +396,7 @@ export const PurchaseOrderItemsSection = ({
   itemFields,
   appendItem,
   removeItem,
+  readOnly = false,
 }: Props) => {
   const {
     formState: { errors },
@@ -415,14 +433,20 @@ export const PurchaseOrderItemsSection = ({
 
       {/* The reference's toolbar strip above the grid. */}
       <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-muted/30 px-2 py-1">
-        <Button type="button" variant="ghost" size="sm" onClick={addLine}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={addLine}
+          disabled={readOnly}
+        >
           <Plus className="size-3.5 text-primary" /> New
         </Button>
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          disabled={selected === null}
+          disabled={readOnly || selected === null}
           onClick={deleteLine}
         >
           <X className="size-3.5 text-destructive" /> Delete
@@ -502,6 +526,7 @@ export const PurchaseOrderItemsSection = ({
                 key={field.id}
                 index={index}
                 selected={selected === index}
+                readOnly={readOnly}
                 onSelect={() => setSelected(index)}
               />
             ))}

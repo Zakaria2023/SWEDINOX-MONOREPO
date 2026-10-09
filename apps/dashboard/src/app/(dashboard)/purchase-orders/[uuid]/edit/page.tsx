@@ -1,42 +1,16 @@
-import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
-import { getPurchaseOrderDetail } from "@/app/(dashboard)/purchase-orders/actions";
-import { PurchaseOrderEditForm } from "@/components/purchase-orders/purchase-order-edit-form";
-import { PageHeading } from "@/components/layout/page-heading";
+import { redirect } from "next/navigation";
 
 type Props = {
   params: Promise<{ uuid: string }>;
 };
 
+/**
+ * The reference edits an order on the screen it is shown on, so Edit is the
+ * order's own page: the header there is the form, the toolbar above it.
+ */
 const EditPurchaseOrderPage = async ({ params }: Props) => {
   const { uuid } = await params;
-
-  const purchaseOrder = await getPurchaseOrderDetail(uuid);
-
-  if (!purchaseOrder) {
-    notFound();
-  }
-
-  if (purchaseOrder.status === "cancelled") {
-    redirect(`/purchase-orders/${uuid}`);
-  }
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <Link
-          href={`/purchase-orders/${uuid}`}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ChevronLeft className="size-4" />
-          Purchase Order #{purchaseOrder.id}
-        </Link>
-      </div>
-      <PageHeading title={`Edit Purchase Order #${purchaseOrder.id}`} />
-      <PurchaseOrderEditForm purchaseOrder={purchaseOrder} />
-    </div>
-  );
+  redirect(`/purchase-orders/${uuid}`);
 };
 
 export default EditPurchaseOrderPage;

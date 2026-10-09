@@ -10,7 +10,7 @@ import { Button } from "@/components/shadcn/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
 import { receptionActions } from "@/lib/helpers";
-import { FileText, Scissors, Tag, Trash2 } from "lucide-react";
+import { FileText, Plus, Scissors, Tag, Trash2 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { ReceptionBatchSettingsDialog } from "./reception-batch-settings-dialog";
 import { ReceptionChargeDialog } from "./reception-charge-dialog";
@@ -85,10 +85,31 @@ export const ReceptionToolbar = ({ orderId, selected }: Props) => {
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
+      {/* `New · Delete · Split · Batch registration · Charge aanpassen…`,
+          the reference's order. New is greyed: what wakes it is unknown. */}
+      <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-muted/30 px-2 py-1">
+        <Button type="button" variant="ghost" size="sm" disabled>
+          <Plus size={16} className="text-primary" />
+          New
+        </Button>
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
+          size="sm"
+          disabled={!hasSelection || !permitted.canDelete || isPending}
+          onClick={() => setIsDeleteOpen(true)}
+        >
+          <Trash2 size={16} className="text-destructive" />
+          Delete
+        </Button>
+        <Button type="button" variant="ghost" size="sm" disabled>
+          <Scissors size={16} />
+          Split
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
           disabled={!hasSelection || !permitted.canRegisterBatch}
           onClick={() => setIsBatchOpen(true)}
         >
@@ -97,25 +118,13 @@ export const ReceptionToolbar = ({ orderId, selected }: Props) => {
         </Button>
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
+          size="sm"
           disabled={!hasSelection || !permitted.canAdjustCharge}
           onClick={() => setIsChargeOpen(true)}
         >
           <Tag size={16} />
-          Adjust charge
-        </Button>
-        <Button type="button" variant="outline" disabled>
-          <Scissors size={16} />
-          Split
-        </Button>
-        <Button
-          type="button"
-          variant="destructive"
-          disabled={!hasSelection || !permitted.canDelete || isPending}
-          onClick={() => setIsDeleteOpen(true)}
-        >
-          <Trash2 size={16} />
-          Delete
+          Charge aanpassen…
         </Button>
       </div>
 

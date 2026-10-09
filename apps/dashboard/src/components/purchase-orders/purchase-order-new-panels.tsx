@@ -37,6 +37,37 @@ type Props = {
  * `Complaints` and `Texts`, which is why the list is in two halves — the form
  * renders its own Logistics block there.
  */
+// The reference's `Workorders` block — three grids, empty on a new order.
+export const WORK_ORDER_PANELS: NewOrderPanel[] = [
+  {
+    title: "Warehouse workorders",
+    columns: [
+      "Number",
+      "Planned",
+      "Type",
+      "Warehouse",
+      "Status",
+      "Lines",
+      "Qty planned",
+      "Qty actual",
+      "Kg planned",
+      "Kg actual",
+      "Created",
+    ],
+    empty: "None — raised once the order is saved and released.",
+  },
+  {
+    title: "Production workorders",
+    columns: ["Number", "Machine", "Option", "Planned date", "Status"],
+    empty: "None — raised once the order is saved and released.",
+  },
+  {
+    title: "Transport workorders",
+    columns: ["Trip", "Date", "Vehicle", "Status", "Bill of lading"],
+    empty: "None — raised once the order is saved and released.",
+  },
+];
+
 export const NEW_ORDER_PANELS_BEFORE_LOGISTICS: NewOrderPanel[] = [
   {
     title: "Options",
@@ -287,3 +318,14 @@ export const PurchaseOrderNewPanels = ({ panels }: Props) => (
     ))}
   </>
 );
+
+/** The panels named, in the order given — for a screen that has its own
+ *  grids for some of them and the empty shape for the rest. */
+export const panelsNamed = (titles: string[]): NewOrderPanel[] =>
+  titles.flatMap((title) => {
+    const panel = [
+      ...NEW_ORDER_PANELS_BEFORE_LOGISTICS,
+      ...NEW_ORDER_PANELS_AFTER_LOGISTICS,
+    ].find((candidate) => candidate.title === title);
+    return panel ? [panel] : [];
+  });

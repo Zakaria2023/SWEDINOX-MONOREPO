@@ -314,6 +314,7 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
         <div className="flex flex-wrap items-end gap-2">
           <Button
             variant="outline"
+            nativeButton={false}
             render={
               <Link href={`/purchase-invoices/${purchaseInvoice.uuid}/edit`} />
             }

@@ -303,6 +303,7 @@ export const OrderDetailView = ({
         <div className="flex gap-2">
           <Button
             variant="outline"
+            nativeButton={false}
             render={<Link href={`/orders/${order.uuid}/edit`} />}
           >
             Edit Details
@@ -345,6 +346,7 @@ export const OrderDetailView = ({
           ) : (
             <Button
               variant="outline"
+              nativeButton={false}
               render={
                 <Link
                   href={`/return-orders/new?company=${order.companyUuid}&order=${order.uuid}`}
@@ -356,6 +358,7 @@ export const OrderDetailView = ({
           )}
           <Button
             variant="outline"
+            nativeButton={false}
             render={<Link href={`/companies/${order.companyUuid}`} />}
           >
             Show company
@@ -367,6 +370,7 @@ export const OrderDetailView = ({
           ) : (
             <Button
               variant="outline"
+              nativeButton={false}
               render={
                 <Link href={`/invoices/add?company=${order.companyUuid}`} />
               }

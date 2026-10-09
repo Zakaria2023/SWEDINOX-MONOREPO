@@ -196,6 +196,7 @@ export const PurchaseReturnOrderDetailView = ({
         <div className="flex gap-2">
           <Button
             variant="outline"
+            nativeButton={false}
             render={
               <Link href={`/purchase-return-orders/${returnOrder.uuid}/edit`} />
             }
