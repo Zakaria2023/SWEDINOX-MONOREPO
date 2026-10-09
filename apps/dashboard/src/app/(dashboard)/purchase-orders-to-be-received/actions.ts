@@ -1,5 +1,6 @@
 "use server";
 
+import { PURCHASE_ORDER_TO_RECEIVE_COLUMNS } from "@/app/(dashboard)/purchase-orders-to-be-received/columns";
 import { openPurchaseOrderStatuses } from "@/lib/enums";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { db } from "@/db";
@@ -19,8 +20,59 @@ import {
   refreshPurchaseLineStatus,
 } from "@/lib/server/purchase-lines";
 import { describeError, todayDateString } from "@/lib/helpers";
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { exportRows } from "@/lib/server/excel";
+import {
+  dateRangeFilter,
+  enumFilter,
+  FilterBindings,
+  relationFilter,
+  runPaged,
+  SortableColumns,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+
+// The order's number, the article, the supplier and the supplier's reference —
+// what a buyer has in hand when a delivery turns up at the door.
+const PURCHASE_ORDER_TO_RECEIVE_SEARCH = [
+  PurchaseOrders.id,
+  Products.productCode,
+  Companies.companyName,
+  PurchaseOrders.reference,
+] as const;
+
+const PURCHASE_ORDER_TO_RECEIVE_FILTERS: FilterBindings = {
+  supplier: relationFilter(PurchaseOrders.supplierUuid),
+  // Only the open statuses can reach this screen, so only they are offered.
+  status: enumFilter(PurchaseOrders.status, openPurchaseOrderStatuses),
+  orderDate: dateRangeFilter(PurchaseOrders.orderDate),
+};
+
+// The kilo columns are worked out per row after the query, so they are not
+// sortable; everything read straight off a column is.
+const PURCHASE_ORDER_TO_RECEIVE_SORTABLE: SortableColumns = {
+  purchaseOrderId: PurchaseOrders.id,
+  productCode: Products.productCode,
+  supplierName: Companies.companyName,
+  status: PurchaseOrders.status,
+  orderDate: PurchaseOrders.orderDate,
+  orderAmount: PurchaseOrderItems.amount,
+};
+
+// What makes a line belong on this screen at all, whatever the URL asks for:
+// an order still in flight, with quantity still to come.
+const PURCHASE_ORDER_TO_RECEIVE_SCOPE = [
+  inArray(PurchaseOrders.status, [...openPurchaseOrderStatuses]),
+  sql`${PurchaseOrderItems.quantity} - ${PurchaseOrderItems.qtyReceived} > 0`,
+];
 
 export type PurchaseOrderToReceiveRow = {
   purchaseOrderItemUuid: SelectPurchaseOrderItems["uuid"];
@@ -70,13 +122,20 @@ type ReceivableLine = {
 };
 
 // Open purchase-order lines still awaiting delivery — quantity not yet fully
-// received on orders that aren't completed or cancelled. Line-level amounts
-// aren't stored (the order total lives on the header), so the value picture is
-// the PO amount; the outstanding position is expressed in kg.
-export const getPurchaseOrdersToBeReceived = async (): Promise<
-  PurchaseOrderToReceiveRow[]
-> => {
-  try {
+// received on orders that aren't completed or cancelled. The screen is one row
+// per line, so the amount is the line's own (`PurchaseOrderItems.amount`), not
+// the header total — which reads EUR 0.00 on almost every order and, where it
+// is filled, repeated the whole order's value down each of its lines. The
+// outstanding position is expressed in kg.
+//
+// The rows one view selects, as a window onto them. Shared by the page and the
+// export.
+const purchaseOrderToReceiveRows =
+  (query: TableQuery) =>
+  async (
+    limit: number,
+    offset: number,
+  ): Promise<PurchaseOrderToReceiveRow[]> => {
     const rows = await db
       .select({
         purchaseOrderItemUuid: PurchaseOrderItems.uuid,
@@ -89,7 +148,7 @@ export const getPurchaseOrdersToBeReceived = async (): Promise<
         companyCode: Companies.id,
         status: PurchaseOrders.status,
         orderDate: PurchaseOrders.orderDate,
-        orderAmount: PurchaseOrders.amount,
+        orderAmount: PurchaseOrderItems.amount,
         revenueGroupNumber: RevenueGroups.number,
         revenueGroupName: RevenueGroups.name,
         kgPurchased: PurchaseOrderItems.kgPurchased,
@@ -110,15 +169,30 @@ export const getPurchaseOrdersToBeReceived = async (): Promise<
         eq(Products.revenueGroupUuid, RevenueGroups.uuid),
       )
       .where(
-        and(
-          inArray(PurchaseOrders.status, [...openPurchaseOrderStatuses]),
-          sql`${PurchaseOrderItems.quantity} - ${PurchaseOrderItems.qtyReceived} > 0`,
-        ),
+        tableWhere({
+          query,
+          search: PURCHASE_ORDER_TO_RECEIVE_SEARCH,
+          filters: PURCHASE_ORDER_TO_RECEIVE_FILTERS,
+          scope: PURCHASE_ORDER_TO_RECEIVE_SCOPE,
+        }),
       )
       // Newest first. A buyer comes to this screen to receive the order they
       // just placed, and sorting by company name alphabetically buried it
-      // hundreds of rows down with no search box to find it again.
-      .orderBy(desc(PurchaseOrders.id), asc(PurchaseOrderItems.lineNumber));
+      // hundreds of rows down.
+      .orderBy(
+        ...tableOrderBy(
+          PURCHASE_ORDER_TO_RECEIVE_SORTABLE,
+          query,
+          [desc(PurchaseOrders.id), asc(PurchaseOrderItems.lineNumber)],
+          PurchaseOrderItems.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+    if (rows.length === 0) {
+      return [];
+    }
 
     // The buyer is stored on the header as a Clerk user id; resolve it to a
     // display name (falling back to the raw id if it can't be resolved).
@@ -126,10 +200,56 @@ export const getPurchaseOrdersToBeReceived = async (): Promise<
     const nameById = new Map(users.map((user) => [user.value, user.label]));
 
     return mapRows(rows, nameById);
+  };
+
+export const getPurchaseOrdersToBeReceived = async (
+  query: TableQuery,
+): Promise<Paged<PurchaseOrderToReceiveRow>> => {
+  try {
+    return await runPaged(query, {
+      rows: purchaseOrderToReceiveRows(query),
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(PurchaseOrderItems)
+          .innerJoin(
+            PurchaseOrders,
+            eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
+          )
+          .innerJoin(
+            Companies,
+            eq(PurchaseOrders.supplierUuid, Companies.uuid),
+          )
+          .innerJoin(
+            Products,
+            eq(PurchaseOrderItems.productUuid, Products.uuid),
+          )
+          .where(
+            tableWhere({
+              query,
+              search: PURCHASE_ORDER_TO_RECEIVE_SEARCH,
+              filters: PURCHASE_ORDER_TO_RECEIVE_FILTERS,
+              scope: PURCHASE_ORDER_TO_RECEIVE_SCOPE,
+            }),
+          );
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch purchase orders to be received"));
   }
 };
+
+export const exportPurchaseOrdersToBeReceived = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Purchase orders to be received",
+    columns: PURCHASE_ORDER_TO_RECEIVE_COLUMNS,
+    columnKeys,
+    rows: purchaseOrderToReceiveRows(parseTableQuery(params)),
+  });
 
 const RECEIVABLE_LINE_COLUMNS = {
   itemUuid: PurchaseOrderItems.uuid,
@@ -188,8 +308,8 @@ const revalidateReceiptPaths = () => {
   revalidatePath("/receipts");
 };
 
-// Receives a single outstanding purchase-order line — the per-line "Receive"
-// button in the table.
+// Receives a single outstanding purchase-order line — the toolbar's "Receive"
+// button, acting on the row selected in the grid.
 export const receivePurchaseOrderLine = async (
   purchaseOrderItemUuid: string,
 ): Promise<ReceiveGoodsResult> => {
@@ -283,7 +403,7 @@ const mapRows = (
     companyCode: SelectCompanies["id"] | null;
     status: SelectPurchaseOrders["status"];
     orderDate: SelectPurchaseOrders["orderDate"];
-    orderAmount: string;
+    orderAmount: SelectPurchaseOrderItems["amount"];
     revenueGroupNumber: SelectRevenueGroups["number"] | null;
     revenueGroupName: SelectRevenueGroups["name"] | null;
     kgPurchased: string | null;

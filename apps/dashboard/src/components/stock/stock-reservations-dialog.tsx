@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { FormError } from "@/components/ui/form-error";
-import { formatDateColumn } from "@/lib/helpers";
+import { cn, formatDateColumn } from "@/lib/helpers";
 import {
   RESERVATION_STATUS_LABELS,
   RESERVATION_TYPE_LABELS,
@@ -56,6 +56,10 @@ type Props = {
  * 🔑 `Order/R…` in the reference is order number *and* line in one cell
  * (`O107163/20`). Here they arrive separately and are joined for display, so
  * the cell can still link through.
+ *
+ * Both act on the selected row from a toolbar above the grid (245), `Verwijder`
+ * greyed until a row is picked — never a column of buttons per row. The
+ * columns are the reference's eight, `Gewijzigd` last.
  */
 export const StockReservationsDialog = ({ data, open, onOpenChange }: Props) => {
   const { lot, reservations } = data;
@@ -64,6 +68,9 @@ export const StockReservationsDialog = ({ data, open, onOpenChange }: Props) => 
     {},
   );
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+  const selected =
+    reservations.find((row) => row.uuid === selectedUuid) ?? null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -81,6 +88,34 @@ export const StockReservationsDialog = ({ data, open, onOpenChange }: Props) => 
         </DialogHeader>
 
         <DialogBody className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {selected?.orderUuid ? (
+              <Button
+                variant="outline"
+                size="sm"
+                render={<Link href={`/orders/${selected.orderUuid}`} />}
+              >
+                <ExternalLink className="size-4" />
+                Order
+              </Button>
+            ) : (
+              <Button type="button" variant="outline" size="sm" disabled>
+                <ExternalLink className="size-4" />
+                Order
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!selected || isReleasing}
+              onClick={() => setConfirming(selected ? selected.uuid : null)}
+            >
+              <Trash2 className="size-4" />
+              Release
+            </Button>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -88,18 +123,17 @@ export const StockReservationsDialog = ({ data, open, onOpenChange }: Props) => 
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
                 <TableHead>Unit</TableHead>
-                <TableHead className="text-right">Kg</TableHead>
                 <TableHead>Order / line</TableHead>
                 <TableHead>Company</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead className="w-24" />
+                <TableHead>Modified</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {reservations.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={9}
+                    colSpan={8}
                     className="h-20 text-center text-muted-foreground"
                   >
                     Nothing has claimed this lot.
@@ -107,7 +141,15 @@ export const StockReservationsDialog = ({ data, open, onOpenChange }: Props) => 
                 </TableRow>
               ) : (
                 reservations.map((row) => (
-                  <TableRow key={row.uuid}>
+                  <TableRow
+                    key={row.uuid}
+                    aria-selected={row.uuid === selectedUuid}
+                    onClick={() => setSelectedUuid(row.uuid)}
+                    className={cn(
+                      "cursor-pointer",
+                      row.uuid === selectedUuid && "bg-accent",
+                    )}
+                  >
                     <TableCell>{RESERVATION_TYPE_LABELS[row.type]}</TableCell>
                     <TableCell>
                       {RESERVATION_STATUS_LABELS[row.status]}
@@ -116,9 +158,6 @@ export const StockReservationsDialog = ({ data, open, onOpenChange }: Props) => 
                       {row.quantity}
                     </TableCell>
                     <TableCell>{STOCK_UNIT_LABELS[row.unit]}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {row.quantityKg}
-                    </TableCell>
                     <TableCell className="font-medium">
                       {row.orderNumber
                         ? `O${row.orderNumber}${row.lineNumber ? `/${row.lineNumber}` : ""}`
@@ -126,27 +165,9 @@ export const StockReservationsDialog = ({ data, open, onOpenChange }: Props) => 
                     </TableCell>
                     <TableCell>{row.companyName ?? "—"}</TableCell>
                     <TableCell>{formatDateColumn(row.reservedFor)}</TableCell>
+                    {/* `Gewijzigd` — when the claim last changed. */}
                     <TableCell>
-                      <div className="flex justify-end gap-1">
-                        {row.orderUuid ? (
-                          <Link
-                            href={`/orders/${row.orderUuid}`}
-                            aria-label="Open the order"
-                            className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
-                          >
-                            <ExternalLink className="size-4" />
-                          </Link>
-                        ) : null}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          aria-label="Release this reservation"
-                          disabled={isReleasing}
-                          onClick={() => setConfirming(row.uuid)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
+                      {formatDateColumn(row.changedAt ?? row.updatedAt)}
                     </TableCell>
                   </TableRow>
                 ))
@@ -177,6 +198,7 @@ export const StockReservationsDialog = ({ data, open, onOpenChange }: Props) => 
                     startTransition(() => {
                       release({ reservationUuid: confirming });
                       setConfirming(null);
+                      setSelectedUuid(null);
                     })
                   }
                 >

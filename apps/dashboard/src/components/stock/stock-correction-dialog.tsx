@@ -23,19 +23,25 @@ import {
 } from "@/components/shadcn/dialog";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
+import { Textarea } from "@/components/shadcn/textarea";
 import { StockCorrectionSimulationPane } from "@/components/stock/stock-correction-simulation";
-import { StockLotLedger } from "@/components/stock/stock-lot-ledger";
+import { StockLotWorkSummary } from "@/components/stock/stock-lot-ledger";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { stockCategories, stockCorrectionReasons } from "@/lib/enums";
 import {
+  featuresQualities,
+  stockCategories,
+  stockCorrectionReasons,
+} from "@/lib/enums";
+import {
+  FEATURES_QUALITY_LABELS,
   STOCK_CATEGORY_LABELS,
   STOCK_CORRECTION_REASON_LABELS,
   STOCK_UNIT_LABELS,
 } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { startTransition, useActionState, useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, DefaultValues, useForm } from "react-hook-form";
 
 type Props = {
   data: StockLotDialogData;
@@ -77,7 +83,7 @@ export const StockCorrectionDialog = ({
   open,
   onOpenChange,
 }: Props) => {
-  const { lot, ledger } = data;
+  const { lot, ledger, workOrderQuantities } = data;
   const [state, dispatch, isPending] = useActionState(correctStockLot, {});
   // `Simuleer` — the same correction, run and rolled back.
   const [simulation, simulate, isSimulating] = useActionState(
@@ -85,9 +91,11 @@ export const StockCorrectionDialog = ({
     {},
   );
 
-  const defaults: StockCorrectionFormValues = {
+  const defaults: DefaultValues<StockCorrectionFormValues> = {
     stockUuid: lot.uuid,
-    reason: "stock_correction",
+    // Blank, as the reference opens it (233) — `OK` stays greyed until a
+    // `Reden` is chosen.
+    reason: undefined,
     description: "",
     sawOrderUuid: "",
     correctQuantity: false,
@@ -142,6 +150,22 @@ export const StockCorrectionDialog = ({
   const unit = lot.unit ? STOCK_UNIT_LABELS[lot.unit] : "";
   const busy = isPending || isSimulating;
 
+  // `Kwaliteit` is a lookup in the reference (237/238) — `Kwaliteitscode` and
+  // `Omschrijving`, `304L` against `EN 1.4307`. A lot keyed before the list
+  // existed may hold a code outside it, so that one is offered too rather than
+  // silently blanked.
+  const qualityOptions = [
+    ...(lot.quality &&
+    !(featuresQualities as readonly string[]).includes(lot.quality)
+      ? [{ value: lot.quality, label: lot.quality, description: "" }]
+      : []),
+    ...featuresQualities.map((value) => ({
+      value,
+      label: value,
+      description: FEATURES_QUALITY_LABELS[value],
+    })),
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
@@ -156,10 +180,10 @@ export const StockCorrectionDialog = ({
           </DialogHeader>
 
           <DialogBody className="space-y-4">
-            <StockLotLedger
+            <StockLotWorkSummary
+              workOrderQuantities={workOrderQuantities}
               ledger={ledger}
               unit={unit}
-              totalLabel="Total correctable"
             />
 
             {/* The lot's identity, shown greyed rather than hidden — the
@@ -181,74 +205,6 @@ export const StockCorrectionDialog = ({
                 <p className="text-xs text-muted-foreground">Location</p>
                 <p className="text-sm">{lot.locationName ?? "—"}</p>
               </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <FormLabel htmlFor="correction-reason" required>
-                  Reason
-                </FormLabel>
-                <Controller
-                  control={control}
-                  name="reason"
-                  render={({ field }) => (
-                    <Select
-                      id="correction-reason"
-                      value={field.value}
-                      options={stockCorrectionReasons.map((value) => ({
-                        value,
-                        label: STOCK_CORRECTION_REASON_LABELS[value],
-                      }))}
-                      onValueChange={field.onChange}
-                    />
-                  )}
-                />
-                <FormFieldError message={errors.reason?.message} />
-              </div>
-
-              <div>
-                {/* `Zaagopdracht`. Offered only where the lot has been through
-                    a saw at all — an empty picker is what the reference showed
-                    on a lot that had not. */}
-                <FormLabel htmlFor="correction-saw-order">
-                  Saw order (optional)
-                </FormLabel>
-                <Controller
-                  control={control}
-                  name="sawOrderUuid"
-                  render={({ field }) => (
-                    <Select
-                      id="correction-saw-order"
-                      value={field.value ?? ""}
-                      placeholder={
-                        sawOrders.length === 0
-                          ? "This lot has not been through a saw"
-                          : "Not attributed to a cut"
-                      }
-                      disabled={sawOrders.length === 0}
-                      options={sawOrders.map((row) => ({
-                        value: row.lineUuid,
-                        label: `${row.workOrderNumber}${
-                          row.orderNumber ? ` / ${row.orderNumber}` : ""
-                        }`,
-                        description: row.plannedDate ?? undefined,
-                      }))}
-                      onValueChange={field.onChange}
-                    />
-                  )}
-                />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Blames the loss on the cut that caused it.
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <FormLabel htmlFor="correction-description">
-                Movement description
-              </FormLabel>
-              <Input id="correction-description" {...register("description")} />
-              <FormFieldError message={errors.description?.message} />
             </div>
 
             {/* ── ☑ Voorraad hoeveelheid correctie ──────────────────────── */}
@@ -287,6 +243,75 @@ export const StockCorrectionDialog = ({
                   />
                   <FormFieldError message={errors.quantity?.message} />
                 </div>
+              </div>
+
+              {/* `Reden` and `Zaagopdracht` sit inside the `Corrigeren voorraad`
+                  box in the reference (233), under the new quantity. `Reden`
+                  stays live even with the box unticked: a remark-only
+                  correction still needs its reason, `Add / adjust stock
+                  remark`. */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <FormLabel htmlFor="correction-reason" required>
+                    Reason
+                  </FormLabel>
+                  <Controller
+                    control={control}
+                    name="reason"
+                    render={({ field }) => (
+                      <Select
+                        id="correction-reason"
+                        value={field.value ?? ""}
+                        placeholder="-empty-"
+                        invalid={Boolean(errors.reason)}
+                        options={stockCorrectionReasons.map((value) => ({
+                          value,
+                          label: STOCK_CORRECTION_REASON_LABELS[value],
+                        }))}
+                        onValueChange={field.onChange}
+                      />
+                    )}
+                  />
+                  <FormFieldError message={errors.reason?.message} />
+                </div>
+
+                <div>
+                  {/* `Zaagopdracht` — always enabled in the reference (236),
+                      a lookup grid `Opdracht` / `Ordernr` that opens on a
+                      `-leeg-` row even when the lot never saw a saw. */}
+                  <FormLabel htmlFor="correction-saw-order">
+                    Saw order (optional)
+                  </FormLabel>
+                  <Controller
+                    control={control}
+                    name="sawOrderUuid"
+                    render={({ field }) => (
+                      <Select
+                        id="correction-saw-order"
+                        value={field.value ?? ""}
+                        placeholder="-empty-"
+                        columnHeaders={{ left: "Order", right: "Order no." }}
+                        options={[
+                          { value: "", label: "-empty-", description: "" },
+                          ...sawOrders.map((row) => ({
+                            value: row.lineUuid,
+                            label: String(row.workOrderNumber),
+                            description: row.orderNumber
+                              ? String(row.orderNumber)
+                              : "—",
+                          })),
+                        ]}
+                        onValueChange={field.onChange}
+                      />
+                    )}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Blames the loss on the cut that caused it.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <div>
                   <FormLabel htmlFor="correction-category">Category</FormLabel>
                   <Controller
@@ -310,10 +335,20 @@ export const StockCorrectionDialog = ({
                 </div>
                 <div>
                   <FormLabel htmlFor="correction-quality">Quality</FormLabel>
-                  <Input
-                    id="correction-quality"
-                    disabled={!correctQuantity}
-                    {...register("quality")}
+                  <Controller
+                    control={control}
+                    name="quality"
+                    render={({ field }) => (
+                      <Select
+                        id="correction-quality"
+                        value={field.value ?? ""}
+                        disabled={!correctQuantity}
+                        placeholder="Not set"
+                        columnHeaders={{ left: "Code", right: "Description" }}
+                        options={qualityOptions}
+                        onValueChange={field.onChange}
+                      />
+                    )}
                   />
                   <FormFieldError message={errors.quality?.message} />
                 </div>
@@ -405,6 +440,19 @@ export const StockCorrectionDialog = ({
                 its value follows the quantity — a correction cannot revalue
                 metal.
               </p>
+
+              {/* `Vooraadmutatie omschrijving` — a memo, after the weights. */}
+              <div>
+                <FormLabel htmlFor="correction-description">
+                  Movement description
+                </FormLabel>
+                <Textarea
+                  id="correction-description"
+                  rows={3}
+                  {...register("description")}
+                />
+                <FormFieldError message={errors.description?.message} />
+              </div>
             </div>
 
             {/* ── ☐ Voorraad kenmerk correctie ──────────────────────────── */}
@@ -424,8 +472,9 @@ export const StockCorrectionDialog = ({
               />
               <div>
                 <FormLabel htmlFor="correction-remark">Stock remark</FormLabel>
-                <Input
+                <Textarea
                   id="correction-remark"
+                  rows={3}
                   disabled={!correctCharacteristics}
                   {...register("remark")}
                 />
@@ -469,12 +518,15 @@ export const StockCorrectionDialog = ({
             >
               {isSimulating ? "Simulating…" : "Simulate"}
             </Button>
-            {/* Greyed until something is actually being corrected, the way the
-                reference greys `OK` until the form is legal. */}
+            {/* Greyed until something is actually being corrected and a
+                `Reden` is chosen, the way the reference greys `OK` until the
+                form is legal. */}
             <Button
               type="submit"
               disabled={
-                busy || (!correctQuantity && !correctCharacteristics)
+                busy ||
+                !reason ||
+                (!correctQuantity && !correctCharacteristics)
               }
             >
               {isPending ? "Correcting…" : "OK"}

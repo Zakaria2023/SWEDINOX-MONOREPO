@@ -73,8 +73,8 @@ import {
   stockCorrectionSchema,
   StockLabelFormValues,
   stockLabelSchema,
-  StockOptionFormValues,
-  stockOptionSchema,
+  StockOptionsSaveValues,
+  stockOptionsSaveSchema,
   StockRelocateFormValues,
   stockRelocateSchema,
   StockSplitFormValues,
@@ -101,7 +101,16 @@ import {
 } from "@/lib/table-query";
 import { exportRows } from "@/lib/server/excel";
 import { STOCK_COLUMNS } from "@/app/(dashboard)/stock/columns";
-import { and, count, desc, eq, getTableColumns, inArray, sum } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  isNotNull,
+  sum,
+} from "drizzle-orm";
 
 export type StockListItem = SelectStock & {
   productCode: SelectProducts["productCode"] | null;
@@ -134,6 +143,7 @@ export type LotReservationRow = {
   quantityKg: SelectReservations["quantityKg"];
   reservedFor: SelectReservations["reservedFor"];
   changedAt: SelectReservations["changedAt"];
+  updatedAt: SelectReservations["updatedAt"];
   orderItemUuid: SelectReservations["orderItemUuid"];
   orderUuid: SelectOrders["uuid"] | null;
   orderNumber: SelectOrders["id"] | null;
@@ -149,10 +159,14 @@ export type SupplierDeliveryRow = {
   lineNumber: SelectPurchaseOrderItems["lineNumber"] | null;
   supplierCode: SelectCompanies["id"] | null;
   supplierName: SelectCompanies["companyName"] | null;
+  /** `Artikel code` — the article the receival was booked against. */
+  productCode: SelectProducts["productCode"] | null;
   receiptDate: SelectPurchaseLineReceivals["receiptDate"];
   lengthMm: SelectPurchaseOrderItems["lengthMm"] | null;
   widthMm: SelectPurchaseOrderItems["widthMm"] | null;
   qtyWeighed: SelectPurchaseLineReceivals["qtyActual"];
+  /** `hvh eh.` — the unit the weighed quantity is counted in. */
+  unit: SelectPurchaseLineReceivals["unit"];
   kgWeighed: SelectPurchaseLineReceivals["kgActual"];
   charge: SelectPurchaseLineReceivals["charge"];
   internalCharge: SelectPurchaseLineReceivals["internalCharge"];
@@ -187,8 +201,19 @@ export type StockLotDialogData = {
   };
   ledger: LotLedger;
   weights: LotWeights;
+  /**
+   * `Nieuw` · `Vrijgegeven` · `Klaar` — the quantity on this lot's warehouse
+   * work order lines, per status. The left half of the summary the
+   * correction and transfer dialogs open with (233, 240). Summed in SQL.
+   */
+  workOrderQuantities: { new: number; released: number; ready: number };
   reservations: LotReservationRow[];
   options: SelectStockOptions[];
+  /**
+   * What `Specificatie` may hold for each option — the specifications already
+   * on record against it. Feeds the combo on `Voorraad opties` (249).
+   */
+  optionSpecifications: Pick<SelectStockOptions, "option" | "specification">[];
 };
 
 /** What every lot action reports back. */
@@ -738,8 +763,34 @@ export const getStockLotDialog = async (
     0,
   );
 
+  // `Nieuw` · `Vrijgegeven` · `Klaar` on `Corrigeren voorraad` (233) — what
+  // stands on this lot's warehouse work order lines, by the line's status.
+  const byStatus = await db
+    .select({
+      status: WarehouseWorkOrderLines.status,
+      qty: sum(WarehouseWorkOrderLines.qtyPlanned),
+    })
+    .from(WarehouseWorkOrderLines)
+    .where(
+      and(
+        eq(WarehouseWorkOrderLines.stockUuid, stockUuid),
+        inArray(WarehouseWorkOrderLines.status, ["new", "released", "ready"]),
+      ),
+    )
+    .groupBy(WarehouseWorkOrderLines.status);
+  const quantityOf = (status: "new" | "released" | "ready"): number =>
+    Number(byStatus.find((row) => row.status === status)?.qty ?? 0);
+
   const reservations = await getLotReservations(stockUuid);
   const options = await getLotOptions(stockUuid);
+  const optionSpecifications = await db
+    .selectDistinct({
+      option: StockOptions.option,
+      specification: StockOptions.specification,
+    })
+    .from(StockOptions)
+    .where(isNotNull(StockOptions.specification))
+    .orderBy(StockOptions.option, StockOptions.specification);
 
   return {
     lot,
@@ -750,8 +801,14 @@ export const getStockLotDialog = async (
       plannedMoves: movesPlanned,
     }),
     weights: lotWeights(lot),
+    workOrderQuantities: {
+      new: quantityOf("new"),
+      released: quantityOf("released"),
+      ready: quantityOf("ready"),
+    },
     reservations,
     options,
+    optionSpecifications,
   };
 };
 
@@ -778,6 +835,7 @@ export const getLotReservations = async (
       quantityKg: Reservations.quantityKg,
       reservedFor: Reservations.reservedFor,
       changedAt: Reservations.changedAt,
+      updatedAt: Reservations.updatedAt,
       orderItemUuid: Reservations.orderItemUuid,
       orderUuid: OrderItems.orderUuid,
       orderNumber: Orders.id,
@@ -1152,25 +1210,53 @@ export const getLotOptions = async (
     .where(eq(StockOptions.stockUuid, stockUuid))
     .orderBy(StockOptions.createdAt);
 
-export const addLotOption = async (
+/**
+ * `Opslaan` on `Voorraad opties` — commit the staged edits in one go.
+ *
+ * The reference (249-251) buffers every `Toevoegen` and every `Verwijder
+ * geselecteerde optie` in the dialog and writes them only on `Opslaan`, so a
+ * half-finished edit never reaches the lot. One transaction, removals first, so
+ * re-adding an option that was just removed does not trip the unique index.
+ *
+ * 🔑 The status is stamped here, never chosen: a row added through
+ * `Toevoegen` is `to_add` — pending work, not yet true of the metal.
+ */
+export const saveLotOptions = async (
   _prevState: StockLotActionResult,
-  input: StockOptionFormValues,
+  input: StockOptionsSaveValues,
 ): Promise<StockLotActionResult> => {
   await requireAuth();
 
-  const parsed = stockOptionSchema.safeParse(input);
+  const parsed = stockOptionsSaveSchema.safeParse(input);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid option" };
+    return { error: parsed.error.issues[0]?.message ?? "Invalid options" };
   }
   const values = parsed.data;
 
   try {
-    await db.insert(StockOptions).values({
-      uuid: generateUuid(),
-      stockUuid: values.stockUuid,
-      option: values.option,
-      specification: values.specification?.trim() || null,
-      status: values.status,
+    await db.transaction(async (tx) => {
+      if (values.removals.length > 0) {
+        await tx
+          .delete(StockOptions)
+          .where(
+            and(
+              eq(StockOptions.stockUuid, values.stockUuid),
+              inArray(StockOptions.uuid, values.removals),
+            ),
+          );
+      }
+
+      if (values.additions.length > 0) {
+        await tx.insert(StockOptions).values(
+          values.additions.map((addition) => ({
+            uuid: generateUuid(),
+            stockUuid: values.stockUuid,
+            option: addition.option,
+            specification: addition.specification?.trim() || null,
+            status: "to_add" as const,
+          })),
+        );
+      }
     });
 
     revalidatePath(`/stock/${values.stockUuid}`);
@@ -1181,24 +1267,9 @@ export const addLotOption = async (
     return {
       error: describeError(
         error,
-        "Failed to add the option — it may already be on this lot",
+        "Failed to save the options — one may already be on this lot",
       ),
     };
-  }
-};
-
-export const deleteLotOption = async (
-  _prevState: StockLotActionResult,
-  input: { optionUuid: string; stockUuid: string },
-): Promise<StockLotActionResult> => {
-  await requireAuth();
-
-  try {
-    await db.delete(StockOptions).where(eq(StockOptions.uuid, input.optionUuid));
-    revalidatePath(`/stock/${input.stockUuid}`);
-    return { success: true };
-  } catch (error) {
-    return { error: describeError(error, "Failed to remove the option") };
   }
 };
 
@@ -1239,10 +1310,12 @@ export const getSupplierDeliveriesForLot = async (
       lineNumber: PurchaseOrderItems.lineNumber,
       supplierCode: Companies.id,
       supplierName: Companies.companyName,
+      productCode: Products.productCode,
       receiptDate: PurchaseLineReceivals.receiptDate,
       lengthMm: PurchaseOrderItems.lengthMm,
       widthMm: PurchaseOrderItems.widthMm,
       qtyWeighed: PurchaseLineReceivals.qtyActual,
+      unit: PurchaseLineReceivals.unit,
       kgWeighed: PurchaseLineReceivals.kgActual,
       charge: PurchaseLineReceivals.charge,
       internalCharge: PurchaseLineReceivals.internalCharge,
@@ -1257,6 +1330,7 @@ export const getSupplierDeliveriesForLot = async (
       eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
     )
     .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
+    .leftJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
     .where(
       and(
         eq(PurchaseOrderItems.productUuid, lot.productUuid),

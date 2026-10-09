@@ -79,7 +79,9 @@ export const StockRelocateDialog = ({
       stockUuid: lot.uuid,
       quantity: "",
       toLocationUuid: "",
-      reason: "to_another_location",
+      // `-leeg-` in the reference (230), and `OK en gereed` greyed until a
+      // reason is picked — so no reason is pre-chosen here either.
+      reason: undefined,
       // The reference defaults the execution date to today.
       executeOn: todayDateString(),
       includeReservations: false,
@@ -95,6 +97,7 @@ export const StockRelocateDialog = ({
 
   const quantity = Number(watch("quantity"));
   const toLocationUuid = watch("toLocationUuid");
+  const reason = watch("reason");
   const unit = lot.unit ? STOCK_UNIT_LABELS[lot.unit] : "";
 
   const onSubmit = handleSubmit((values) => {
@@ -108,7 +111,8 @@ export const StockRelocateDialog = ({
     Number.isFinite(quantity) &&
     quantity > 0 &&
     quantity <= ledger.totalMovable &&
-    Boolean(toLocationUuid);
+    Boolean(toLocationUuid) &&
+    Boolean(reason);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -129,18 +133,23 @@ export const StockRelocateDialog = ({
               totalLabel="Total movable"
             />
 
+            {/* `Interne charge` and `Bundel`, both greyed — the `Verplaatsen`
+                box of 230 names the lot by the two, never by its shelf. */}
             <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3">
               <div>
                 <p className="text-xs text-muted-foreground">Internal charge</p>
                 <p className="text-sm">{lot.internalCharge ?? "—"}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">From location</p>
-                <p className="text-sm">{lot.locationName ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">Bundle</p>
+                <p className="text-sm">{lot.internalBatch ?? "—"}</p>
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            {/* The reference's order (230): `Hoeveelheid` with `Incl.
+                reserveringen` on one row, then `Naar locatie`, `Reden`, and
+                `Uitvoerdatum` last. */}
+            <div className="grid items-end gap-3 sm:grid-cols-2">
               <div>
                 <FormLabel htmlFor="relocate-quantity" required>
                   Quantity ({unit})
@@ -152,23 +161,26 @@ export const StockRelocateDialog = ({
                 />
                 <FormFieldError message={errors.quantity?.message} />
               </div>
-              <div>
-                <FormLabel htmlFor="relocate-execute-on" required>
-                  Execution date
-                </FormLabel>
-                <Controller
-                  control={control}
-                  name="executeOn"
-                  render={({ field }) => (
-                    <DatePicker
-                      id="relocate-execute-on"
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
+              <Controller
+                control={control}
+                name="includeReservations"
+                render={({ field }) => (
+                  <label className="flex items-start gap-2 text-sm">
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={field.value}
+                      onChange={(event) => field.onChange(event.target.checked)}
                     />
-                  )}
-                />
-                <FormFieldError message={errors.executeOn?.message} />
-              </div>
+                    <span>
+                      Include reservations
+                      <span className="block text-xs text-muted-foreground">
+                        Reserved metal is movable either way — a reservation
+                        binds the lot, not the shelf.
+                      </span>
+                    </span>
+                  </label>
+                )}
+              />
             </div>
 
             <div>
@@ -201,7 +213,9 @@ export const StockRelocateDialog = ({
                 render={({ field }) => (
                   <Select
                     id="relocate-reason"
-                    value={field.value}
+                    value={field.value ?? ""}
+                    placeholder="-empty-"
+                    invalid={Boolean(errors.reason)}
                     options={relocationReasons.map((value) => ({
                       value,
                       label: RELOCATION_REASON_LABELS[value],
@@ -213,26 +227,23 @@ export const StockRelocateDialog = ({
               <FormFieldError message={errors.reason?.message} />
             </div>
 
-            <Controller
-              control={control}
-              name="includeReservations"
-              render={({ field }) => (
-                <label className="flex items-start gap-2 text-sm">
-                  <Checkbox
-                    className="mt-0.5"
-                    checked={field.value}
-                    onChange={(event) => field.onChange(event.target.checked)}
+            <div>
+              <FormLabel htmlFor="relocate-execute-on" required>
+                Execution date
+              </FormLabel>
+              <Controller
+                control={control}
+                name="executeOn"
+                render={({ field }) => (
+                  <DatePicker
+                    id="relocate-execute-on"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
                   />
-                  <span>
-                    Include reservations
-                    <span className="block text-xs text-muted-foreground">
-                      Reserved metal is movable either way — a reservation binds
-                      the lot, not the shelf.
-                    </span>
-                  </span>
-                </label>
-              )}
-            />
+                )}
+              />
+              <FormFieldError message={errors.executeOn?.message} />
+            </div>
 
             <FormError>{state.error}</FormError>
           </DialogBody>

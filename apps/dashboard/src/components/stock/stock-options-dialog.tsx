@@ -1,8 +1,7 @@
 "use client";
 
 import {
-  addLotOption,
-  deleteLotOption,
+  saveLotOptions,
   StockLotDialogData,
 } from "@/app/(dashboard)/stock/actions";
 import {
@@ -19,7 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
-import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import {
   Table,
@@ -31,7 +29,8 @@ import {
 } from "@/components/shadcn/table";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { stockOptions, stockOptionStatuses } from "@/lib/enums";
+import { StockOption, StockOptionStatus, stockOptions } from "@/lib/enums";
+import { cn, generateUuid } from "@/lib/helpers";
 import {
   STOCK_OPTION_LABELS,
   STOCK_OPTION_STATUS_LABELS,
@@ -45,6 +44,22 @@ type Props = {
   data: StockLotDialogData;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+};
+
+/** A `Toevoegen` not yet saved — held in the dialog until `Opslaan`. */
+type StagedOption = {
+  key: string;
+  option: StockOption;
+  specification: string;
+};
+
+/** One row of the grid: a saved option still standing, or a staged one. */
+type OptionGridRow = {
+  key: string;
+  option: StockOption;
+  specification: string | null;
+  status: StockOptionStatus;
+  staged: boolean;
 };
 
 /**
@@ -67,41 +82,134 @@ type Props = {
  * a contradiction that was going to be chased across 2.910 batch rows.
  */
 export const StockOptionsDialog = ({ data, open, onOpenChange }: Props) => {
-  const { lot, options } = data;
-  const [addState, add, isAdding] = useActionState(addLotOption, {});
-  const [removeState, remove, isRemoving] = useActionState(deleteLotOption, {});
-  const [confirming, setConfirming] = useState<string | null>(null);
+  const { lot, options, optionSpecifications } = data;
+  const [saveState, save, isSaving] = useActionState(saveLotOptions, {});
+  // 🔑 Nothing is written until `Opslaan` (249-251): adds and removals are
+  // staged here, and `Annuleren` drops them.
+  const [additions, setAdditions] = useState<StagedOption[]>([]);
+  const [removals, setRemovals] = useState<string[]>([]);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   const {
     control,
-    register,
     reset,
+    watch,
     handleSubmit,
     formState: { errors },
   } = useForm<StockOptionFormValues>({
     resolver: zodResolver(stockOptionSchema),
+    // `Optie` opens blank in the reference, `Toevoegen` greyed until one is
+    // chosen.
     defaultValues: {
-      stockUuid: lot.uuid,
-      option: "uv_foil",
+      option: undefined,
       specification: "",
-      status: "to_add",
     },
   });
 
-  useEffect(() => {
-    if (addState.success) {
-      reset();
-    }
-  }, [addState, reset]);
+  const chosenOption = watch("option");
 
-  const onSubmit = handleSubmit((values) => {
-    startTransition(() => {
-      add({ ...values, stockUuid: lot.uuid });
-    });
+  const discard = () => {
+    setAdditions([]);
+    setRemovals([]);
+    setSelectedKey(null);
+    reset();
+  };
+
+  useEffect(() => {
+    if (saveState.success) {
+      setAdditions([]);
+      setRemovals([]);
+      setSelectedKey(null);
+      onOpenChange(false);
+    }
+  }, [saveState, onOpenChange]);
+
+  const rows: OptionGridRow[] = [
+    ...options
+      .filter((row) => !removals.includes(row.uuid))
+      .map((row) => ({
+        key: row.uuid,
+        option: row.option,
+        specification: row.specification,
+        status: row.status,
+        staged: false,
+      })),
+    ...additions.map((row) => ({
+      key: row.key,
+      option: row.option,
+      specification: row.specification || null,
+      status: "to_add" as const,
+      staged: true,
+    })),
+  ];
+  const selected = rows.find((row) => row.key === selectedKey) ?? null;
+
+  // `Specificatie` is a combo, not free text: the specifications already on
+  // record against the chosen option, and a blank.
+  const specificationOptions = [
+    { value: "", label: "-empty-" },
+    ...optionSpecifications
+      .filter((row) => row.option === chosenOption && row.specification)
+      .map((row) => ({
+        value: row.specification ?? "",
+        label: row.specification ?? "",
+      })),
+  ];
+
+  const onAdd = handleSubmit((values) => {
+    setAdditions((current) => [
+      ...current,
+      {
+        key: generateUuid(),
+        option: values.option,
+        specification: values.specification?.trim() ?? "",
+      },
+    ]);
+    reset();
   });
 
+  // `Verwijder geselecteerde optie` — a staged row simply goes; a saved one
+  // is marked for removal and leaves on `Opslaan`.
+  const removeSelected = () => {
+    if (!selected) {
+      return;
+    }
+    if (selected.staged) {
+      setAdditions((current) =>
+        current.filter((row) => row.key !== selected.key),
+      );
+    } else {
+      setRemovals((current) => [...current, selected.key]);
+    }
+    setSelectedKey(null);
+  };
+
+  const onSave = () => {
+    startTransition(() => {
+      save({
+        stockUuid: lot.uuid,
+        additions: additions.map((row) => ({
+          option: row.option,
+          specification: row.specification,
+        })),
+        removals,
+      });
+    });
+  };
+
+  const dirty = additions.length > 0 || removals.length > 0;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // Closing without `Opslaan` is `Annuleren`: the staged edits go.
+        if (!next) {
+          discard();
+        }
+        onOpenChange(next);
+      }}
+    >
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Stock options</DialogTitle>
@@ -118,22 +226,29 @@ export const StockOptionsDialog = ({ data, open, onOpenChange }: Props) => {
                 <TableHead>Option</TableHead>
                 <TableHead>Specification</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {options.length === 0 ? (
+              {rows.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={4}
+                    colSpan={3}
                     className="h-20 text-center text-muted-foreground"
                   >
                     No options on this lot.
                   </TableCell>
                 </TableRow>
               ) : (
-                options.map((row) => (
-                  <TableRow key={row.uuid}>
+                rows.map((row) => (
+                  <TableRow
+                    key={row.key}
+                    aria-selected={row.key === selectedKey}
+                    onClick={() => setSelectedKey(row.key)}
+                    className={cn(
+                      "cursor-pointer",
+                      row.key === selectedKey && "bg-accent",
+                    )}
+                  >
                     <TableCell className="font-medium">
                       {STOCK_OPTION_LABELS[row.option]}
                     </TableCell>
@@ -141,58 +256,30 @@ export const StockOptionsDialog = ({ data, open, onOpenChange }: Props) => {
                     <TableCell>
                       {STOCK_OPTION_STATUS_LABELS[row.status]}
                     </TableCell>
-                    <TableCell>
-                      {/* The reference asks "Weet je dit zeker?" before it
-                          removes a row, so this does too. */}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        aria-label={`Remove ${STOCK_OPTION_LABELS[row.option]}`}
-                        disabled={isRemoving}
-                        onClick={() => setConfirming(row.uuid)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
 
-          {confirming ? (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3">
-              <p className="text-sm">Remove this option from the lot?</p>
-              <div className="mt-2 flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setConfirming(null)}
-                >
-                  No
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={isRemoving}
-                  onClick={() =>
-                    startTransition(() => {
-                      remove({ optionUuid: confirming, stockUuid: lot.uuid });
-                      setConfirming(null);
-                    })
-                  }
-                >
-                  Yes
-                </Button>
-              </div>
-            </div>
-          ) : null}
+          {/* One `Verwijder geselecteerde optie`, acting on the selected row
+              and greyed until there is one (249) — not a bin per row. */}
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!selected}
+              onClick={removeSelected}
+            >
+              <Trash2 className="size-4" />
+              Remove selected option
+            </Button>
+          </div>
 
-          <FormError>{removeState.error}</FormError>
-
-          <form onSubmit={onSubmit} className="space-y-3 rounded-lg border p-3">
-            <p className="text-sm font-medium">Add an option</p>
-            <div className="grid gap-3 sm:grid-cols-3">
+          <form onSubmit={onAdd} className="space-y-3 rounded-lg border p-3">
+            <p className="text-sm font-medium">Add</p>
+            <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <FormLabel htmlFor="option-option" required>
                   Option
@@ -203,7 +290,8 @@ export const StockOptionsDialog = ({ data, open, onOpenChange }: Props) => {
                   render={({ field }) => (
                     <Select
                       id="option-option"
-                      value={field.value}
+                      value={field.value ?? ""}
+                      placeholder="-empty-"
                       options={stockOptions.map((value) => ({
                         value,
                         label: STOCK_OPTION_LABELS[value],
@@ -218,46 +306,50 @@ export const StockOptionsDialog = ({ data, open, onOpenChange }: Props) => {
                 <FormLabel htmlFor="option-specification">
                   Specification
                 </FormLabel>
-                <Input
-                  id="option-specification"
-                  {...register("specification")}
-                />
-                <FormFieldError message={errors.specification?.message} />
-              </div>
-              <div>
-                <FormLabel htmlFor="option-status" required>
-                  Status
-                </FormLabel>
                 <Controller
                   control={control}
-                  name="status"
+                  name="specification"
                   render={({ field }) => (
                     <Select
-                      id="option-status"
-                      value={field.value}
-                      options={stockOptionStatuses.map((value) => ({
-                        value,
-                        label: STOCK_OPTION_STATUS_LABELS[value],
-                      }))}
+                      id="option-specification"
+                      value={field.value ?? ""}
+                      placeholder="-empty-"
+                      options={specificationOptions}
                       onValueChange={field.onChange}
                     />
                   )}
                 />
-                <FormFieldError message={errors.status?.message} />
+                <FormFieldError message={errors.specification?.message} />
               </div>
             </div>
-            <FormError>{addState.error}</FormError>
             <div className="flex justify-end">
-              <Button type="submit" variant="outline" disabled={isAdding}>
-                {isAdding ? "Adding…" : "Add"}
+              <Button type="submit" variant="outline" disabled={!chosenOption}>
+                Add
               </Button>
             </div>
           </form>
+
+          <FormError>{saveState.error}</FormError>
         </DialogBody>
 
         <DialogFooter>
-          <Button type="button" onClick={() => onOpenChange(false)}>
-            Close
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isSaving}
+            onClick={() => {
+              discard();
+              onOpenChange(false);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={isSaving || !dirty}
+            onClick={onSave}
+          >
+            {isSaving ? "Saving…" : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>

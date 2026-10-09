@@ -13,6 +13,7 @@ import {
 } from "@/components/shadcn/table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
+import { ProductStockGrid } from "@/components/products/product-stock-grid";
 import {
   formatDateColumn,
   formatMoney,
@@ -344,53 +345,9 @@ export const ProductPanels = ({ product }: Props) => (
       title="Stock"
       summary={pluralize(product.stock.length, "stock lot")}
     >
-      <Grid
-        headers={[
-          "Location",
-          "Quality",
-          "Length",
-          "Width",
-          "Thickness",
-          "Technical",
-          "Reserved",
-          "Available",
-          "Charge",
-          "Status",
-        ]}
-        emptyMessage="No stock on hand."
-        rowCount={product.stock.length}
-      >
-        {product.stock.map((row) => (
-          <TableRow key={row.uuid}>
-            <TableCell className="font-medium">
-              {orDash(row.locationName)}
-            </TableCell>
-            <TableCell>{orDash(row.quality)}</TableCell>
-            <TableCell className="text-right tabular-nums">
-              {orDash(row.lengthMm)}
-            </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {orDash(row.widthMm)}
-            </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {orDash(row.thicknessMm)}
-            </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {formatNumber(Number(row.quantity ?? 0))}
-            </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {formatNumber(Number(row.reservedQuantity ?? 0))}
-            </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {formatNumber(
-                Number(row.quantity ?? 0) - Number(row.reservedQuantity ?? 0),
-              )}
-            </TableCell>
-            <TableCell>{orDash(row.charge)}</TableCell>
-            <TableCell>{orDash(row.status)}</TableCell>
-          </TableRow>
-        ))}
-      </Grid>
+      {/* The lot toolbar sits above this grid and acts on the selected row,
+          as on the reference's article screen (230/249/252). */}
+      <ProductStockGrid rows={product.stock} />
     </CollapsibleSection>
 
     <CollapsibleSection

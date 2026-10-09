@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 type Props = {
-  purchaseOrderItemUuid: string;
+  /** The selected line; null greys the button until a row is picked. */
+  purchaseOrderItemUuid: string | null;
 };
 
 export const ReceiveLineButton = ({ purchaseOrderItemUuid }: Props) => {
@@ -17,6 +18,9 @@ export const ReceiveLineButton = ({ purchaseOrderItemUuid }: Props) => {
 
   const onClick = () =>
     startTransition(async () => {
+      if (!purchaseOrderItemUuid) {
+        return;
+      }
       setError(null);
       const result = await receivePurchaseOrderLine(purchaseOrderItemUuid);
       if (result.error) {
@@ -27,8 +31,14 @@ export const ReceiveLineButton = ({ purchaseOrderItemUuid }: Props) => {
     });
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <Button type="button" size="sm" onClick={onClick} disabled={isPending}>
+    <div className="flex flex-col items-start gap-1">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onClick}
+        disabled={isPending || !purchaseOrderItemUuid}
+      >
         <PackageCheck className="mr-1 size-3.5" />
         {isPending ? "Receiving…" : "Receive"}
       </Button>

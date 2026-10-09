@@ -5,7 +5,6 @@ import {
   stockCorrectionReasons,
   stockLabelTypes,
   stockOptions,
-  stockOptionStatuses,
   transferReasons,
 } from "@/lib/enums";
 
@@ -214,18 +213,32 @@ export type StockTransferFormValues = z.infer<typeof stockTransferSchema>;
  * 🔴 Options are **rows**, not a column of text. This is the schema behind that
  * change: an option carries a specification and a status of its own, and a
  * `varchar` could hold neither.
+ *
+ * No status here: the reference's `Toevoegen` block (249) offers only `Optie`
+ * and `Specificatie`, and the status it produces is `Toevoegen` — a pending
+ * edit, stamped by the server, not something a user picks.
  */
 export const stockOptionSchema = z.object({
-  stockUuid: z.string().min(1, "Stock lot is required"),
   option: z.enum(stockOptions, { message: "Choose an option" }),
   specification: z.string().max(255).optional(),
-  // Defaulted rather than chosen: the reference's `Toevoegen` block offers only
-  // `Optie` and `Specificatie`, and the status it produces is `Toevoegen` —
-  // a pending edit, not something a user picks.
-  status: z.enum(stockOptionStatuses, { message: "Choose a status" }),
 });
 
 export type StockOptionFormValues = z.infer<typeof stockOptionSchema>;
+
+/**
+ * `Opslaan` on `Voorraad opties` — the staged edits, committed together.
+ *
+ * The reference (249-251) buffers every `Toevoegen` and every `Verwijder
+ * geselecteerde optie` and writes nothing until `Opslaan`; `Annuleren` throws
+ * the lot away. So the save carries both lists at once.
+ */
+export const stockOptionsSaveSchema = z.object({
+  stockUuid: z.string().min(1, "Stock lot is required"),
+  additions: z.array(stockOptionSchema),
+  removals: z.array(z.string().min(1)),
+});
+
+export type StockOptionsSaveValues = z.infer<typeof stockOptionsSaveSchema>;
 
 /**
  * `Voorraadlabel` — `Selecteer type voorraadlabel en aantal`.

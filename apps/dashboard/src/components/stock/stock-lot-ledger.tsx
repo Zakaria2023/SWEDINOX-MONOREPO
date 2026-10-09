@@ -16,6 +16,18 @@ type LotWeightsProps = {
   weights: LotWeights;
 };
 
+type LotWorkSummaryProps = {
+  /** `Nieuw` · `Vrijgegeven` · `Klaar` — open warehouse work, by status. */
+  workOrderQuantities: { new: number; released: number; ready: number };
+  ledger: LotLedger;
+  unit: string;
+};
+
+type SummaryLineProps = {
+  label: string;
+  value: number;
+};
+
 type LedgerLineProps = {
   label: string;
   value: number;
@@ -47,6 +59,52 @@ const LedgerLine = ({ label, value, indented, strong }: LedgerLineProps) => (
     >
       {formatQuantity(value)}
     </span>
+  </div>
+);
+
+const SummaryLine = ({ label, value }: SummaryLineProps) => (
+  <div className="flex items-baseline justify-between gap-4">
+    <span className="text-sm text-foreground">{label}</span>
+    <span className="text-sm tabular-nums">{formatQuantity(value)}</span>
+  </div>
+);
+
+/**
+ * The summary `Corrigeren voorraad` (233) and `Aanmaken overboekingsopdracht`
+ * (240) open with — not the relocation ledger below.
+ *
+ * Same title, `Hoeveelheid in magazijnopdrachten en reserveringen`, but two
+ * columns of three:
+ *
+ *   Nieuw:          0        Niet gereserveerd:   0
+ *   Vrijgegeven:    0        Gereserveerd:       25
+ *   Klaar:          0        Beschikbaar:         0
+ *
+ * The left is what stands on this lot's warehouse work orders, per status; the
+ * right is how the lot splits between free and claimed. Neither dialog moves
+ * metal by the relocation rules, so neither carries `Totaal verplaatsbaar`.
+ */
+export const StockLotWorkSummary = ({
+  workOrderQuantities,
+  ledger,
+  unit,
+}: LotWorkSummaryProps) => (
+  <div className="rounded-lg border bg-muted/30 p-3">
+    <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+      Quantity in warehouse orders and reservations ({unit})
+    </p>
+    <div className="grid gap-x-8 gap-y-1 sm:grid-cols-2">
+      <div className="space-y-1">
+        <SummaryLine label="New" value={workOrderQuantities.new} />
+        <SummaryLine label="Released" value={workOrderQuantities.released} />
+        <SummaryLine label="Ready" value={workOrderQuantities.ready} />
+      </div>
+      <div className="space-y-1">
+        <SummaryLine label="Not reserved" value={ledger.available} />
+        <SummaryLine label="Reserved" value={ledger.reserved} />
+        <SummaryLine label="Available" value={ledger.availableAndMovable} />
+      </div>
+    </div>
   </div>
 );
 

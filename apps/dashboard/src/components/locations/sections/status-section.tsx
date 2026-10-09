@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { LocationEditValues } from "@/app/(dashboard)/locations/validation";
 import { Checkbox } from "@/components/shadcn/checkbox";
@@ -9,7 +10,7 @@ import { FormSelectField } from "@/components/ui/form-select-field";
 import { SelectOption } from "@/components/shadcn/select";
 import { warehouseProductTypes, WarehouseProductType } from "@/lib/enums";
 import { WAREHOUSE_PRODUCT_TYPE_LABELS } from "@/lib/labels";
-import { cn } from "@/lib/helpers";
+import { blockReasonForLocationType, cn } from "@/lib/helpers";
 
 type Props = {
   blocked: boolean;
@@ -25,6 +26,23 @@ export const StatusSection = ({ blocked, blockReasonOptions }: Props) => {
     formState: { errors },
   } = useFormContext<LocationEditValues>();
 
+  // 🔑 `Geblokkeerd`, `Reden` and `Beperkte afmetingen` are greyed on the
+  // reference's location screen (246, `Reden: Location type setting`): they
+  // follow from the location type, not from a tick. A type that blocks by its
+  // nature sets both here; any other type leaves what is stored, because a
+  // location blocked by hand stays blocked. `Geblokkeerd voor optimalisatie`
+  // has no type behaviour behind it, so it stays a free tick.
+  const typeBlockReason = blockReasonForLocationType(
+    watch("locationType") || null,
+  );
+
+  useEffect(() => {
+    if (typeBlockReason) {
+      setValue("blocked", true);
+      setValue("blockReason", typeBlockReason);
+    }
+  }, [typeBlockReason, setValue]);
+
   return (
     <section className="space-y-4">
       <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -32,15 +50,10 @@ export const StatusSection = ({ blocked, blockReasonOptions }: Props) => {
       </h2>
       <div className="space-y-4">
         <label className="flex cursor-pointer items-center gap-3">
-          <Checkbox
-            id="blocked"
-            checked={watch("blocked")}
-            onChange={(e) => {
-              setValue("blocked", e.target.checked);
-              if (!e.target.checked) setValue("blockReason", "");
-            }}
-          />
-          <span className="text-sm font-medium">Blocked</span>
+          <Checkbox id="blocked" checked={watch("blocked")} readOnly disabled />
+          <span className="text-sm font-medium text-muted-foreground">
+            Blocked
+          </span>
         </label>
 
         <div
@@ -56,7 +69,7 @@ export const StatusSection = ({ blocked, blockReasonOptions }: Props) => {
             label="Reason"
             options={blockReasonOptions}
             emptyValue=""
-            disabled={!blocked}
+            disabled
           />
         </div>
 
@@ -75,9 +88,12 @@ export const StatusSection = ({ blocked, blockReasonOptions }: Props) => {
           <Checkbox
             id="limitedDimensions"
             checked={watch("limitedDimensions")}
-            onChange={(e) => setValue("limitedDimensions", e.target.checked)}
+            readOnly
+            disabled
           />
-          <span className="text-sm font-medium">Limited Dimensions</span>
+          <span className="text-sm font-medium text-muted-foreground">
+            Limited Dimensions
+          </span>
         </label>
       </div>
 

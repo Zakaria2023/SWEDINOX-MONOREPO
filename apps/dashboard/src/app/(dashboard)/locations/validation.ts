@@ -35,8 +35,9 @@ const locationFields = z.object({
   maxWidth: z.union([z.number().int().min(0), z.literal(""), z.undefined()]),
   maxWeight: z.union([z.number().int().min(0), z.literal(""), z.undefined()]),
   productTypes: z.array(z.enum(warehouseProductTypes)),
+  // `Pickvolgorde` reads 0 on the reference's `Laad` (246), so 0 is legal.
   pickingSequence: z.union([
-    z.number().int().min(1),
+    z.number().int().min(0),
     z.literal(""),
     z.undefined(),
   ]),

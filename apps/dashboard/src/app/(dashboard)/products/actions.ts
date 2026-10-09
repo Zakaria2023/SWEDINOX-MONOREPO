@@ -587,6 +587,48 @@ export const deleteProduct = async (
   redirect("/products");
 };
 
+/**
+ * `Kopieer artikel(groep)en` on the article toolbar (244/249) — start a new
+ * article from this one.
+ *
+ * The copy is the article record alone, under its code with `-COPY` behind it
+ * so it cannot be mistaken for the original; it opens in the editor to be
+ * renamed. Suppliers, prices and stock stay with the original — a copy that
+ * dragged its stock along would count the same metal twice.
+ */
+export const copyProduct = async (
+  uuid: string,
+): Promise<ProductActionResult> => {
+  const copyUuid = generateUuid();
+  try {
+    const [source] = await db
+      .select()
+      .from(Products)
+      .where(eq(Products.uuid, uuid))
+      .limit(1);
+
+    if (!source) {
+      return { error: "Product not found." };
+    }
+
+    await db.insert(Products).values({
+      ...source,
+      id: undefined,
+      uuid: copyUuid,
+      productCode: `${source.productCode}-COPY`,
+      createdAt: undefined,
+      updatedAt: undefined,
+    });
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Failed to copy product",
+    };
+  }
+
+  revalidatePath("/products");
+  redirect(`/products/${copyUuid}/edit`);
+};
+
 // ── Detail ──────────────────────────────────────────────────────────────────
 // Every line-level grid on the product screen is a document line joined back to
 // its header, so each row can say which order, quote or customer it belongs to.

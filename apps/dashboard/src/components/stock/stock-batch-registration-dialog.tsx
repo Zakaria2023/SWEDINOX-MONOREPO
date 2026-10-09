@@ -30,9 +30,10 @@ import {
 } from "@/components/shadcn/table";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { formatDateColumn } from "@/lib/helpers";
+import { cn, formatDateColumn } from "@/lib/helpers";
 import { STOCK_UNIT_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Ellipsis } from "lucide-react";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -71,9 +72,27 @@ export const StockBatchRegistrationDialog = ({
   open,
   onOpenChange,
 }: Props) => {
-  const { lot } = data;
+  const { lot, ledger, weights } = data;
   const [state, dispatch, isPending] = useActionState(registerStockBatch, {});
-  const [picked, setPicked] = useState<SupplierDeliveryRow | null>(null);
+
+  // The reference opens with the delivery this lot already hangs on selected
+  // and `Partijkenmerken` filled (244: `403773`, `7-8-2026`), so `OK` is live
+  // from the start. The receival is found by our internal charge first — it is
+  // stamped per instalment — and by the purchase line after that.
+  const linked =
+    deliveries.find(
+      (row) =>
+        Boolean(lot.internalCharge) &&
+        row.internalCharge === lot.internalCharge,
+    ) ??
+    deliveries.find(
+      (row) =>
+        Boolean(lot.purchaseOrderItemUuid) &&
+        row.purchaseOrderItemUuid === lot.purchaseOrderItemUuid,
+    ) ??
+    null;
+
+  const [picked, setPicked] = useState<SupplierDeliveryRow | null>(linked);
 
   const {
     register,
@@ -85,9 +104,9 @@ export const StockBatchRegistrationDialog = ({
     resolver: zodResolver(batchRegistrationSchema),
     defaultValues: {
       stockUuid: lot.uuid,
-      purchaseLineReceivalUuid: "",
-      purchaseOrderItemUuid: "",
-      charge: lot.charge ?? "",
+      purchaseLineReceivalUuid: linked?.receivalUuid ?? "",
+      purchaseOrderItemUuid: linked?.purchaseOrderItemUuid ?? "",
+      charge: lot.charge ?? linked?.charge ?? "",
       factoryNumber: lot.factoryNumber ?? "",
     },
   });
@@ -117,6 +136,9 @@ export const StockBatchRegistrationDialog = ({
   });
 
   const unit = lot.unit ? STOCK_UNIT_LABELS[lot.unit] : "";
+  // `Leverancier` above the grid — the supplier whose deliveries are listed,
+  // which is the lot's own: the grid is narrowed to it.
+  const supplierName = deliveries[0]?.supplierName ?? null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -132,31 +154,65 @@ export const StockBatchRegistrationDialog = ({
 
           <DialogBody className="space-y-4">
             {/* ── Artikel / Voorraad — the lot being registered ───────────── */}
+            {/* One row, the reference's thirteen columns (244). `Item Code` has
+                no source we know of and reads blank. */}
             <div>
               <p className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 Article / stock
               </p>
-              <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3 sm:grid-cols-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Code</p>
-                  <p className="text-sm">{lot.productCode ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Location</p>
-                  <p className="text-sm">{lot.locationName ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Quantity</p>
-                  <p className="text-sm">
-                    {lot.quantity} {unit}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">
-                    Internal charge (ours)
-                  </p>
-                  <p className="text-sm">{lot.internalCharge ?? "—"}</p>
-                </div>
+              <div className="overflow-x-auto rounded-lg border bg-muted/30">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Article</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead className="text-right">Stock</TableHead>
+                      <TableHead className="text-right">Reserved</TableHead>
+                      <TableHead className="text-right">Available</TableHead>
+                      <TableHead className="text-right">Length</TableHead>
+                      <TableHead className="text-right">Width</TableHead>
+                      <TableHead className="text-right">Thickness</TableHead>
+                      <TableHead className="text-right">Kg</TableHead>
+                      <TableHead>Charge</TableHead>
+                      <TableHead>Internal charge</TableHead>
+                      <TableHead>Item code</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="font-medium">
+                        {lot.productCode ?? "—"}
+                      </TableCell>
+                      <TableCell>{lot.productName ?? "—"}</TableCell>
+                      <TableCell>{lot.locationName ?? "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {ledger.technical} {unit}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {ledger.reserved} {unit}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {ledger.available} {unit}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {lot.lengthMm ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {lot.widthMm ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {lot.thicknessMm ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {weights.theoreticalKg ?? "—"}
+                      </TableCell>
+                      <TableCell>{lot.charge ?? "—"}</TableCell>
+                      <TableCell>{lot.internalCharge ?? "—"}</TableCell>
+                      <TableCell>—</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
               </div>
             </div>
 
@@ -165,27 +221,48 @@ export const StockBatchRegistrationDialog = ({
               <p className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 Purchase deliveries
               </p>
+              {/* `Leverancier` sits above the grid in the reference (244),
+                  greyed with its `…` — the supplier is the lot's, not a
+                  choice. */}
+              <div className="mb-2 flex items-center gap-2">
+                <p className="w-24 shrink-0 text-sm text-muted-foreground">
+                  Supplier
+                </p>
+                <Input value={supplierName ?? ""} readOnly disabled />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Choose supplier"
+                  disabled
+                >
+                  <Ellipsis className="size-4" />
+                </Button>
+              </div>
+              {/* A row is chosen by clicking it, as in the reference — no
+                  button per row. */}
               <div className="max-h-56 overflow-y-auto rounded-lg border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Order</TableHead>
-                      <TableHead>Line</TableHead>
-                      <TableHead>Supplier</TableHead>
-                      <TableHead>Received</TableHead>
-                      <TableHead className="text-right">L</TableHead>
-                      <TableHead className="text-right">W</TableHead>
+                      <TableHead>Purchase order</TableHead>
+                      <TableHead>Order line</TableHead>
+                      <TableHead>Supplier code</TableHead>
+                      <TableHead>Article code</TableHead>
+                      <TableHead>Receipt date</TableHead>
+                      <TableHead className="text-right">Length</TableHead>
+                      <TableHead className="text-right">Width</TableHead>
                       <TableHead className="text-right">Qty (w)</TableHead>
+                      <TableHead>Qty unit</TableHead>
                       <TableHead className="text-right">Kg (w)</TableHead>
                       <TableHead>Charge</TableHead>
-                      <TableHead className="w-20" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {deliveries.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={10}
+                          colSpan={11}
                           className="h-20 text-center text-muted-foreground"
                         >
                           No deliveries of this article from this lot’s
@@ -196,20 +273,22 @@ export const StockBatchRegistrationDialog = ({
                       deliveries.map((row) => (
                         <TableRow
                           key={row.receivalUuid}
-                          className={
+                          aria-selected={
                             picked?.receivalUuid === row.receivalUuid
-                              ? "bg-accent"
-                              : ""
                           }
+                          onClick={() => choose(row)}
+                          className={cn(
+                            "cursor-pointer",
+                            picked?.receivalUuid === row.receivalUuid &&
+                              "bg-accent",
+                          )}
                         >
                           <TableCell className="font-medium">
                             {row.purchaseOrderNumber ?? "—"}
                           </TableCell>
                           <TableCell>{row.lineNumber ?? "—"}</TableCell>
-                          <TableCell>
-                            {row.supplierCode ?? "—"}
-                            {row.supplierName ? ` · ${row.supplierName}` : ""}
-                          </TableCell>
+                          <TableCell>{row.supplierCode ?? "—"}</TableCell>
+                          <TableCell>{row.productCode ?? "—"}</TableCell>
                           <TableCell>
                             {formatDateColumn(row.receiptDate)}
                           </TableCell>
@@ -222,19 +301,13 @@ export const StockBatchRegistrationDialog = ({
                           <TableCell className="text-right tabular-nums">
                             {row.qtyWeighed}
                           </TableCell>
+                          <TableCell>
+                            {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
+                          </TableCell>
                           <TableCell className="text-right tabular-nums">
                             {row.kgWeighed}
                           </TableCell>
                           <TableCell>{row.charge ?? "—"}</TableCell>
-                          <TableCell>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => choose(row)}
-                            >
-                              Pick
-                            </Button>
-                          </TableCell>
                         </TableRow>
                       ))
                     )}
@@ -313,6 +386,56 @@ export const StockBatchRegistrationDialog = ({
                   </p>
                   <Input value={lot.internalCharge ?? ""} readOnly disabled />
                 </div>
+                {/* The five greyed `Partijkenmerken` the reference also shows
+                    (244). Length and width come off the delivery; inner size
+                    and the two coil numbers are not stored here, so they read
+                    blank. */}
+                <div>
+                  <p className="mb-1 block text-sm font-medium text-muted-foreground">
+                    Length
+                  </p>
+                  <Input
+                    value={
+                      picked && picked.lengthMm !== null
+                        ? String(picked.lengthMm)
+                        : ""
+                    }
+                    readOnly
+                    disabled
+                  />
+                </div>
+                <div>
+                  <p className="mb-1 block text-sm font-medium text-muted-foreground">
+                    Width
+                  </p>
+                  <Input
+                    value={
+                      picked && picked.widthMm !== null
+                        ? String(picked.widthMm)
+                        : ""
+                    }
+                    readOnly
+                    disabled
+                  />
+                </div>
+                <div>
+                  <p className="mb-1 block text-sm font-medium text-muted-foreground">
+                    Inner size
+                  </p>
+                  <Input value="" readOnly disabled />
+                </div>
+                <div>
+                  <p className="mb-1 block text-sm font-medium text-muted-foreground">
+                    Coil number
+                  </p>
+                  <Input value="" readOnly disabled />
+                </div>
+                <div>
+                  <p className="mb-1 block text-sm font-medium text-muted-foreground">
+                    Coil sequence number
+                  </p>
+                  <Input value="" readOnly disabled />
+                </div>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 There is no certificate field here. A certificate is a stock
@@ -329,7 +452,7 @@ export const StockBatchRegistrationDialog = ({
               variant="outline"
               onClick={() => {
                 reset();
-                setPicked(null);
+                setPicked(linked);
                 onOpenChange(false);
               }}
               disabled={isPending}

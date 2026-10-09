@@ -21,8 +21,9 @@ import {
 } from "@/components/shadcn/dialog";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
+import { Textarea } from "@/components/shadcn/textarea";
 import { LocationSearchField } from "@/components/stock/location-search-field";
-import { StockLotLedger } from "@/components/stock/stock-lot-ledger";
+import { StockLotWorkSummary } from "@/components/stock/stock-lot-ledger";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { ProductSearchField } from "@/components/ui/product-search-field";
@@ -65,7 +66,7 @@ export const StockTransferDialog = ({
   open,
   onOpenChange,
 }: Props) => {
-  const { lot, ledger } = data;
+  const { lot, ledger, workOrderQuantities } = data;
   const [state, dispatch, isPending] = useActionState(transferStockLot, {});
   const [targetLabel, setTargetLabel] = useState<string | null>(null);
 
@@ -83,7 +84,9 @@ export const StockTransferDialog = ({
       quantity: "",
       toProductUuid: "",
       toLocationUuid: "",
-      reason: "transfer",
+      // Blank in the reference (240), though its list holds one value (243):
+      // `OK en gereed` stays greyed until `Transfer` is picked.
+      reason: undefined,
       description: "",
     },
   });
@@ -98,6 +101,7 @@ export const StockTransferDialog = ({
 
   const quantity = Number(watch("quantity"));
   const toProductUuid = watch("toProductUuid");
+  const reason = watch("reason");
   const unit = lot.unit ? STOCK_UNIT_LABELS[lot.unit] : "";
 
   // 🔴 A reservation cannot cross an article boundary — the order line promises
@@ -116,7 +120,8 @@ export const StockTransferDialog = ({
     Number.isFinite(quantity) &&
     quantity > 0 &&
     quantity <= unreserved &&
-    Boolean(toProductUuid);
+    Boolean(toProductUuid) &&
+    Boolean(reason);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -131,10 +136,10 @@ export const StockTransferDialog = ({
           </DialogHeader>
 
           <DialogBody className="space-y-4">
-            <StockLotLedger
+            <StockLotWorkSummary
+              workOrderQuantities={workOrderQuantities}
               ledger={ledger}
               unit={unit}
-              totalLabel="Total movable"
             />
 
             <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3">
@@ -187,10 +192,10 @@ export const StockTransferDialog = ({
                     id="transfer-product"
                     value={field.value}
                     initialLabel={targetLabel}
-                    // Re-classifying picks from the article list, regardless of
-                    // what is in stock — the lot being transferred *is* the
-                    // stock, so searching the shelf would offer the wrong set.
-                    sources={["catalogue"]}
+                    // The reference opens `Voorraad` on the shelf (241), with
+                    // `Alleen artikelen met technische voorraad` ticked; the
+                    // catalogue comes second, for an article nobody holds yet.
+                    sources={["stock", "catalogue"]}
                     invalid={Boolean(errors.toProductUuid)}
                     onChange={(choice) => {
                       field.onChange(choice.productUuid);
@@ -239,7 +244,9 @@ export const StockTransferDialog = ({
                 render={({ field }) => (
                   <Select
                     id="transfer-reason"
-                    value={field.value}
+                    value={field.value ?? ""}
+                    placeholder="-empty-"
+                    invalid={Boolean(errors.reason)}
                     options={transferReasons.map((value) => ({
                       value,
                       label: TRANSFER_REASON_LABELS[value],
@@ -255,7 +262,11 @@ export const StockTransferDialog = ({
               <FormLabel htmlFor="transfer-description">
                 Movement description
               </FormLabel>
-              <Input id="transfer-description" {...register("description")} />
+              <Textarea
+                id="transfer-description"
+                rows={3}
+                {...register("description")}
+              />
               <FormFieldError message={errors.description?.message} />
             </div>
 
@@ -272,7 +283,7 @@ export const StockTransferDialog = ({
               Cancel
             </Button>
             <Button type="submit" disabled={isPending || !legal}>
-              {isPending ? "Transferring…" : "OK"}
+              {isPending ? "Transferring…" : "OK and ready"}
             </Button>
           </DialogFooter>
         </form>

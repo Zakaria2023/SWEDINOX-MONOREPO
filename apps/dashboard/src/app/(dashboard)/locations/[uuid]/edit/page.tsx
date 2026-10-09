@@ -1,4 +1,7 @@
-import { getLocationForEdit } from "@/app/(dashboard)/locations/actions";
+import {
+  getLocationForEdit,
+  getLocationStock,
+} from "@/app/(dashboard)/locations/actions";
 import { locationToEditValues } from "@/app/(dashboard)/locations/mappers";
 import { PageHeading } from "@/components/layout/page-heading";
 import { LocationEditForm } from "@/components/locations/location-edit-form";
@@ -18,6 +21,8 @@ const EditLocationPage = async ({ params }: Props) => {
     notFound();
   }
 
+  const stock = await getLocationStock(uuid);
+
   return (
     <div className="space-y-4">
       <div>
@@ -33,6 +38,7 @@ const EditLocationPage = async ({ params }: Props) => {
       <LocationEditForm
         locationUuid={uuid}
         defaultValues={locationToEditValues(location)}
+        stock={stock}
       />
     </div>
   );

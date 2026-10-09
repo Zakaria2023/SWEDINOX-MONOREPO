@@ -45,7 +45,7 @@ export const GeneralSection = ({
           <Input
             id="pickingSequence"
             type="number"
-            min={1}
+            min={0}
             {...register("pickingSequence", {
               setValueAs: (v) => (v === "" ? "" : Number(v)),
             })}

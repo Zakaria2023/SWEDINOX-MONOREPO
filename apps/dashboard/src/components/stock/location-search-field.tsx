@@ -1,7 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Search } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  Search,
+} from "lucide-react";
 import { LocationTreeRow } from "@/app/(dashboard)/stock/actions";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -186,6 +192,31 @@ export const LocationSearchField = ({
       return next;
     });
 
+  /**
+   * The `1` `2` buttons on the reference's `Magazijn` tab (231): open the tree
+   * down to that level. Level 1 shows the warehouses alone; level 2 opens each
+   * warehouse onto the locations beneath it.
+   */
+  const expandToLevel = (level: number) =>
+    setExpanded(
+      new Set(
+        locations
+          .filter((row) => row.depth < level - 1)
+          .map((row) => row.uuid),
+      ),
+    );
+
+  const expandAll = () =>
+    setExpanded(
+      new Set(
+        locations
+          .filter((row) => (childrenOf.get(row.uuid) ?? []).length > 0)
+          .map((row) => row.uuid),
+      ),
+    );
+
+  const collapseAll = () => setExpanded(new Set());
+
   const confirm = () => {
     onChange(picked);
     setOpen(false);
@@ -231,6 +262,51 @@ export const LocationSearchField = ({
               placeholder="Search locations"
               onChange={(event) => setSearch(event.target.value)}
             />
+
+            {/* The `Magazijn` tab's toolbar (231): expand to level `1` or `2`,
+                expand everything, collapse everything. */}
+            <div className="flex flex-wrap gap-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-label="Expand to level 1"
+                disabled={Boolean(search.trim())}
+                onClick={() => expandToLevel(1)}
+              >
+                1
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-label="Expand to level 2"
+                disabled={Boolean(search.trim())}
+                onClick={() => expandToLevel(2)}
+              >
+                2
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={Boolean(search.trim())}
+                onClick={expandAll}
+              >
+                <ChevronsUpDown className="size-4" />
+                Expand all
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={Boolean(search.trim())}
+                onClick={collapseAll}
+              >
+                <ChevronsDownUp className="size-4" />
+                Collapse all
+              </Button>
+            </div>
 
             <div className="max-h-80 overflow-y-auto rounded-lg border p-2">
               {search.trim() ? (

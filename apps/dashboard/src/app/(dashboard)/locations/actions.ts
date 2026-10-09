@@ -9,10 +9,19 @@ import {
 import { Products, SelectProducts } from "@/db/schema/products";
 import { ProductPreferredLocations } from "@/db/schema/product-details";
 import { describeError, generateUuid } from "@/lib/helpers";
+import {
+  StockLotOverviewRow,
+  stockLotOverviewRows,
+} from "@/lib/server/stock-lot-overview";
+import { parseTableQuery } from "@/lib/table-query";
 import { and, asc, desc, eq, getTableColumns, isNotNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
+// Enough to show a bay's contents on its own screen; `Stock on location`,
+// filtered to the bay, is the place to page through more.
+const LOCATION_STOCK_LIMIT = 500;
 
 export type LocationFields = Omit<
   InsertWarehouses,
@@ -132,6 +141,26 @@ export const getLocationForEdit = async (
     return { ...row.location, parentName: row.parentName ?? null };
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch the location"));
+  }
+};
+
+/**
+ * The lots standing on one location — the `Voorraad` and `Klantvoorraad`
+ * sections of the reference's location screen (246, `Locatie Laad`).
+ *
+ * The same rows `Stock on location` prints, narrowed to this bay; the caller
+ * splits our own stock from the stock a customer owns.
+ */
+export const getLocationStock = async (
+  uuid: string,
+): Promise<StockLotOverviewRow[]> => {
+  try {
+    return await stockLotOverviewRows(
+      parseTableQuery({ location: uuid }),
+      "all",
+    )(LOCATION_STOCK_LIMIT, 0);
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch the location's stock"));
   }
 };
 

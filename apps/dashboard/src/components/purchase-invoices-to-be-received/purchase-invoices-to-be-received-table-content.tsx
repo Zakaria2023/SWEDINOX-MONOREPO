@@ -2,112 +2,92 @@
 
 import Link from "next/link";
 
-import { PurchaseInvoiceToReceiveRow } from "@/app/(dashboard)/purchase-invoices-to-be-received/actions";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/shadcn/table";
-import { formatDateColumn, formatMoney } from "@/lib/helpers";
-import { INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
-import { TableExportButton } from "@/components/ui/table-export-button";
+  exportPurchaseInvoicesToBeReceived,
+  PurchaseInvoicesToReceivePage,
+  PurchaseInvoiceToReceiveRow,
+} from "@/app/(dashboard)/purchase-invoices-to-be-received/actions";
+import {
+  PURCHASE_INVOICE_TO_RECEIVE_COLUMNS,
+  PurchaseInvoiceToReceiveColumnKey,
+} from "@/app/(dashboard)/purchase-invoices-to-be-received/columns";
+import { OverviewTable } from "@/components/ui/overview-table";
+import { RelatedRecordsBar } from "@/components/ui/related-records-bar";
+import { formatMoney } from "@/lib/helpers";
+import { TableFilterControl } from "@/lib/table-query";
 
 type Props = {
-  rows: PurchaseInvoiceToReceiveRow[];
+  page: PurchaseInvoicesToReceivePage;
+  filters: TableFilterControl[];
 };
 
-export const PurchaseInvoicesToBeReceivedTable = ({ rows }: Props) => {
-  const total = rows.reduce((sum, row) => sum + row.amount, 0);
-
-  return (
-    <div>
-      <div className="space-y-4">
-        <div className="flex justify-end">
-          <TableExportButton
-            tableId="purchase-invoices-to-be-received-table"
-            fileName="purchase-invoices-to-be-received"
-            sheetName="Purchase invoices to be received"
-          />
-        </div>
-        <Table id="purchase-invoices-to-be-received-table">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Purchase order</TableHead>
-              <TableHead>Company</TableHead>
-              <TableHead>Supplier reference</TableHead>
-              <TableHead className="text-right">Company code</TableHead>
-              <TableHead>City</TableHead>
-              <TableHead>Order date</TableHead>
-              <TableHead>Payment terms</TableHead>
-              <TableHead>Scheduled delivery</TableHead>
-              <TableHead>Actual delivery</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={10}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  No purchase invoices awaited.
-                </TableCell>
-              </TableRow>
-            ) : (
-              <>
-                {rows.map((row) => (
-                  <TableRow key={row.purchaseOrderUuid}>
-                    {/* The order's own number, which this screen never showed —
-                        its `Purchase order` column held the supplier's
-                        reference, empty on almost every order. */}
-                    <TableCell className="font-medium whitespace-nowrap">
-                      <Link
-                        href={`/purchase-orders/${row.purchaseOrderUuid}`}
-                        className="text-primary hover:underline"
-                      >
-                        {row.purchaseOrderId}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{row.supplierName ?? "—"}</TableCell>
-                    <TableCell>{row.reference ?? "—"}</TableCell>
-                    <TableCell className="text-right">
-                      {row.companyCode ?? "—"}
-                    </TableCell>
-                    <TableCell>{row.city ?? "—"}</TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {formatDateColumn(row.orderDate)}
-                    </TableCell>
-                    <TableCell>
-                      {row.paymentTerms
-                        ? INVOICE_PAYMENT_TERM_LABELS[row.paymentTerms]
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {formatDateColumn(row.scheduledDeliveryDate)}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {formatDateColumn(row.actualDeliveryDate)}
-                    </TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      {formatMoney(row.amount)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="font-semibold [&>td]:border-t-2 [&>td]:border-border">
-                  <TableCell colSpan={9}>Total</TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    {formatMoney(total)}
-                  </TableCell>
-                </TableRow>
-              </>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
+const SORTABLE: Partial<Record<PurchaseInvoiceToReceiveColumnKey, string>> = {
+  purchaseOrderId: "purchaseOrderId",
+  supplierName: "supplierName",
+  orderDate: "orderDate",
+  scheduledDeliveryDate: "scheduledDeliveryDate",
+  amount: "amount",
 };
+
+const renderCell = (
+  row: PurchaseInvoiceToReceiveRow,
+  key: PurchaseInvoiceToReceiveColumnKey,
+) => {
+  switch (key) {
+    // The order's own number, which this screen never showed — its
+    // `Purchase order` column held the supplier's reference, empty on almost
+    // every order.
+    case "purchaseOrderId":
+      return (
+        <Link
+          href={`/purchase-orders/${row.purchaseOrderUuid}`}
+          className="font-medium whitespace-nowrap text-primary hover:underline"
+        >
+          {row.purchaseOrderId}
+        </Link>
+      );
+    case "amount":
+      return (
+        <span className="block text-right whitespace-nowrap">
+          {formatMoney(row.amount)}
+        </span>
+      );
+    default:
+      return undefined;
+  }
+};
+
+const renderSelection = (selected: PurchaseInvoiceToReceiveRow | null) => (
+  <RelatedRecordsBar
+    records={[
+      {
+        label: "Show purchase order",
+        href: selected ? `/purchase-orders/${selected.purchaseOrderUuid}` : null,
+      },
+    ]}
+  />
+);
+
+export const PurchaseInvoicesToBeReceivedTable = ({ page, filters }: Props) => (
+  <div className="space-y-2">
+    <OverviewTable
+      page={page}
+      filters={filters}
+      columns={PURCHASE_INVOICE_TO_RECEIVE_COLUMNS}
+      sortable={SORTABLE}
+      rowKey={(row) => row.purchaseOrderUuid}
+      renderCell={renderCell}
+      selectionToolbar={renderSelection}
+      exportAction={exportPurchaseInvoicesToBeReceived}
+      fileName="purchase-invoices-to-be-received"
+      searchPlaceholder="Search order, supplier or reference…"
+      emptyText="No purchase invoices awaited."
+      singular="purchase order"
+      plural="purchase orders"
+    />
+    {/* The total of every matching order, not just the page on show. */}
+    <p className="text-right text-sm font-semibold">
+      Total {formatMoney(page.totalAmount)}
+    </p>
+  </div>
+);
