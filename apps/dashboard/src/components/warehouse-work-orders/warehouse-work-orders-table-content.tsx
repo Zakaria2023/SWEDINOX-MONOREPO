@@ -2,7 +2,15 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Ban, Check, Info, Package, Printer, Tag } from "lucide-react";
+import {
+  Ban,
+  Check,
+  ClipboardList,
+  Info,
+  Package,
+  Printer,
+  Tag,
+} from "lucide-react";
 import {
   approveWarehouseWorkOrderLine,
   cancelWarehouseWorkOrder,
@@ -17,12 +25,16 @@ import {
 } from "@/app/(dashboard)/warehouse-work-orders/actions";
 import { LocationOption } from "@/app/(dashboard)/locations/actions";
 import { Button } from "@/components/shadcn/button";
+import { Checkbox } from "@/components/shadcn/checkbox";
 import { FormError } from "@/components/ui/form-error";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableToolbar } from "@/components/ui/table-toolbar";
 import { CancelWorkOrderDialog } from "@/components/work-orders/cancel-work-order-dialog";
-import { LineDetailDialog } from "@/components/work-orders/line-detail-dialog";
+import {
+  LineDetailDialog,
+  LineDetailPanel,
+} from "@/components/work-orders/line-detail-dialog";
 import { PackagingDialog } from "@/components/work-orders/packaging-dialog";
 import {
   TreeColumn,
@@ -32,6 +44,7 @@ import { WorkOrderStatus } from "@/lib/enums";
 import { orDash } from "@/lib/helpers";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { TableFilterControl } from "@/lib/table-query";
+import { PrepareLineDialog } from "./prepare-line-dialog";
 import { ReportCompletionDialog } from "./report-completion-dialog";
 
 type Props = {
@@ -43,14 +56,33 @@ type Props = {
 
 const num = (value: string | null) => Number(value ?? 0);
 
-// The columns the reference system shows to the right of the tree.
+// The columns the reference shows to the right of the tree, in its order
+// (Magazijn opdrachten, 9-10-2026): Order · Opties · Interne charge · Bedrijf
+// · Van · Naar · Artikelcode · Voorraadcategorie · Lengte · Breedte · Dikte ·
+// Hvh(p) · Hvh(w) · Kg(p) · Kg(w) — then the charge.
 const COLUMNS: TreeColumn<WarehouseTreeRow>[] = [
+  { key: "order", header: "Order", cell: (row) => orDash(row.orderNumber) },
+  { key: "options", header: "Options", cell: (row) => orDash(row.options) },
+  {
+    key: "internalCharge",
+    header: "Internal charge",
+    cell: (row) => orDash(row.internalCharge),
+  },
+  {
+    key: "company",
+    header: "Company",
+    cell: (row) => orDash(row.companyName),
+  },
+  // An empty side is the company boundary, not a gap in the record: the goods
+  // came from outside, or they left.
+  { key: "from", header: "From", cell: (row) => row.fromLocationName ?? "—" },
+  { key: "to", header: "To", cell: (row) => row.toLocationName ?? "—" },
   {
     key: "productCode",
-    header: "Product",
+    header: "Product code",
     cell: (row) => orDash(row.productCode),
   },
-  { key: "order", header: "Order", cell: (row) => orDash(row.orderNumber) },
+  { key: "quality", header: "Stock cat.", cell: (row) => orDash(row.quality) },
   { key: "length", header: "Length", cell: (row) => orDash(row.length) },
   { key: "width", header: "Width", cell: (row) => orDash(row.width) },
   { key: "thickness", header: "Thickness", cell: (row) => orDash(row.thickness) },
@@ -82,16 +114,7 @@ const COLUMNS: TreeColumn<WarehouseTreeRow>[] = [
     cell: (row) => orDash(row.kgActual),
     sum: (row) => num(row.kgActual),
   },
-  // An empty side is the company boundary, not a gap in the record: the goods
-  // came from outside, or they left.
-  { key: "from", header: "From", cell: (row) => row.fromLocationName ?? "—" },
-  { key: "to", header: "To", cell: (row) => row.toLocationName ?? "—" },
   { key: "charge", header: "Charge", cell: (row) => orDash(row.charge) },
-  {
-    key: "company",
-    header: "Company",
-    cell: (row) => orDash(row.companyName),
-  },
 ];
 
 export const WarehouseWorkOrdersTable = ({
@@ -108,6 +131,9 @@ export const WarehouseWorkOrdersTable = ({
   const [packaging, setPackaging] = useState<WorkOrderDetail | null>(null);
   const [detailLine, setDetailLine] = useState<WarehouseTreeRow | null>(null);
   const [reportingLine, setReportingLine] = useState<WarehouseTreeRow | null>(
+    null,
+  );
+  const [preparingLine, setPreparingLine] = useState<WarehouseTreeRow | null>(
     null,
   );
 
@@ -128,6 +154,13 @@ export const WarehouseWorkOrdersTable = ({
   const statuses = new Set(picked.map((row) => row.workOrderStatus));
   const only = (status: WorkOrderStatus) =>
     statuses.size === 1 && statuses.has(status);
+  // An unloading line can be reported while its slip is still New: on
+  // 327402 (9-10-2026) Gereedmelden was live on the line before any release,
+  // and Vrijgeven lived on the order node beside it.
+  const canReport =
+    !!oneLine &&
+    oneLine.status !== "approved" &&
+    (only("released") || (oneLine.type === "unloading" && only("new")));
 
   const run = (
     action: () => Promise<{ error?: string; success?: boolean }>,
@@ -177,6 +210,20 @@ export const WarehouseWorkOrdersTable = ({
       {/* The floor selects rows and acts on them from here, rather than opening
           each job in turn. */}
       <div className="flex flex-wrap items-center gap-2 rounded-lg border p-2">
+        {/* `Alles Selecteren` — every line on the page, or none. */}
+        <label className="flex items-center gap-2 px-1 text-sm">
+          <Checkbox
+            checked={tree.rows.length > 0 && selected.size === tree.rows.length}
+            onChange={(event) =>
+              setSelected(
+                event.target.checked
+                  ? new Set(tree.rows.map((row) => row.lineUuid))
+                  : new Set(),
+              )
+            }
+          />
+          Select all
+        </label>
         <Button
           type="button"
           size="sm"
@@ -206,17 +253,24 @@ export const WarehouseWorkOrdersTable = ({
           <Tag className="size-4" />
           Release without stock labels
         </Button>
+        {/* `Voorbereiden`: the picks a line will be drawn from, chosen
+            before the floor goes to fetch them. */}
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setPreparingLine(oneLine)}
+          disabled={!oneLine || !only("released") || isPending}
+        >
+          <ClipboardList className="size-4" />
+          Prepare
+        </Button>
         <Button
           type="button"
           size="sm"
           variant="outline"
           onClick={() => setReportingLine(oneLine)}
-          disabled={
-            !oneLine ||
-            !only("released") ||
-            oneLine.status === "approved" ||
-            isPending
-          }
+          disabled={!canReport || isPending}
         >
           Report completion
         </Button>
@@ -289,12 +343,26 @@ export const WarehouseWorkOrdersTable = ({
         plural="work orders"
       />
 
+      {/* The reference's footer: Voorraad · Order · Opties · Teksten for the
+          selected line, under the tree rather than in a window. */}
+      <div className="rounded-lg border p-3">
+        <LineDetailPanel line={oneLine} load={getWarehouseWorkOrderLineDetail} />
+      </div>
+
       <LineDetailDialog
         line={detailLine}
         load={getWarehouseWorkOrderLineDetail}
         onOpenChange={(open) => {
           if (!open) {
             setDetailLine(null);
+          }
+        }}
+      />
+      <PrepareLineDialog
+        line={preparingLine}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreparingLine(null);
           }
         }}
       />

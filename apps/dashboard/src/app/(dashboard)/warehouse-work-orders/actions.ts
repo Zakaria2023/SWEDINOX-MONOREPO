@@ -1282,7 +1282,10 @@ export const reportWarehouseWorkOrderLineCompletion = async (
 
     const { line, workOrder } = row;
 
-    if (workOrder.status === "new") {
+    // An unloading is reported straight away: on 327402 (9-10-2026)
+    // `Vrijgeven` was greyed and `Gereedmelden…` live while the slip was
+    // still New — a lorry is not released onto the floor, it arrives.
+    if (workOrder.status === "new" && workOrder.type !== "unloading") {
       return {
         error: "Release the work order before reporting work against it.",
       };
