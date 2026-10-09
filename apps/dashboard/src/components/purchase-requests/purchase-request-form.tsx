@@ -14,6 +14,14 @@ import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { ClerkUserOption } from "@/lib/server/clerk";
+import { cn } from "@/lib/helpers";
+
+const SENT_FLAGS = [
+  { name: "isPrinted", label: "Printed" },
+  { name: "isMailed", label: "Mailed" },
+  { name: "isFaxed", label: "Faxed" },
+  { name: "messageSentViaStaalWeb", label: "Message sent via StaalWeb" },
+] as const;
 
 type Props = {
   companies: CompanyOption[];
@@ -42,11 +50,14 @@ export const PurchaseRequestForm = ({
     onSubmit,
     state,
     arrangeTransport,
+    pickupDropoffCdPurchases,
     deliveryType,
+    hasSupplier,
     supplierOptions,
     agentOptions,
     contactOptions,
     supplierAddressOptions,
+    deliveryAddressOptions,
     purchaseOrderTypeOptions,
     weightTypeOptions,
     deliveryTermOptions,
@@ -145,11 +156,6 @@ export const PurchaseRequestForm = ({
             <FormLabel htmlFor="reference">Reference</FormLabel>
             <Input id="reference" {...register("reference")} />
           </div>
-
-          <div>
-            <FormLabel htmlFor="ourReference">Our reference</FormLabel>
-            <Input id="ourReference" {...register("ourReference")} />
-          </div>
         </div>
       </section>
 
@@ -194,23 +200,26 @@ export const PurchaseRequestForm = ({
           />
         </div>
 
+        {/* Greyed in the reference: printing, mailing and sending set these. */}
         <div className="flex gap-6">
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input type="checkbox" {...register("isPrinted")} />
-            Printed
-          </label>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input type="checkbox" {...register("isMailed")} />
-            Mailed
-          </label>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input type="checkbox" {...register("isFaxed")} />
-            Faxed
-          </label>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input type="checkbox" {...register("messageSentViaStaalWeb")} />
-            Message sent via StaalWeb
-          </label>
+          {SENT_FLAGS.map(({ name, label }) => (
+            <Controller
+              key={name}
+              control={control}
+              name={name}
+              render={({ field }) => (
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={field.value}
+                    disabled
+                    readOnly
+                  />
+                  {label}
+                </label>
+              )}
+            />
+          ))}
         </div>
       </section>
 
@@ -225,6 +234,7 @@ export const PurchaseRequestForm = ({
             label="Payment Terms"
             options={paymentTermOptions}
             emptyValue=""
+            disabled={!hasSupplier}
           />
         </div>
       </section>
@@ -243,14 +253,14 @@ export const PurchaseRequestForm = ({
             emptyValue=""
           />
 
+          {/* Defaults to our own yard (`Bolderweg 10, 1332AT, Almere`). */}
           <FormSelectField
             control={control}
-            id="supplierAddressUuid"
-            name="supplierAddressUuid"
-            label="Supplier Address"
-            options={supplierAddressOptions}
+            id="deliveryAddressUuid"
+            name="deliveryAddressUuid"
+            label="Delivery Address"
+            options={deliveryAddressOptions}
             emptyValue=""
-            disabled={supplierAddressOptions.length <= 1}
           />
         </div>
 
@@ -269,22 +279,40 @@ export const PurchaseRequestForm = ({
               </label>
             )}
           />
-          {arrangeTransport && (
-            <Controller
-              control={control}
-              name="pickupDropoffCdPurchases"
-              render={({ field }) => (
-                <label className="flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={field.value}
-                    onChange={(e) => field.onChange(e.target.checked)}
-                  />
-                  Pick up / Drop-off CD-purchases
-                </label>
-              )}
-            />
-          )}
+          {/* Greyed until we arrange the transport ourselves. */}
+          <Controller
+            control={control}
+            name="pickupDropoffCdPurchases"
+            render={({ field }) => (
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={field.value}
+                  disabled={!arrangeTransport}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                />
+                Pick up / Drop-off CD-purchases
+              </label>
+            )}
+          />
+        </div>
+
+        {/* A separate, greyed field in the reference: only a pick-up at the
+            supplier needs their address. */}
+        <div className="max-w-md">
+          <FormSelectField
+            control={control}
+            id="supplierAddressUuid"
+            name="supplierAddressUuid"
+            label="Supplier Address"
+            options={supplierAddressOptions}
+            emptyValue=""
+            disabled={
+              !arrangeTransport ||
+              !pickupDropoffCdPurchases ||
+              supplierAddressOptions.length <= 1
+            }
+          />
         </div>
 
         <div className="space-y-3">
@@ -318,55 +346,58 @@ export const PurchaseRequestForm = ({
             />
           </div>
 
-          {deliveryType === "date" ? (
-            <div className="flex items-end gap-3">
-              <div>
-                <FormLabel htmlFor="deliveryDate">Date</FormLabel>
-                <Controller
-                  control={control}
-                  name="deliveryDate"
-                  render={({ field }) => (
-                    <DatePicker
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                      className="w-48"
-                    />
-                  )}
-                />
-              </div>
-              <div>
-                <FormLabel htmlFor="deliveryRemark">Rem</FormLabel>
-                <Input
-                  id="deliveryRemark"
-                  className="w-40"
-                  {...register("deliveryRemark")}
-                />
-              </div>
+          {/* Both rows always show, as in the reference; the one not chosen
+              is greyed (a blank request: no Date, Week = this week). */}
+          <div className="flex items-end gap-3">
+            <div>
+              <FormLabel htmlFor="deliveryDate">Date</FormLabel>
+              <Controller
+                control={control}
+                name="deliveryDate"
+                render={({ field }) => (
+                  <DatePicker
+                    id="deliveryDate"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    disabled={deliveryType !== "date"}
+                    className="w-48"
+                  />
+                )}
+              />
             </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <div>
-                <FormLabel htmlFor="deliveryWeek">Week</FormLabel>
-                <Input
-                  id="deliveryWeek"
-                  type="number"
-                  min={1}
-                  max={53}
-                  className="w-20"
-                  {...register("deliveryWeek")}
-                />
-              </div>
-              <div>
-                <FormLabel htmlFor="deliveryYear">Year</FormLabel>
-                <Input
-                  id="deliveryYear"
-                  type="number"
-                  className="w-28"
-                  {...register("deliveryYear")}
-                />
-              </div>
+            <div>
+              <FormLabel htmlFor="deliveryRemark">Rem</FormLabel>
+              <Input
+                id="deliveryRemark"
+                className="w-40"
+                {...register("deliveryRemark")}
+              />
             </div>
-          )}
+          </div>
+          <div className="flex items-center gap-3">
+            <div>
+              <FormLabel htmlFor="deliveryWeek">Week</FormLabel>
+              <Input
+                id="deliveryWeek"
+                type="number"
+                min={1}
+                max={53}
+                readOnly={deliveryType !== "week"}
+                className={cn("w-20", deliveryType !== "week" && "bg-muted")}
+                {...register("deliveryWeek")}
+              />
+            </div>
+            <div>
+              <FormLabel htmlFor="deliveryYear">Year</FormLabel>
+              <Input
+                id="deliveryYear"
+                type="number"
+                readOnly={deliveryType !== "week"}
+                className={cn("w-28", deliveryType !== "week" && "bg-muted")}
+                {...register("deliveryYear")}
+              />
+            </div>
+          </div>
         </div>
       </section>
 

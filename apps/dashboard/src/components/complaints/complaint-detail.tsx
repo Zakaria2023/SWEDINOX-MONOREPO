@@ -11,6 +11,7 @@ import {
   deleteComplaint,
 } from "@/app/(dashboard)/complaints/actions";
 import { ComplaintLinesPanel } from "./complaint-lines-panel";
+import { WorkordersSection } from "./sections/workorders-section";
 import { Button } from "@/components/shadcn/button";
 import {
   Table,
@@ -25,11 +26,13 @@ import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DetailField } from "@/components/ui/detail-field";
 import { FormError } from "@/components/ui/form-error";
+import { RelatedRecordsBar } from "@/components/ui/related-records-bar";
 import {
   complaintSolutionReturnsGoods,
   formatDateColumn,
   formatMoney,
   formatNumber,
+  formatTimeValue,
   fullName,
   orDash,
   pluralize,
@@ -119,19 +122,47 @@ export const ComplaintDetailView = ({
     <div className="space-y-6">
       {error && <FormError>{error}</FormError>}
 
+      {/* `Show company · Show product` on the reference's complaint toolbar. */}
+      <RelatedRecordsBar
+        records={[
+          {
+            label: "Show company",
+            href: `/companies/${complaint.companyUuid}`,
+          },
+          {
+            label: "Show product",
+            href: complaint.productUuid
+              ? `/products/${complaint.productUuid}`
+              : null,
+          },
+        ]}
+      />
+
       {/* The reference heads the record with who recorded it and who touched
-          it last. */}
+          it last, to the minute ("08-04-2025 14:43"). */}
       <p className="text-sm text-muted-foreground">
         Recorded by {userName(complaint.createdByUserId, userNames)} on{" "}
-        {formatDateColumn(complaint.createdAt)}; last changed by{" "}
+        {formatDateColumn(complaint.createdAt)}{" "}
+        {formatTimeValue(complaint.createdAt)}; last changed by{" "}
         {userName(complaint.modifiedByUserId, userNames)} on{" "}
-        {formatDateColumn(complaint.updatedAt)}
+        {formatDateColumn(complaint.updatedAt)}{" "}
+        {formatTimeValue(complaint.updatedAt)}
       </p>
 
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-base font-semibold">Complaint</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          <DetailField label="Company" value={complaint.companyName} />
+          <DetailField
+            label="Company"
+            value={
+              <Link
+                href={`/companies/${complaint.companyUuid}`}
+                className="text-primary hover:underline"
+              >
+                {complaint.companyName ?? "Show company"}
+              </Link>
+            }
+          />
           <DetailField
             label="Account manager"
             value={salesRepresentativeLabel(complaint.accountManager)}
@@ -245,40 +276,6 @@ export const ComplaintDetailView = ({
       </section>
 
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">Handling</h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <DetailField
-            label="Responsible"
-            value={userName(complaint.responsibleUserId, userNames)}
-          />
-          <DetailField
-            label="Cause"
-            value={
-              complaint.cause ? COMPLAINT_CAUSE_LABELS[complaint.cause] : null
-            }
-          />
-          <DetailField
-            label="Solution"
-            value={
-              complaint.solution
-                ? COMPLAINT_SOLUTION_LABELS[complaint.solution]
-                : null
-            }
-          />
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <DetailField
-            label="Explanation of cause"
-            value={complaint.explanationOfCause}
-          />
-          <DetailField
-            label="Explanation of solution"
-            value={complaint.explanationOfSolution}
-          />
-        </div>
-      </section>
-
-      <section className="space-y-4">
         <h2 className="border-b pb-2 text-base font-semibold">Costs</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <DetailField
@@ -364,6 +361,54 @@ export const ComplaintDetailView = ({
             items={complaint.items}
             orderLines={orderLines}
           />
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Workorders">
+          <WorkordersSection showHeading={false} />
+        </CollapsibleSection>
+
+        {/* A collapsible panel in the reference, its header carrying the
+            status ("Status: Done"). */}
+        <CollapsibleSection
+          title="Handling"
+          summary={`Status: ${
+            complaint.status ? COMPLAINT_STATUS_LABELS[complaint.status] : "—"
+          }`}
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <DetailField
+                label="Responsible"
+                value={userName(complaint.responsibleUserId, userNames)}
+              />
+              <DetailField
+                label="Cause"
+                value={
+                  complaint.cause
+                    ? COMPLAINT_CAUSE_LABELS[complaint.cause]
+                    : null
+                }
+              />
+              <DetailField
+                label="Solution"
+                value={
+                  complaint.solution
+                    ? COMPLAINT_SOLUTION_LABELS[complaint.solution]
+                    : null
+                }
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <DetailField
+                label="Explanation of cause"
+                value={complaint.explanationOfCause}
+              />
+              <DetailField
+                label="Explanation of solution"
+                value={complaint.explanationOfSolution}
+              />
+            </div>
+          </div>
         </CollapsibleSection>
 
         <CollapsibleSection

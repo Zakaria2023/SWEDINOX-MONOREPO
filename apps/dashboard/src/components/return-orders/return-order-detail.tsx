@@ -22,7 +22,9 @@ import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DetailField } from "@/components/ui/detail-field";
 import { FormError } from "@/components/ui/form-error";
+import { RelatedRecordsBar } from "@/components/ui/related-records-bar";
 import {
+  formatAddressLine,
   formatDateColumn,
   formatMoney,
   formatNumber,
@@ -33,6 +35,8 @@ import {
 } from "@/lib/helpers";
 import {
   COMPLAINT_CATEGORY_LABELS,
+  DISCOUNT_UNIT_LABELS,
+  ORDER_LINE_STATUS_LABELS,
   COMPLAINT_SOLUTION_LABELS,
   COMPLAINT_STATUS_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
@@ -66,13 +70,78 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
     0,
   );
 
+  // What has actually come back: the planned quantities, once received.
+  const hasArrived =
+    returnOrder.status === "received" || returnOrder.status === "credited";
+
+  const deliveryAddress = formatAddressLine({
+    streetAndNo: returnOrder.deliveryStreetAndNo,
+    postalCode: returnOrder.deliveryPostalCode,
+    city: returnOrder.deliveryCity,
+  });
+
+  const complaintUuid =
+    returnOrder.complaints[0]?.complaintUuid ??
+    returnOrder.items.find((item) => item.complaintUuid)?.complaintUuid ??
+    null;
+  const creditNote = returnOrder.credits[0] ?? null;
+  const linesWithOptions = returnOrder.items.filter((item) => item.options);
+
   return (
     <div className="space-y-6">
       {error && <FormError>{error}</FormError>}
 
+      {/* The reference's return toolbar: `Print… · Send… · Show company ·
+          Show order · Show complaint · Workorder · Invoice`, each greyed when
+          there is nothing to open. */}
+      <div className="flex flex-wrap gap-2">
+        <span title="Not built yet">
+          <Button type="button" variant="outline" size="sm" disabled>
+            Print…
+          </Button>
+        </span>
+        <span title="Not built yet">
+          <Button type="button" variant="outline" size="sm" disabled>
+            Send…
+          </Button>
+        </span>
+        <RelatedRecordsBar
+          records={[
+            {
+              label: "Show company",
+              href: `/companies/${returnOrder.companyUuid}`,
+            },
+            {
+              label: "Show order",
+              href: returnOrder.orderUuid
+                ? `/orders/${returnOrder.orderUuid}`
+                : null,
+            },
+            {
+              label: "Show complaint",
+              href: complaintUuid ? `/complaints/${complaintUuid}` : null,
+            },
+            {
+              label: "Workorder",
+              href: returnOrder.warehouseWorkOrderUuid
+                ? `/warehouse-work-orders/${returnOrder.warehouseWorkOrderUuid}`
+                : null,
+            },
+            {
+              label: "Invoice",
+              href: creditNote ? `/invoices/${creditNote.uuid}` : null,
+            },
+          ]}
+        />
+      </div>
+
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-base font-semibold">Return order</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <DetailField
+            label="Creation date"
+            value={formatDateColumn(returnOrder.createdAt)}
+          />
           <DetailField label="Customer" value={returnOrder.companyName} />
           <DetailField
             label="Contact"
@@ -135,6 +204,10 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
             label="Pick-up address"
             value={returnOrder.pickupAddress}
           />
+          <DetailField label="Delivery address" value={deliveryAddress} />
+          <DetailField label="Printed" value={yesNo(returnOrder.isPrinted)} />
+          <DetailField label="Mailed" value={yesNo(returnOrder.isMailed)} />
+          <DetailField label="Faxed" value={yesNo(returnOrder.isFaxed)} />
           <DetailField
             label="Handling blocked"
             value={yesNo(returnOrder.handlingBlocked)}
@@ -158,6 +231,40 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
         </div>
       </section>
 
+      <section className="space-y-4">
+        <h2 className="border-b pb-2 text-base font-semibold">Summary</h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <DetailField
+            label="Materials"
+            value={formatMoney(Number(returnOrder.materialsRevenue ?? 0))}
+          />
+          <DetailField
+            label="Options"
+            value={formatMoney(Number(returnOrder.optionsRevenue ?? 0))}
+          />
+          <DetailField
+            label="Surcharges"
+            value={formatMoney(Number(returnOrder.surchargesRevenue ?? 0))}
+          />
+          <DetailField
+            label="Total excl. VAT"
+            value={formatMoney(Number(returnOrder.totalExclVat ?? 0))}
+          />
+          <DetailField
+            label="VAT"
+            value={formatMoney(Number(returnOrder.vatAmount ?? 0))}
+          />
+          <DetailField
+            label="Total incl. VAT"
+            value={formatMoney(Number(returnOrder.totalInclVat ?? 0))}
+          />
+          <DetailField
+            label="Total weight"
+            value={`${formatNumber(Number(returnOrder.totalWeightKg ?? 0))} kg`}
+          />
+        </div>
+      </section>
+
       <section className="space-y-3">
         <div className="flex items-baseline justify-between border-b pb-2">
           <h2 className="text-base font-semibold">Return lines</h2>
@@ -170,26 +277,33 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">Line</TableHead>
+                <TableHead className="text-right">Code</TableHead>
+                <TableHead className="text-right">Order line</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Delivery date</TableHead>
                 <TableHead>Product</TableHead>
-                <TableHead>Reference</TableHead>
-                <TableHead>Return reason</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Return qty</TableHead>
-                <TableHead>Unit</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="text-right">Qty(p)</TableHead>
+                <TableHead className="text-right">Qty(a)</TableHead>
+                <TableHead>U</TableHead>
                 <TableHead className="text-right">Length</TableHead>
-                <TableHead className="text-right">Kg</TableHead>
-                <TableHead className="text-right">Net price</TableHead>
+                <TableHead className="text-right">Width</TableHead>
+                <TableHead className="text-right">Kg(p)</TableHead>
+                <TableHead className="text-right">Kg(a)</TableHead>
+                <TableHead className="text-right">Gross price</TableHead>
+                <TableHead>U</TableHead>
+                <TableHead className="text-right">Line discount</TableHead>
+                <TableHead>U</TableHead>
+                <TableHead className="text-right">Group discount</TableHead>
+                <TableHead>U</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
-                {/* What the goods were sold for, against what is coming back. */}
-                <TableHead className="text-right">Sales</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {returnOrder.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={12}
+                    colSpan={20}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No lines on this return order.
@@ -201,51 +315,75 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
                     <TableCell className="text-right tabular-nums">
                       {orDash(item.lineNumber)}
                     </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {orDash(item.originalOrderLine)}
+                    </TableCell>
+                    <TableCell>
+                      {item.lineStatus
+                        ? ORDER_LINE_STATUS_LABELS[item.lineStatus]
+                        : "—"}
+                    </TableCell>
+                    <TableCell>{formatDateColumn(item.deliveryDate)}</TableCell>
                     <TableCell className="font-medium">
                       {item.productUuid ? (
                         <Link
                           href={`/products/${item.productUuid}`}
                           className="text-primary hover:underline"
                         >
-                          {[item.productCode, item.productName]
-                            .filter(Boolean)
-                            .join(" — ") || item.productUuid}
+                          {item.productCode ?? item.productUuid}
                         </Link>
                       ) : (
                         "—"
                       )}
                     </TableCell>
-                    <TableCell>{orDash(item.reference)}</TableCell>
-                    <TableCell>
-                      {item.returnReason
-                        ? RETURN_ORDER_REASON_LABELS[item.returnReason]
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatNumber(Number(item.quantity ?? 0))}
-                    </TableCell>
+                    <TableCell>{orDash(item.productName)}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatNumber(Number(item.returnQty ?? 0))}
                     </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(
+                        hasArrived ? Number(item.returnQty ?? 0) : 0,
+                      )}
+                    </TableCell>
                     <TableCell>{item.unit?.toUpperCase() ?? "—"}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {orDash(item.lengthMm)}
+                      {item.lengthMm === null ? "—" : `${item.lengthMm} mm`}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {item.widthMm === null ? "—" : `${item.widthMm} mm`}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatNumber(Number(item.weightKg ?? 0))}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatMoney(Number(item.netPrice ?? 0))}
+                      {formatNumber(
+                        hasArrived ? Number(item.weightKg ?? 0) : 0,
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(
+                        Number(item.salesGrossPrice ?? item.netPrice ?? 0),
+                      )}
+                    </TableCell>
+                    <TableCell>{orDash(item.priceUnit)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(Number(item.salesLineDiscount ?? 0))}
+                    </TableCell>
+                    <TableCell>
+                      {item.salesLineDiscountUnit
+                        ? DISCOUNT_UNIT_LABELS[item.salesLineDiscountUnit]
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(Number(item.salesGroupDiscount ?? 0))}
+                    </TableCell>
+                    <TableCell>
+                      {item.salesGroupDiscountUnit
+                        ? DISCOUNT_UNIT_LABELS[item.salesGroupDiscountUnit]
+                        : "—"}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMoney(Number(item.amount ?? 0))}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {item.salesAmount === null ? (
-                        <span className="text-muted-foreground">—</span>
-                      ) : (
-                        formatMoney(Number(item.salesAmount))
-                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -256,6 +394,40 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
       </section>
 
       <div className="space-y-2">
+        {/* The options carried by the lines above, read-only as on the
+            reference's return. */}
+        <CollapsibleSection
+          title="Options"
+          summary={`${linesWithOptions.length} ${pluralize(linesWithOptions.length, "line")} with options`}
+        >
+          {linesWithOptions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No options on the lines of this return order.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-right">Code</TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Options</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {linesWithOptions.map((item) => (
+                  <TableRow key={item.uuid}>
+                    <TableCell className="text-right tabular-nums">
+                      {orDash(item.lineNumber)}
+                    </TableCell>
+                    <TableCell>{orDash(item.productCode)}</TableCell>
+                    <TableCell>{orDash(item.options)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CollapsibleSection>
+
         <ReturnSettlementSection returnOrder={returnOrder} />
 
         <CollapsibleSection

@@ -20,6 +20,11 @@ import { coverSalesLineWithPurchase } from "@/lib/server/cross-dock";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { mailDocument, sendPurchaseOrderEmail } from "@/emails/documents";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
+import {
+  CompanyAddresses,
+  SelectCompanyAddresses,
+} from "@/db/schema/company-addresses";
+import { SelectTexts, Texts } from "@/db/schema/texts";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
@@ -100,8 +105,12 @@ export type PurchaseRequestQuoteSummary = {
 
 export type PurchaseRequestDetail = SelectPurchaseRequests & {
   companyName: SelectCompanies["companyName"] | null;
+  deliveryStreetAndNo: SelectCompanyAddresses["streetAndNo"] | null;
+  deliveryPostalCode: SelectCompanyAddresses["postalCode"] | null;
+  deliveryCity: SelectCompanyAddresses["city"] | null;
   items: PurchaseRequestItemDetail[];
   quotes: PurchaseRequestQuoteSummary[];
+  texts: SelectTexts[];
 };
 
 export const getPurchaseRequests = async (): Promise<
@@ -227,9 +236,16 @@ export const getPurchaseRequestDetail = async (
     .select({
       ...getTableColumns(PurchaseRequests),
       companyName: Companies.companyName,
+      deliveryStreetAndNo: CompanyAddresses.streetAndNo,
+      deliveryPostalCode: CompanyAddresses.postalCode,
+      deliveryCity: CompanyAddresses.city,
     })
     .from(PurchaseRequests)
     .leftJoin(Companies, eq(PurchaseRequests.companyUuid, Companies.uuid))
+    .leftJoin(
+      CompanyAddresses,
+      eq(PurchaseRequests.deliveryAddressUuid, CompanyAddresses.uuid),
+    )
     .where(eq(PurchaseRequests.uuid, uuid))
     .limit(1);
 
@@ -292,9 +308,15 @@ export const getPurchaseRequestDetail = async (
     );
   }
 
+  const texts = await db
+    .select()
+    .from(Texts)
+    .where(eq(Texts.purchaseRequestUuid, uuid));
+
   return {
     ...request,
     items,
+    texts,
     quotes: quoteRows.map((row) => ({
       ...row,
       lineCount: lineCountByQuote.get(row.uuid) ?? 0,

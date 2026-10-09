@@ -142,10 +142,13 @@ export const ReturnLinesPickerDialog = ({
                   <TableHead />
                   <TableHead className="text-right">Line</TableHead>
                   <TableHead>Receipt date</TableHead>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Charge</TableHead>
-                  <TableHead className="text-right">Available</TableHead>
+                  <TableHead>Bill of lading</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
                   <TableHead>U</TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead className="text-right">Length</TableHead>
+                  <TableHead className="text-right">Width</TableHead>
+                  <TableHead>Charge</TableHead>
                   <TableHead className="text-right">Return qty</TableHead>
                 </TableRow>
               </TableHeader>
@@ -166,16 +169,23 @@ export const ReturnLinesPickerDialog = ({
                         {lot.lineNumber === null ? "—" : lot.lineNumber * 10}
                       </TableCell>
                       <TableCell>{formatDateColumn(lot.receiptDate)}</TableCell>
+                      <TableCell>{orDash(lot.billOfLading)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(lot.availableQuantity))}
+                      </TableCell>
+                      <TableCell>{orDash(lot.unit ? lot.unit.toUpperCase() : null)}</TableCell>
                       <TableCell>
                         {[lot.productCode, lot.productName]
                           .filter(Boolean)
                           .join(" — ")}
                       </TableCell>
-                      <TableCell>{orDash(lot.charge)}</TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatNumber(Number(lot.availableQuantity))}
+                        {orDash(lot.lengthMm)}
                       </TableCell>
-                      <TableCell>{orDash(lot.unit ? lot.unit.toUpperCase() : null)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(lot.widthMm)}
+                      </TableCell>
+                      <TableCell>{orDash(lot.charge)}</TableCell>
                       <TableCell className="w-28">
                         <Input
                           type="number"

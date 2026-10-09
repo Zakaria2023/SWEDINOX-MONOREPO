@@ -2,8 +2,15 @@
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { CompanyAddresses } from "@/db/schema/company-addresses";
-import { Complaints } from "@/db/schema/complaints";
+import {
+  CompanyAddresses,
+  SelectCompanyAddresses,
+} from "@/db/schema/company-addresses";
+import { Complaints, SelectComplaints } from "@/db/schema/complaints";
+import {
+  PurchaseLineReceivals,
+  SelectPurchaseLineReceivals,
+} from "@/db/schema/purchase-line-receivals";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import {
   InsertPurchaseReturnOrders,
@@ -58,7 +65,7 @@ import {
   LEDGER_ACCOUNTS,
 } from "@/lib/server/ledger";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -129,6 +136,11 @@ export type ReturnablePurchaseLine = {
   // it came in under and the day it arrived.
   charge: SelectStock["charge"] | null;
   receiptDate: SelectStock["receiptDate"] | null;
+  // The rest of the reference picker's columns: the bill of lading the
+  // parcel arrived on and the lot's own dimensions.
+  billOfLading: SelectPurchaseLineReceivals["billOfLading"] | null;
+  lengthMm: SelectStock["lengthMm"] | null;
+  widthMm: SelectStock["widthMm"] | null;
   // Quantity − reserved on that lot − already on an open return: what can
   // physically leave today.
   availableQuantity: string;
@@ -137,6 +149,12 @@ export type ReturnablePurchaseLine = {
 export type PurchaseReturnOrderLineDetail = SelectPurchaseReturnOrderItems & {
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
+  // The price build-up of the purchase line the goods came in on — the
+  // reference's Gross price, Line discount and Group discount columns.
+  grossPrice: SelectPurchaseOrderItems["grossPrice"] | null;
+  lineDiscountPercent: SelectPurchaseOrderItems["lineDiscountPercent"] | null;
+  groupDiscountPercent: SelectPurchaseOrderItems["groupDiscountPercent"] | null;
+  lotLengthMm: SelectStock["lengthMm"] | null;
 };
 
 export type PurchaseReturnOrderDetail = SelectPurchaseReturnOrders & {
@@ -144,6 +162,13 @@ export type PurchaseReturnOrderDetail = SelectPurchaseReturnOrders & {
   contactFirstName: SelectContacts["firstName"] | null;
   contactLastName: SelectContacts["lastName"] | null;
   originalPurchaseOrderId: SelectPurchaseOrders["id"] | null;
+  deliveryStreetAndNo: SelectCompanyAddresses["streetAndNo"] | null;
+  deliveryPostalCode: SelectCompanyAddresses["postalCode"] | null;
+  deliveryCity: SelectCompanyAddresses["city"] | null;
+  complaintId: SelectComplaints["id"] | null;
+  complaintStatus: SelectComplaints["status"] | null;
+  complaintReportDate: SelectComplaints["reportDate"] | null;
+  complaintDescription: SelectComplaints["description"] | null;
   items: PurchaseReturnOrderLineDetail[];
   surcharges: SelectPurchaseReturnOrderSurcharges[];
   texts: SelectTexts[];
@@ -216,6 +241,20 @@ export const getReturnablePurchaseLines = async (
       stockReserved: Stock.reservedQuantity,
       charge: Stock.charge,
       receiptDate: Stock.receiptDate,
+      lengthMm: Stock.lengthMm,
+      widthMm: Stock.widthMm,
+      // A lot does not name the reception it came from, so the bill of lading
+      // is the one on this line's reception of the same day, else its latest.
+      billOfLading: sql<SelectPurchaseLineReceivals["billOfLading"]>`(
+        SELECT ${PurchaseLineReceivals.billOfLading}
+        FROM ${PurchaseLineReceivals}
+        WHERE ${PurchaseLineReceivals.purchaseOrderItemUuid} = ${PurchaseOrderItems.uuid}
+          AND ${PurchaseLineReceivals.billOfLading} IS NOT NULL
+          AND ${PurchaseLineReceivals.billOfLading} <> ''
+        ORDER BY (${PurchaseLineReceivals.receiptDate} <=> ${Stock.receiptDate}) DESC,
+          ${PurchaseLineReceivals.receiptDate} DESC
+        LIMIT 1
+      )`,
     })
     .from(Stock)
     .innerJoin(
@@ -286,6 +325,9 @@ export const getReturnablePurchaseLines = async (
         stockUuid: row.stockUuid,
         charge: row.charge,
         receiptDate: row.receiptDate,
+        billOfLading: row.billOfLading,
+        lengthMm: row.lengthMm,
+        widthMm: row.widthMm,
         availableQuantity: available.toFixed(3),
       },
     ];
@@ -432,6 +474,13 @@ export const getPurchaseReturnOrderDetail = async (
       contactFirstName: Contacts.firstName,
       contactLastName: Contacts.lastName,
       originalPurchaseOrderId: PurchaseOrders.id,
+      deliveryStreetAndNo: CompanyAddresses.streetAndNo,
+      deliveryPostalCode: CompanyAddresses.postalCode,
+      deliveryCity: CompanyAddresses.city,
+      complaintId: Complaints.id,
+      complaintStatus: Complaints.status,
+      complaintReportDate: Complaints.reportDate,
+      complaintDescription: Complaints.description,
     })
     .from(PurchaseReturnOrders)
     .leftJoin(Companies, eq(PurchaseReturnOrders.supplierUuid, Companies.uuid))
@@ -440,6 +489,11 @@ export const getPurchaseReturnOrderDetail = async (
       PurchaseOrders,
       eq(PurchaseReturnOrders.purchaseOrderUuid, PurchaseOrders.uuid),
     )
+    .leftJoin(
+      CompanyAddresses,
+      eq(PurchaseReturnOrders.deliveryAddressUuid, CompanyAddresses.uuid),
+    )
+    .leftJoin(Complaints, eq(PurchaseReturnOrders.complaintUuid, Complaints.uuid))
     .where(eq(PurchaseReturnOrders.uuid, uuid))
     .limit(1);
 
@@ -453,12 +507,24 @@ export const getPurchaseReturnOrderDetail = async (
         ...getTableColumns(PurchaseReturnOrderItems),
         productCode: Products.productCode,
         productName: Products.name,
+        grossPrice: PurchaseOrderItems.grossPrice,
+        lineDiscountPercent: PurchaseOrderItems.lineDiscountPercent,
+        groupDiscountPercent: PurchaseOrderItems.groupDiscountPercent,
+        lotLengthMm: Stock.lengthMm,
       })
       .from(PurchaseReturnOrderItems)
       .leftJoin(
         Products,
         eq(PurchaseReturnOrderItems.productUuid, Products.uuid),
       )
+      .leftJoin(
+        PurchaseOrderItems,
+        eq(
+          PurchaseReturnOrderItems.originalPurchaseOrderItemUuid,
+          PurchaseOrderItems.uuid,
+        ),
+      )
+      .leftJoin(Stock, eq(PurchaseReturnOrderItems.stockUuid, Stock.uuid))
       .where(eq(PurchaseReturnOrderItems.purchaseReturnOrderUuid, uuid))
       .orderBy(PurchaseReturnOrderItems.lineNumber),
 
@@ -1121,6 +1187,31 @@ export const startPurchaseReturnFromOrder = async (
           .join(", ") || null
       : null;
 
+    // Delivery is the supplier's address. 404102 names none, yet its return
+    // 950034 still went to `Am Rennfeuer 2, Ganderkesee` (8-10-2026): the
+    // supplier's own first delivery or visiting address stands in.
+    const supplierAddresses = order.supplierAddressUuid
+      ? []
+      : await db
+          .select({
+            uuid: CompanyAddresses.uuid,
+            category: CompanyAddresses.category,
+          })
+          .from(CompanyAddresses)
+          .where(eq(CompanyAddresses.companyUuid, order.supplierUuid))
+          .orderBy(
+            asc(CompanyAddresses.sequenceNumber),
+            asc(CompanyAddresses.id),
+          );
+    const supplierAddressUuid =
+      order.supplierAddressUuid ??
+      supplierAddresses.find((address) =>
+        address.category.some(
+          (category) => category === "delivery" || category === "visit",
+        ),
+      )?.uuid ??
+      null;
+
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -1172,7 +1263,7 @@ export const startPurchaseReturnFromOrder = async (
         status: "provisional",
         returnDate: tomorrow,
         isDropOff: false,
-        deliveryAddressUuid: order.supplierAddressUuid,
+        deliveryAddressUuid: supplierAddressUuid,
         pickupAddress,
       });
     });
@@ -1299,6 +1390,57 @@ export const addPurchaseReturnLines = async (
     return {
       error:
         error instanceof Error ? error.message : "Failed to add return lines",
+    };
+  }
+};
+
+/**
+ * `Lines → Delete` on a provisional return: the selected line comes off, and
+ * the stored totals are rebuilt without it. Once the goods have gone the line
+ * records stock that physically left, so it stays.
+ */
+export const deletePurchaseReturnLine = async (
+  purchaseReturnOrderUuid: string,
+  itemUuid: string,
+): Promise<PurchaseReturnOrderActionResult> => {
+  try {
+    const [returnOrder] = await db
+      .select({ status: PurchaseReturnOrders.status })
+      .from(PurchaseReturnOrders)
+      .where(eq(PurchaseReturnOrders.uuid, purchaseReturnOrderUuid))
+      .limit(1);
+
+    if (!returnOrder) {
+      return { error: "Purchase return order not found." };
+    }
+    if (!isPurchaseReturnOrderEditable(returnOrder.status)) {
+      return { error: "Lines can only be deleted before the goods have gone." };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(PurchaseReturnOrderItems)
+        .where(
+          and(
+            eq(PurchaseReturnOrderItems.uuid, itemUuid),
+            eq(
+              PurchaseReturnOrderItems.purchaseReturnOrderUuid,
+              purchaseReturnOrderUuid,
+            ),
+          ),
+        );
+
+      await tx
+        .update(PurchaseReturnOrders)
+        .set(await buildPurchaseReturnSummary(tx, purchaseReturnOrderUuid))
+        .where(eq(PurchaseReturnOrders.uuid, purchaseReturnOrderUuid));
+    });
+
+    revalidatePath(`/purchase-return-orders/${purchaseReturnOrderUuid}`);
+    return { success: true, purchaseReturnOrderUuid };
+  } catch (error) {
+    return {
+      error: describeError(error, "Failed to delete the return line"),
     };
   }
 };

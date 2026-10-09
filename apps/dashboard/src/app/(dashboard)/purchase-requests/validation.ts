@@ -7,7 +7,12 @@ import {
   purchaseOrderTypes,
   stockUnits,
 } from "@/lib/enums";
-import { currentYear, dateStringInDays, todayDateString } from "@/lib/helpers";
+import {
+  currentYear,
+  dateStringInDays,
+  isoWeekOf,
+  todayDateString,
+} from "@/lib/helpers";
 
 // A request line says what is wanted, never what it costs — the price is the
 // question being asked, and it comes back on the supplier's quote.
@@ -116,9 +121,11 @@ export const DEFAULT_PURCHASE_REQUEST: PurchaseRequestFormValues = {
   arrangeTransport: false,
   pickupDropoffCdPurchases: false,
   supplierAddressUuid: "",
+  // A blank request's Date reads `1-1-0001` — none — while the greyed Week
+  // already shows the current one (41 on 7-10-2026).
   deliveryType: "date",
-  deliveryDate: todayDateString(),
-  deliveryWeek: "",
+  deliveryDate: "",
+  deliveryWeek: String(isoWeekOf(todayDateString()) ?? ""),
   deliveryYear: String(currentYear()),
   deliveryRemark: "",
 

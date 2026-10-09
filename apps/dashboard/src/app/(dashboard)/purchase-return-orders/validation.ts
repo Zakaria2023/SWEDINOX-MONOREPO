@@ -103,7 +103,8 @@ export const DEFAULT_PURCHASE_RETURN_ORDER: PurchaseReturnOrderFormValues = {
   complaintRef: "",
   contactUuid: "",
   purchaser: "",
-  purchaseOrderType: undefined,
+  // Greyed and fixed on the reference's return: `Materials`.
+  purchaseOrderType: "materials",
   isPrinted: false,
   isMailed: false,
   isFaxed: false,

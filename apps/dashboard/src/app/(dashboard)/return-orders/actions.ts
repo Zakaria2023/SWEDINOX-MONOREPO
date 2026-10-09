@@ -2,7 +2,15 @@
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
+import {
+  CompanyAddresses,
+  SelectCompanyAddresses,
+} from "@/db/schema/company-addresses";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import {
+  SelectWarehouseWorkOrderLines,
+  WarehouseWorkOrderLines,
+} from "@/db/schema/warehouse-work-orders";
 import {
   InsertReturnOrders,
   InsertReturnOrderSurcharges,
@@ -281,6 +289,13 @@ export type ReturnOrderLineDetail = SelectReturnOrderItems & {
   salesNetPrice: SelectOrderItems["netPrice"] | null;
   salesAmount: SelectOrderItems["amount"] | null;
   salesQuantity: SelectOrderItems["quantity"] | null;
+  // The reference's Gross price, Line discount and Group discount columns,
+  // each with its unit: the price build-up of the line sold.
+  salesGrossPrice: SelectOrderItems["grossPrice"] | null;
+  salesLineDiscount: SelectOrderItems["lineDiscount"] | null;
+  salesLineDiscountUnit: SelectOrderItems["lineDiscountUnit"] | null;
+  salesGroupDiscount: SelectOrderItems["groupDiscount"] | null;
+  salesGroupDiscountUnit: SelectOrderItems["groupDiscountUnit"] | null;
 };
 
 // A production work order that touched the goods on this return. Reached through
@@ -324,6 +339,11 @@ export type ReturnOrderDetail = SelectReturnOrders & {
   // surfaced. A return is only checkable once you can open what it came from.
   originalOrderId: SelectOrders["id"] | null;
   originalOrderStatus: SelectOrders["status"] | null;
+  deliveryStreetAndNo: SelectCompanyAddresses["streetAndNo"] | null;
+  deliveryPostalCode: SelectCompanyAddresses["postalCode"] | null;
+  deliveryCity: SelectCompanyAddresses["city"] | null;
+  // The unloading the return raised, for the toolbar's `Workorder`.
+  warehouseWorkOrderUuid: SelectWarehouseWorkOrderLines["workOrderUuid"] | null;
   items: ReturnOrderLineDetail[];
   surcharges: SelectReturnOrderSurcharges[];
   texts: SelectTexts[];
@@ -348,11 +368,18 @@ export const getReturnOrderDetail = async (
       contactLastName: Contacts.lastName,
       originalOrderId: Orders.id,
       originalOrderStatus: Orders.status,
+      deliveryStreetAndNo: CompanyAddresses.streetAndNo,
+      deliveryPostalCode: CompanyAddresses.postalCode,
+      deliveryCity: CompanyAddresses.city,
     })
     .from(ReturnOrders)
     .leftJoin(Companies, eq(ReturnOrders.companyUuid, Companies.uuid))
     .leftJoin(Contacts, eq(ReturnOrders.contactUuid, Contacts.uuid))
     .leftJoin(Orders, eq(ReturnOrders.orderUuid, Orders.uuid))
+    .leftJoin(
+      CompanyAddresses,
+      eq(ReturnOrders.deliveryAddressUuid, CompanyAddresses.uuid),
+    )
     .where(eq(ReturnOrders.uuid, uuid))
     .limit(1);
 
@@ -369,6 +396,11 @@ export const getReturnOrderDetail = async (
         salesNetPrice: OrderItems.netPrice,
         salesAmount: OrderItems.amount,
         salesQuantity: OrderItems.quantity,
+        salesGrossPrice: OrderItems.grossPrice,
+        salesLineDiscount: OrderItems.lineDiscount,
+        salesLineDiscountUnit: OrderItems.lineDiscountUnit,
+        salesGroupDiscount: OrderItems.groupDiscount,
+        salesGroupDiscountUnit: OrderItems.groupDiscountUnit,
       })
       .from(ReturnOrderItems)
       .leftJoin(Products, eq(ReturnOrderItems.productUuid, Products.uuid))
@@ -497,8 +529,23 @@ export const getReturnOrderDetail = async (
         ])
       : [[], []];
 
+  // The unloading that takes the goods back in: a warehouse work order line
+  // naming one of this return's lines.
+  const returnItemUuids = items.map((item) => item.uuid);
+  const [unloading] =
+    returnItemUuids.length > 0
+      ? await db
+          .select({ workOrderUuid: WarehouseWorkOrderLines.workOrderUuid })
+          .from(WarehouseWorkOrderLines)
+          .where(
+            inArray(WarehouseWorkOrderLines.returnOrderItemUuid, returnItemUuids),
+          )
+          .limit(1)
+      : [];
+
   return {
     ...returnOrder,
+    warehouseWorkOrderUuid: unloading?.workOrderUuid ?? null,
     items,
     surcharges,
     texts,

@@ -18,13 +18,18 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
+import { DocumentCell } from "@/components/ui/document-cell";
 import { FormError } from "@/components/ui/form-error";
+import { RelatedRecordsBar } from "@/components/ui/related-records-bar";
 import { PurchaseQuoteStatus, PurchaseRequestStatus } from "@/lib/enums";
 import {
+  formatAddressLine,
   formatMoney,
   formatNumber,
   isPurchaseRequestEditable,
   orDash,
+  pluralize,
   runningMeters,
 } from "@/lib/helpers";
 import {
@@ -33,6 +38,14 @@ import {
   PURCHASE_REQUEST_STATUS_LABELS,
 } from "@/lib/labels";
 import { Send } from "lucide-react";
+
+const NOT_BUILT_ACTIONS = [
+  "Make final",
+  "Print…",
+  "Send…",
+  "Copy",
+  "Options…",
+];
 
 type Props = {
   request: PurchaseRequestDetail;
@@ -70,9 +83,55 @@ export const PurchaseRequestDetailView = ({
     });
   };
 
+  const deliveryAddress = formatAddressLine({
+    streetAndNo: request.deliveryStreetAndNo,
+    postalCode: request.deliveryPostalCode,
+    city: request.deliveryCity,
+  });
+  const documentCount = request.documents?.length ?? 0;
+
   return (
     <div className="space-y-6">
       {error && <FormError>{error}</FormError>}
+
+      {/* The reference's request toolbar: `Make final · Print… · Send… ·
+          Purchase quote · Purchase order · Show company · Copy · Options…`.
+          Purchase quote and Purchase order lead to the two ways this screen
+          already answers a request. */}
+      <div className="flex flex-wrap gap-2">
+        {NOT_BUILT_ACTIONS.slice(0, 3).map((label) => (
+          <span key={label} title="Not built yet">
+            <Button type="button" variant="outline" size="sm" disabled>
+              {label}
+            </Button>
+          </span>
+        ))}
+        <RelatedRecordsBar
+          records={[
+            {
+              label: "Purchase quote",
+              href: isClosed ? null : "#ask-suppliers",
+            },
+            {
+              label: "Purchase order",
+              href: isClosed ? null : "#order-outright",
+            },
+            {
+              label: "Show company",
+              href: request.companyUuid
+                ? `/companies/${request.companyUuid}`
+                : null,
+            },
+          ]}
+        />
+        {NOT_BUILT_ACTIONS.slice(3).map((label) => (
+          <span key={label} title="Not built yet">
+            <Button type="button" variant="outline" size="sm" disabled>
+              {label}
+            </Button>
+          </span>
+        ))}
+      </div>
 
       <div className="grid grid-cols-2 gap-4 rounded-lg border p-4 sm:grid-cols-4">
         <div>
@@ -105,11 +164,22 @@ export const PurchaseRequestDetailView = ({
             {request.deadline?.toLocaleDateString("en-GB") ?? "—"}
           </p>
         </div>
+        <div>
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Delivery address
+          </p>
+          <p className="text-sm">{deliveryAddress || "—"}</p>
+        </div>
       </div>
 
       {/* ── What is being asked for ─────────────────────────────────────── */}
       <div className="space-y-3">
-        <h2 className="border-b pb-2 text-base font-semibold">Requested</h2>
+        <h2 className="border-b pb-2 text-base font-semibold">
+          Lines{" "}
+          <span className="text-sm font-normal text-muted-foreground">
+            {request.items.length} {pluralize(request.items.length, "line")}
+          </span>
+        </h2>
         <div>
           <Table>
             <TableHeader>
@@ -285,7 +355,7 @@ export const PurchaseRequestDetailView = ({
 
       {/* ── Ask more suppliers ──────────────────────────────────────────── */}
       {!isClosed && (
-        <div className="space-y-3">
+        <div id="ask-suppliers" className="space-y-3">
           <h2 className="border-b pb-2 text-base font-semibold">
             Ask suppliers to quote
           </h2>
@@ -331,11 +401,51 @@ export const PurchaseRequestDetailView = ({
 
       {/* ── Or order outright ──────────────────────────────────────────── */}
       {!isClosed && (
-        <PurchaseRequestOrderForm
-          request={request}
-          supplierOptions={supplierOptions}
-        />
+        <div id="order-outright">
+          <PurchaseRequestOrderForm
+            request={request}
+            supplierOptions={supplierOptions}
+          />
+        </div>
       )}
+
+      <div className="space-y-2">
+        <CollapsibleSection
+          title="Texts"
+          summary={`${request.texts.length} ${pluralize(request.texts.length, "text")}`}
+        >
+          {request.texts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No texts on this purchase request.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {request.texts.map((text) => (
+                <li key={text.uuid} className="text-sm">
+                  <p className="font-medium">{orDash(text.title)}</p>
+                  <p className="whitespace-pre-wrap text-muted-foreground">
+                    {orDash(text.textBlock)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Documents"
+          summary={`${documentCount} ${pluralize(documentCount, "Document")}`}
+        >
+          <DocumentCell documents={request.documents} />
+        </CollapsibleSection>
+
+        {/* What `Print…` would file here; printing is not built yet. */}
+        <CollapsibleSection title="PDF Files" summary="PDF Files">
+          <p className="text-sm text-muted-foreground">
+            No PDF files — printing a purchase request is not built yet.
+          </p>
+        </CollapsibleSection>
+      </div>
     </div>
   );
 };

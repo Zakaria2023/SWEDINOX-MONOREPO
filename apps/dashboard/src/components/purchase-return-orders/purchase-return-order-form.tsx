@@ -45,8 +45,9 @@ export const PurchaseReturnOrderForm = ({
     isDropOff,
     supplierOptions,
     contactOptions,
-    purchaseOrderOptions,
+    purchaseOrderLabel,
     addressOptions,
+    pickupOptions,
     purchaseOrderTypeOptions,
     returnReasonOptions,
     paymentTermOptions,
@@ -108,6 +109,7 @@ export const PurchaseReturnOrderForm = ({
               <FormFieldError message={errors.supplierUuid?.message} />
             </div>
 
+            {/* Greyed and fixed in the reference: a return is `Materials`. */}
             <FormSelectField
               control={control}
               id="purchaseOrderType"
@@ -115,30 +117,29 @@ export const PurchaseReturnOrderForm = ({
               label="Purchase order type"
               options={purchaseOrderTypeOptions}
               emptyValue=""
-            />
-
-            <FormSelectField
-              control={control}
-              id="purchaseOrderUuid"
-              name="purchaseOrderUuid"
-              label="Purchase order"
-              options={purchaseOrderOptions}
-              emptyValue=""
-              disabled={purchaseOrderOptions.length <= 1}
+              disabled
             />
 
             <div>
-              <FormLabel htmlFor="purchaseOrderReference">Reference</FormLabel>
+              <FormLabel htmlFor="purchaseOrderLabel">Purchase order</FormLabel>
+              {/* Greyed in the reference: set by `Par. return` on the order. */}
               <Input
-                id="purchaseOrderReference"
-                {...register("purchaseOrderReference")}
+                id="purchaseOrderLabel"
+                value={purchaseOrderLabel}
+                readOnly
+                disabled
               />
             </div>
 
             <div>
               <FormLabel htmlFor="complaintRef">Complaint</FormLabel>
               {/* Greyed in the reference: `Par. return` raises the complaint. */}
-              <Input id="complaintRef" readOnly {...register("complaintRef")} />
+              <Input
+                id="complaintRef"
+                value={watch("complaintRef") ?? ""}
+                readOnly
+                disabled
+              />
             </div>
 
             <FormSelectField
@@ -241,22 +242,27 @@ export const PurchaseReturnOrderForm = ({
               />
             </div>
 
-            {isDropOff ? (
-              <FormSelectField
-                control={control}
-                id="deliveryAddressUuid"
-                name="deliveryAddressUuid"
-                label="Delivery address"
-                options={addressOptions}
-                emptyValue=""
-                disabled={addressOptions.length <= 1}
-              />
-            ) : (
-              <div>
-                <FormLabel htmlFor="pickupAddress">Pick-up</FormLabel>
-                <Input id="pickupAddress" {...register("pickupAddress")} />
-              </div>
-            )}
+            {/* Both always show, as in the reference: the supplier's address
+                is greyed unless we drop the goods off ourselves, and Pick-up
+                picks one of our own addresses. */}
+            <FormSelectField
+              control={control}
+              id="deliveryAddressUuid"
+              name="deliveryAddressUuid"
+              label="Delivery address"
+              options={addressOptions}
+              emptyValue=""
+              disabled={!isDropOff || addressOptions.length <= 1}
+            />
+
+            <FormSelectField
+              control={control}
+              id="pickupAddress"
+              name="pickupAddress"
+              label="Pick-up"
+              options={pickupOptions}
+              emptyValue=""
+            />
           </div>
         </section>
 

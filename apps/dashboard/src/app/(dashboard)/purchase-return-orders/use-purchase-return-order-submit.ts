@@ -3,6 +3,7 @@
 import {
   AddressOption,
   getAddressesForCompany,
+  getInternalAddressesForSelect,
 } from "@/app/(dashboard)/addresses/actions";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import {
@@ -43,7 +44,7 @@ import {
   PurchaseReturnOrderFormValues,
   purchaseReturnOrderSchema,
 } from "./validation";
-import { toDecimal } from "@/lib/helpers";
+import { formatAddressLine, toDecimal } from "@/lib/helpers";
 
 type UsePurchaseReturnOrderSubmitParams = {
   companies: CompanyOption[];
@@ -82,6 +83,7 @@ export const usePurchaseReturnOrderSubmit = ({
     [],
   );
   const [isLoadingSupplierData, setIsLoadingSupplierData] = useState(false);
+  const [ownAddresses, setOwnAddresses] = useState<AddressOption[]>([]);
 
   const form = useForm<PurchaseReturnOrderFormValues>({
     resolver: zodResolver(purchaseReturnOrderSchema),
@@ -122,6 +124,30 @@ export const usePurchaseReturnOrderSubmit = ({
       label: o.reference ? `#${o.id} — ${o.reference}` : `#${o.id}`,
     })),
   ];
+
+  // The Pick-up `...` picks one of our own addresses; the column stores the
+  // address as written, the way `Par. return` fills it (`Bolderweg 10, 1332AT
+  // Almere`), so the option's value is that line.
+  const currentPickup = form.watch("pickupAddress") ?? "";
+  const ownAddressLines = ownAddresses
+    .map((a) => formatAddressLine(a))
+    .filter(Boolean);
+  const pickupOptions: SelectOption[] = [
+    emptyOpt,
+    ...[
+      ...(currentPickup && !ownAddressLines.includes(currentPickup)
+        ? [currentPickup]
+        : []),
+      ...ownAddressLines,
+    ].map((line) => ({ value: line, label: line })),
+  ];
+
+  const purchaseOrderLabel =
+    purchaseOrderOptions.find(
+      (option) =>
+        option.value !== "" &&
+        option.value === form.watch("purchaseOrderUuid"),
+    )?.label ?? "";
 
   const purchaseOrderTypeOptions = makeOptions(
     purchaseOrderTypes,
@@ -185,6 +211,18 @@ export const usePurchaseReturnOrderSubmit = ({
     loadSupplierData(editingSupplierUuid);
   }, [editingSupplierUuid, loadSupplierData]);
 
+  useEffect(() => {
+    const subscription = { cancelled: false };
+    void getInternalAddressesForSelect().then((rows) => {
+      if (!subscription.cancelled) {
+        setOwnAddresses(rows);
+      }
+    });
+    return () => {
+      subscription.cancelled = true;
+    };
+  }, []);
+
   const handleSupplierChange = (uuid: string) => {
     form.setValue("supplierUuid", uuid);
     form.setValue("contactUuid", "");
@@ -241,10 +279,10 @@ export const usePurchaseReturnOrderSubmit = ({
           returnDate: values.returnDate ? new Date(values.returnDate) : null,
           returnReason: values.returnReason,
           isDropOff: values.isDropOff,
-          deliveryAddressUuid: values.isDropOff
-            ? values.deliveryAddressUuid || null
-            : null,
-          pickupAddress: values.isDropOff ? null : values.pickupAddress || null,
+          // Both are kept, as the reference shows both: the supplier's address
+          // the goods go to and our yard they are collected from.
+          deliveryAddressUuid: values.deliveryAddressUuid || null,
+          pickupAddress: values.pickupAddress || null,
 
           completeDelivery: values.completeDelivery,
           vehicleWithCrane: values.vehicleWithCrane,
@@ -292,8 +330,9 @@ export const usePurchaseReturnOrderSubmit = ({
     isDropOff,
     supplierOptions,
     contactOptions,
-    purchaseOrderOptions,
+    purchaseOrderLabel,
     addressOptions,
+    pickupOptions,
     purchaseOrderTypeOptions,
     returnReasonOptions,
     paymentTermOptions,

@@ -9,6 +9,11 @@ type PanelProps = {
   columns: string[];
 };
 
+type WorkordersSectionProps = {
+  /** False inside a collapsible panel that already carries the title. */
+  showHeading?: boolean;
+};
+
 const WORKORDER_PANELS: PanelProps[] = [
   {
     title: "Warehouse workorders",
@@ -83,9 +88,11 @@ const WorkordersPanel = ({ title, columns }: PanelProps) => (
   </div>
 );
 
-export const WorkordersSection = () => (
+export const WorkordersSection = ({
+  showHeading = true,
+}: WorkordersSectionProps) => (
   <section className="space-y-4">
-    <h2 className="text-base font-semibold">Workorders</h2>
+    {showHeading && <h2 className="text-base font-semibold">Workorders</h2>}
     {WORKORDER_PANELS.map((panel) => (
       <WorkordersPanel
         key={panel.title}

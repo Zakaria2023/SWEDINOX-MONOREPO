@@ -3,6 +3,7 @@
 import {
   AddressOption,
   getAddressesForCompany,
+  getInternalAddressesForSelect,
 } from "@/app/(dashboard)/addresses/actions";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import {
@@ -78,6 +79,7 @@ export const usePurchaseRequestSubmit = ({
     [],
   );
   const [isLoadingSupplierData, setIsLoadingSupplierData] = useState(false);
+  const [ownAddresses, setOwnAddresses] = useState<AddressOption[]>([]);
 
   const form = useForm<PurchaseRequestFormValues>({
     resolver: zodResolver(purchaseRequestSchema),
@@ -91,7 +93,10 @@ export const usePurchaseRequestSubmit = ({
   } = useFieldArray({ control: form.control, name: "items" });
 
   const arrangeTransport = form.watch("arrangeTransport");
+  const pickupDropoffCdPurchases = form.watch("pickupDropoffCdPurchases");
   const deliveryType = form.watch("deliveryType");
+  // Payment terms stay greyed until a supplier is chosen, as in the reference.
+  const hasSupplier = Boolean(form.watch("supplierUuid"));
 
   const supplierCompanies = companies.filter((c) =>
     c.roles?.includes("supplier"),
@@ -125,6 +130,15 @@ export const usePurchaseRequestSubmit = ({
   const supplierAddressOptions: SelectOption[] = [
     emptyOpt,
     ...supplierAddresses.map((a) => ({
+      value: a.uuid,
+      label: addressLabel(a),
+    })),
+  ];
+
+  // Where the goods are delivered: one of our own addresses.
+  const deliveryAddressOptions: SelectOption[] = [
+    emptyOpt,
+    ...ownAddresses.map((a) => ({
       value: a.uuid,
       label: addressLabel(a),
     })),
@@ -177,6 +191,18 @@ export const usePurchaseRequestSubmit = ({
     }
     loadSupplierData(editingCompanyUuid);
   }, [editingCompanyUuid, loadSupplierData]);
+
+  useEffect(() => {
+    const subscription = { cancelled: false };
+    void getInternalAddressesForSelect().then((rows) => {
+      if (!subscription.cancelled) {
+        setOwnAddresses(rows);
+      }
+    });
+    return () => {
+      subscription.cancelled = true;
+    };
+  }, []);
 
   const handleSupplierChange = (uuid: string) => {
     form.setValue("supplierUuid", uuid);
@@ -278,11 +304,14 @@ export const usePurchaseRequestSubmit = ({
     onSubmit,
     state,
     arrangeTransport,
+    pickupDropoffCdPurchases,
     deliveryType,
+    hasSupplier,
     supplierOptions,
     agentOptions,
     contactOptions,
     supplierAddressOptions,
+    deliveryAddressOptions,
     purchaseOrderTypeOptions,
     weightTypeOptions,
     deliveryTermOptions,
