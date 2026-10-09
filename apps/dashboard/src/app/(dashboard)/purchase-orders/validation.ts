@@ -10,7 +10,7 @@ import {
   receiptDocumentKinds,
   stockOptions,
 } from "@/lib/enums";
-import { todayDateString, currentYear } from "@/lib/helpers";
+import { todayDateString, currentYear, isoWeekOf } from "@/lib/helpers";
 
 export const purchaseOrderItemSchema = z.object({
   productUuid: z.string().min(1, "Product is required"),
@@ -135,9 +135,11 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderFormValues = {
     },
   ],
 
-  purchaseOrderType: undefined,
+  // A blank form in the reference reads `Materials`, weight type `-leeg-` and
+  // `Overlength` ticked (9-10-2026).
+  purchaseOrderType: "materials",
   weightType: undefined,
-  isOverlength: false,
+  isOverlength: true,
   isPrinted: false,
   isMailed: false,
   isFaxed: false,
@@ -153,8 +155,10 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderFormValues = {
   pickupDropoffCdPurchases: false,
   supplierAddressUuid: "",
   deliveryType: "date",
-  deliveryDate: todayDateString(),
-  deliveryWeek: "",
+  // `1-1-0001` on a blank form — the null sentinel. Choosing the supplier sets
+  // the date; before that there is none.
+  deliveryDate: "",
+  deliveryWeek: String(isoWeekOf(todayDateString()) ?? ""),
   deliveryYear: String(currentYear()),
   deliveryRemark: "",
 

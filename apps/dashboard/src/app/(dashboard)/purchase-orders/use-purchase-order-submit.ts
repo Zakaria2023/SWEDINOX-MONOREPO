@@ -21,12 +21,19 @@ import {
   purchaseOrderTypes,
 } from "@/lib/enums";
 import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_WEIGHT_TYPE_LABELS, PURCHASE_ORDER_TYPE_LABELS } from "@/lib/labels";
+import { addLeadTime, isoWeekOf, todayDateString } from "@/lib/helpers";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
-import { createPurchaseOrder, PurchaseOrderActionResult } from "./actions";
+import {
+  createPurchaseOrder,
+  getPurchaseSupplierDefaults,
+  PurchaseOrderActionResult,
+  PurchaseSupplierDefaults,
+  YardDeliveryAddress,
+} from "./actions";
 import {
   DEFAULT_PURCHASE_ORDER,
   PurchaseOrderFormValues,
@@ -36,6 +43,9 @@ import {
 type UsePurchaseOrderSubmitParams = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
+  /** The signed-in user — the reference's default `Purchaser`. */
+  currentUserId: string;
+  yardAddress: YardDeliveryAddress | null;
 };
 
 const emptyOpt = { value: "", label: "Empty" };
@@ -48,6 +58,11 @@ const makeOptions = <T extends string>(
   ...values.map((v) => ({ value: v, label: labels[v] })),
 ];
 
+// `11692 — Holland Stainless Int`: the reference's Supplier field takes the
+// code and prints the name beside it, so a buyer who knows the code finds it.
+const companyLabel = (c: CompanyOption) =>
+  [c.searchCode1, c.companyName].filter(Boolean).join(" — ") || c.uuid;
+
 const addressLabel = (a: AddressOption) =>
   [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
   a.uuid;
@@ -55,6 +70,8 @@ const addressLabel = (a: AddressOption) =>
 export const usePurchaseOrderSubmit = ({
   companies,
   clerkUsers,
+  currentUserId,
+  yardAddress,
 }: UsePurchaseOrderSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -63,11 +80,17 @@ export const usePurchaseOrderSubmit = ({
   const [supplierAddresses, setSupplierAddresses] = useState<AddressOption[]>(
     [],
   );
+  const [supplierDefaults, setSupplierDefaults] =
+    useState<PurchaseSupplierDefaults | null>(null);
   const [isLoadingSupplierData, setIsLoadingSupplierData] = useState(false);
 
   const form = useForm<PurchaseOrderFormValues>({
     resolver: zodResolver(purchaseOrderSchema),
-    defaultValues: DEFAULT_PURCHASE_ORDER,
+    defaultValues: {
+      ...DEFAULT_PURCHASE_ORDER,
+      purchaser: currentUserId,
+      deliveryAddressUuid: yardAddress?.uuid ?? "",
+    },
   });
 
   const {
@@ -88,7 +111,7 @@ export const usePurchaseOrderSubmit = ({
     emptyOpt,
     ...supplierCompanies.map((c) => ({
       value: c.uuid,
-      label: c.companyName ?? c.searchCode1 ?? c.uuid,
+      label: companyLabel(c),
     })),
   ];
 
@@ -96,7 +119,7 @@ export const usePurchaseOrderSubmit = ({
     emptyOpt,
     ...agentCompanies.map((c) => ({
       value: c.uuid,
-      label: c.companyName ?? c.searchCode1 ?? c.uuid,
+      label: companyLabel(c),
     })),
   ];
 
@@ -138,6 +161,16 @@ export const usePurchaseOrderSubmit = ({
 
   const purchaserOptions: SelectOption[] = [emptyOpt, ...clerkUsers];
 
+  // `Week` and `Year` are greyed beside a chosen `Date` and follow it.
+  const handleDeliveryDateChange = (date: string) => {
+    form.setValue("deliveryDate", date);
+    const week = isoWeekOf(date);
+    if (week !== null) {
+      form.setValue("deliveryWeek", String(week));
+      form.setValue("deliveryYear", date.slice(0, 4));
+    }
+  };
+
   // ⚠️ Changing the supplier used to wipe every line, because the lines could
   // only name that supplier's own articles. They name the catalogue now, so the
   // lines survive — a buyer who has typed out five lines and then realises the
@@ -148,6 +181,7 @@ export const usePurchaseOrderSubmit = ({
     form.setValue("supplierAddressUuid", "");
     setContacts([]);
     setSupplierAddresses([]);
+    setSupplierDefaults(null);
     if (!uuid) {
       return;
     }
@@ -157,6 +191,33 @@ export const usePurchaseOrderSubmit = ({
       .then(async (newContacts) => {
         setContacts(newContacts);
         setSupplierAddresses(await getAddressesForCompany(uuid));
+        const defaults = await getPurchaseSupplierDefaults(uuid);
+        setSupplierDefaults(defaults);
+
+        // The supplier brings the terms with it. Watched on 9-10-2026: typing
+        // `11692` into a blank order filled the contact, `Prepayment`, `(CPT)`
+        // and a delivery date before a line existed.
+        if (defaults) {
+          if (defaults.contactUuid) {
+            form.setValue("contactUuid", defaults.contactUuid);
+          }
+          if (defaults.paymentTerms) {
+            form.setValue("paymentTerms", defaults.paymentTerms);
+          }
+          if (defaults.deliveryTerms) {
+            form.setValue("deliveryTerms", defaults.deliveryTerms);
+          }
+          if (defaults.weightType) {
+            form.setValue("weightType", defaults.weightType);
+          }
+        }
+        // The date goes from the `1-1-0001` sentinel to the next working day:
+        // a Friday order (9-10-2026) read Monday 12-10-2026, week 42.
+        if (!form.getValues("deliveryDate")) {
+          handleDeliveryDateChange(
+            addLeadTime(todayDateString(), 1, "working_days") ?? "",
+          );
+        }
       })
       .finally(() => setIsLoadingSupplierData(false));
   };
@@ -251,8 +312,11 @@ export const usePurchaseOrderSubmit = ({
     paymentTermOptions,
     purchaserOptions,
     isLoadingSupplierData,
+    supplierDefaults,
+    yardAddress,
     handleSupplierChange,
     handleAgentChange,
+    handleDeliveryDateChange,
     handleCancel,
   };
 };

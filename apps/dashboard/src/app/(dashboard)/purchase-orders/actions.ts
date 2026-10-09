@@ -20,6 +20,10 @@ import {
 } from "@/db/schema/warehouse-work-orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import {
+  CompanyAddresses,
+  SelectCompanyAddresses,
+} from "@/db/schema/company-addresses";
+import {
   CommunicationSettings,
   SelectCommunicationSettings,
 } from "@/db/schema/communication-settings";
@@ -434,6 +438,111 @@ export type InternalChargeOption = {
   /** How many receptions already carry it — a sanity check, not a filter. */
   receptionCount: number;
 };
+
+/**
+ * What typing a supplier into a blank purchase order fills in by itself —
+ * watched on 9-10-2026 (`404355`, supplier `11692`): the contact, the payment
+ * terms off the Creditor panel, the delivery terms, and the name, telephone
+ * and fax the banner prints.
+ */
+export type PurchaseSupplierDefaults = {
+  companyName: SelectCompanies["companyName"];
+  paymentTerms: SelectCompanies["paymentTerms"];
+  deliveryTerms: SelectCompanies["deliveryTerms"];
+  weightType: SelectCompanies["weightType"];
+  /** The supplier's only contact, when it has exactly one. */
+  contactUuid: SelectContacts["uuid"] | null;
+  telephone: SelectCompanyAddresses["telephone"] | null;
+  fax: SelectCompanyAddresses["fax"] | null;
+};
+
+/** Our own yard — `Bolderweg 10, 1332AT, Almere` on every blank purchase form. */
+export type YardDeliveryAddress = {
+  uuid: SelectCompanyAddresses["uuid"];
+  label: string;
+};
+
+export const getPurchaseSupplierDefaults = async (
+  companyUuid: string,
+): Promise<PurchaseSupplierDefaults | null> => {
+  const [company] = await db
+    .select({
+      companyName: Companies.companyName,
+      paymentTerms: Companies.paymentTerms,
+      deliveryTerms: Companies.deliveryTerms,
+      weightType: Companies.weightType,
+    })
+    .from(Companies)
+    .where(eq(Companies.uuid, companyUuid))
+    .limit(1);
+
+  if (!company) {
+    return null;
+  }
+
+  // Sequential rather than concurrent: this database caps connections.
+  const contacts = await db
+    .select({ uuid: Contacts.uuid })
+    .from(Contacts)
+    .where(eq(Contacts.companyUuid, companyUuid))
+    .limit(2);
+
+  // The banner's `Tel` and `Fax` are the company's, which live on its
+  // addresses: the first address that carries a telephone speaks for it.
+  const [address] = await db
+    .select({
+      telephone: CompanyAddresses.telephone,
+      fax: CompanyAddresses.fax,
+    })
+    .from(CompanyAddresses)
+    .where(
+      and(
+        eq(CompanyAddresses.companyUuid, companyUuid),
+        isNotNull(CompanyAddresses.telephone),
+      ),
+    )
+    .orderBy(asc(CompanyAddresses.sequenceNumber), asc(CompanyAddresses.id))
+    .limit(1);
+
+  return {
+    ...company,
+    contactUuid: contacts.length === 1 ? contacts[0].uuid : null,
+    telephone: address?.telephone ?? null,
+    fax: address?.fax ?? null,
+  };
+};
+
+/**
+ * The delivery address a blank purchase order starts with: the one delivery
+ * address of the company that is us (role `internal`). Null when we have not
+ * been set up as a company yet, in which case the field starts empty.
+ */
+export const getYardDeliveryAddress =
+  async (): Promise<YardDeliveryAddress | null> => {
+    const rows = await db
+      .select({
+        uuid: CompanyAddresses.uuid,
+        streetAndNo: CompanyAddresses.streetAndNo,
+        postalCode: CompanyAddresses.postalCode,
+        city: CompanyAddresses.city,
+        category: CompanyAddresses.category,
+      })
+      .from(CompanyAddresses)
+      .innerJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
+      .where(sql`JSON_CONTAINS(${Companies.roles}, '"internal"')`)
+      .orderBy(asc(CompanyAddresses.sequenceNumber), asc(CompanyAddresses.id));
+
+    const yard = rows.find((row) => row.category.includes("delivery"));
+    if (!yard) {
+      return null;
+    }
+    return {
+      uuid: yard.uuid,
+      label: [yard.streetAndNo, yard.postalCode, yard.city]
+        .filter(Boolean)
+        .join(", "),
+    };
+  };
 
 export const getPurchaseOrdersForCompany = async (
   supplierUuid: string,

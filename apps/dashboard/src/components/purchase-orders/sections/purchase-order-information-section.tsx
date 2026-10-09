@@ -3,7 +3,8 @@
 import { Controller, useFormContext } from "react-hook-form";
 import { PurchaseOrderFormValues } from "@/app/(dashboard)/purchase-orders/validation";
 import { Input } from "@/components/shadcn/input";
-import { Select, SelectOption } from "@/components/shadcn/select";
+import { SearchSelect } from "@/components/shadcn/search-select";
+import { SelectOption } from "@/components/shadcn/select";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 
@@ -52,7 +53,7 @@ export const PurchaseOrderInformationSection = ({
             control={control}
             name="supplierUuid"
             render={({ field }) => (
-              <Select
+              <SearchSelect
                 id="supplierUuid"
                 value={field.value || ""}
                 options={supplierOptions}
@@ -64,15 +65,21 @@ export const PurchaseOrderInformationSection = ({
           <FormFieldError message={errors.supplierUuid?.message} />
         </div>
 
-        <FormSelectField
-          control={control}
-          id="agentUuid"
-          name="agentUuid"
-          label="Agent"
-          options={agentOptions}
-          emptyValue=""
-          onValueChange={(value) => handleAgentChange(value)}
-        />
+        <div>
+          <FormLabel htmlFor="agentUuid">Agent</FormLabel>
+          <Controller
+            control={control}
+            name="agentUuid"
+            render={({ field }) => (
+              <SearchSelect
+                id="agentUuid"
+                value={field.value || ""}
+                options={agentOptions}
+                onValueChange={handleAgentChange}
+              />
+            )}
+          />
+        </div>
 
         <FormSelectField
           control={control}

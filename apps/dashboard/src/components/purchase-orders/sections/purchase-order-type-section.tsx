@@ -70,26 +70,28 @@ export const PurchaseOrderTypeSection = ({
         />
       </div>
 
-      <div className="flex gap-6">
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <input type="checkbox" {...register("isPrinted")} />
+      {/* Stamps, not choices: the reference greys all four on a new order —
+          printing, mailing and sending set them, nobody ticks them. */}
+      <div className="flex gap-6 text-muted-foreground">
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" disabled {...register("isPrinted")} />
           Printed
         </label>
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <input type="checkbox" {...register("isMailed")} />
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" disabled {...register("isMailed")} />
           Mailed
         </label>
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <input type="checkbox" {...register("isFaxed")} />
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" disabled {...register("isFaxed")} />
           Faxed
         </label>
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <input type="checkbox" {...register("messageSentViaStaalWeb")} />
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            disabled
+            {...register("messageSentViaStaalWeb")}
+          />
           Message sent via StaalWeb
-        </label>
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <input type="checkbox" {...register("deliberatelyNotSent")} />
-          Deliberately not sent
         </label>
       </div>
     </section>

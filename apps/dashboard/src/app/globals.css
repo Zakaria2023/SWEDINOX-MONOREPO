@@ -3,6 +3,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* The phrase files hold translated UI text, and a translated class string is
+   not a class: scanning them handed Tailwind `var(-radius-md)` as a utility. */
+@source not "../lang/phrases";
 
 @custom-variant dark (&:is(.dark *));
 

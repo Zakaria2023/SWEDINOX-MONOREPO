@@ -2766,6 +2766,27 @@ export const isoWeekToDate = (
 };
 
 /**
+ * The ISO week a YYYY-MM-DD date falls in — the greyed `Week` the reference
+ * shows beside a delivery `Date` (9-10-2026 → 41, 12-10-2026 → 42). Null on bad
+ * input.
+ */
+export const isoWeekOf = (date: string | null | undefined): number | null => {
+  if (!date) {
+    return null;
+  }
+  const value = new Date(`${date.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(value.getTime())) {
+    return null;
+  }
+  // ISO 8601: move to the Thursday of this week, then count weeks from the
+  // first Thursday-bearing week of that Thursday's year.
+  const day = value.getUTCDay() || 7;
+  value.setUTCDate(value.getUTCDate() + 4 - day);
+  const yearStart = Date.UTC(value.getUTCFullYear(), 0, 1);
+  return Math.ceil(((value.getTime() - yearStart) / 86_400_000 + 1) / 7);
+};
+
+/**
  * Resolves a delivery moment to a concrete YYYY-MM-DD date: for a `date`-type
  * delivery it's the date itself; for a `week`-type it's the Monday of that ISO
  * week. Returns null when the needed inputs are missing.
