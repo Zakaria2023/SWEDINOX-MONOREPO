@@ -331,6 +331,7 @@ export const WarehouseWorkOrdersTable = ({
         selected={selected}
         onSelectedChange={setSelected}
         workOrderHref={(row) => `/warehouse-work-orders/${row.workOrderUuid}`}
+        levelsHeader="Day / Type / Order / Line"
         emptyMessage="No warehouse work orders found."
       />
 

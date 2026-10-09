@@ -324,6 +324,33 @@ const WORK_ORDER_FILTERS = {
   status: enumFilter(WarehouseWorkOrders.status, workOrderStatuses),
   warehouse: relationFilter(WarehouseWorkOrders.warehouseUuid),
   plannedDate: dateRangeFilter(WarehouseWorkOrders.plannedDate),
+  // `Subsectie` and `Naar` on the reference's work panel (327402,
+  // 9-10-2026): a slip qualifies when one of its lines moves goods in or out
+  // of that subsection, or to that location.
+  subsection: (values: string[]) => {
+    const wanted = values.filter((value) => value.trim() !== "");
+    if (wanted.length === 0) {
+      return undefined;
+    }
+    return sql`EXISTS (
+      SELECT 1 FROM ${WarehouseWorkOrderLines}
+      JOIN ${Warehouses} AS sub_loc
+        ON sub_loc.uuid IN (${WarehouseWorkOrderLines.fromLocationUuid}, ${WarehouseWorkOrderLines.toLocationUuid})
+      WHERE ${WarehouseWorkOrderLines.workOrderUuid} = ${WarehouseWorkOrders.uuid}
+        AND sub_loc.parent_uuid IN (${sql.join(wanted.map((value) => sql`${value}`), sql`, `)})
+    )`;
+  },
+  to: (values: string[]) => {
+    const wanted = values.filter((value) => value.trim() !== "");
+    if (wanted.length === 0) {
+      return undefined;
+    }
+    return sql`EXISTS (
+      SELECT 1 FROM ${WarehouseWorkOrderLines}
+      WHERE ${WarehouseWorkOrderLines.workOrderUuid} = ${WarehouseWorkOrders.uuid}
+        AND ${WarehouseWorkOrderLines.toLocationUuid} IN (${sql.join(wanted.map((value) => sql`${value}`), sql`, `)})
+    )`;
+  },
 };
 
 const LINE_TOTALS = {

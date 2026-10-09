@@ -23,14 +23,19 @@ import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableToolbar } from "@/components/ui/table-toolbar";
 import { CancelWorkOrderDialog } from "@/components/work-orders/cancel-work-order-dialog";
-import { LineDetailDialog } from "@/components/work-orders/line-detail-dialog";
+import {
+  LineDetailDialog,
+  LineDetailPanel,
+} from "@/components/work-orders/line-detail-dialog";
 import { PackagingDialog } from "@/components/work-orders/packaging-dialog";
 import {
   TreeColumn,
   WorkOrderTree,
 } from "@/components/work-orders/work-order-tree";
 import { WorkOrderStatus } from "@/lib/enums";
-import { orDash } from "@/lib/helpers";
+import { formatDateColumn, orDash } from "@/lib/helpers";
+import { BooleanFlag } from "@/components/ui/boolean-flag";
+import { Checkbox } from "@/components/shadcn/checkbox";
 import { STOCK_UNIT_LABELS } from "@/lib/labels";
 import { TableFilterControl } from "@/lib/table-query";
 import { ReportCutDialog } from "./report-cut-dialog";
@@ -97,7 +102,12 @@ const COLUMNS: TreeColumn<ProductionTreeRow>[] = [
     cell: (row) => orDash(row.kgActual),
     sum: (row) => num(row.kgActual),
   },
-  { key: "back", header: "Back", cell: (row) => row.backLocationName ?? "—" },
+  // `Vorig` on the reference's panel (327247, 8-10-2026).
+  {
+    key: "back",
+    header: "Previous",
+    cell: (row) => row.backLocationName ?? "—",
+  },
   { key: "from", header: "From", cell: (row) => row.fromLocationName ?? "—" },
   { key: "to", header: "To", cell: (row) => row.toLocationName ?? "—" },
   {
@@ -105,6 +115,30 @@ const COLUMNS: TreeColumn<ProductionTreeRow>[] = [
     header: "Company",
     cell: (row) => orDash(row.companyName),
   },
+  // `Leveren op · Afhaal · Spoed · Prioriteit · Charge` — the rest of the
+  // reference's row.
+  {
+    key: "deliverOn",
+    header: "Deliver on",
+    cell: (row) => formatDateColumn(row.deliverOn),
+  },
+  {
+    key: "isPickup",
+    header: "Pick-up",
+    cell: (row) => <BooleanFlag on={!!row.isPickup} label="Pick-up" />,
+  },
+  {
+    key: "rush",
+    header: "Rush",
+    cell: (row) => <BooleanFlag on={!!row.rush} label="Rush" />,
+  },
+  {
+    key: "priority",
+    header: "Priority",
+    align: "right",
+    cell: (row) => orDash(row.priority),
+  },
+  { key: "charge", header: "Charge", cell: (row) => orDash(row.charge) },
 ];
 
 export const ProductionWorkOrdersTable = ({
@@ -215,6 +249,20 @@ export const ProductionWorkOrdersTable = ({
       {/* The floor selects rows and acts on them from here, rather than opening
           each job in turn. */}
       <div className="flex flex-wrap items-center gap-2 rounded-lg border p-2">
+        {/* `Alles Selecteren` — every line on the page, or none. */}
+        <label className="flex items-center gap-2 px-1 text-sm">
+          <Checkbox
+            checked={tree.rows.length > 0 && selected.size === tree.rows.length}
+            onChange={(event) =>
+              setSelected(
+                event.target.checked
+                  ? new Set(tree.rows.map((row) => row.lineUuid))
+                  : new Set(),
+              )
+            }
+          />
+          Select all
+        </label>
         <Button
           type="button"
           size="sm"
@@ -257,21 +305,21 @@ export const ProductionWorkOrdersTable = ({
           type="button"
           size="sm"
           variant="outline"
-          onClick={() => oneOrder && openWithDetail(oneOrder, setPackaging)}
-          disabled={!oneOrder || isPending}
-        >
-          <Package className="size-4" />
-          Package
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
           onClick={() => setCancelling(oneOrder)}
           disabled={!oneOrder || only("approved") || isPending}
         >
           <Ban className="size-4" />
           Cancel
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => oneOrder && openWithDetail(oneOrder, setPackaging)}
+          disabled={!oneOrder || isPending}
+        >
+          <Package className="size-4" />
+          Package
         </Button>
         <div className="ms-auto">
           {/* "Print" in the reference system saves the selection as a document;
@@ -297,7 +345,17 @@ export const ProductionWorkOrdersTable = ({
         onSelectedChange={setSelected}
         workOrderHref={(row) => `/production-workorders/${row.workOrderUuid}`}
         emptyMessage="No production work orders found."
+        levelsHeader="Day / Option (Machine) / Order / Line"
       />
+
+      {/* The reference's footer: Voorraad · Order · Opties · Teksten for the
+          selected line (327247, 8-10-2026). */}
+      <div className="rounded-lg border p-3">
+        <LineDetailPanel
+          line={oneLine}
+          load={getProductionWorkOrderLineDetail}
+        />
+      </div>
 
       <TablePagination
         page={tree.page}

@@ -1,3 +1,4 @@
+import { LocationOption } from "@/app/(dashboard)/locations/actions";
 import { WarehouseOption } from "@/app/(dashboard)/warehouses/actions";
 import { workOrderStatuses, warehouseWorkOrderTypes } from "@/lib/enums";
 import {
@@ -10,6 +11,8 @@ import { TableFilterControl } from "@/lib/table-query";
 // how far along it is, and which warehouse it belongs to.
 export const warehouseWorkOrderFilters = (
   warehouses: WarehouseOption[],
+  subsections: LocationOption[] = [],
+  locations: LocationOption[] = [],
 ): TableFilterControl[] => [
   { key: "plannedDate", kind: "dateRange", label: "Planned date" },
   {
@@ -32,14 +35,36 @@ export const warehouseWorkOrderFilters = (
       label: WORK_ORDER_STATUS_LABELS[status],
     })),
   },
+  // The reference's `Sectie` is the warehouse itself, `Subsectie` the level
+  // below it, and `Naar` the location a line goes to.
   {
     key: "warehouse",
     kind: "select",
-    label: "Warehouse",
-    placeholder: "All warehouses",
+    label: "Section",
+    placeholder: "All sections",
     options: warehouses.map((warehouse) => ({
       value: warehouse.uuid,
       label: warehouse.name,
+    })),
+  },
+  {
+    key: "subsection",
+    kind: "select",
+    label: "Subsection",
+    placeholder: "All subsections",
+    options: subsections.map((subsection) => ({
+      value: subsection.uuid,
+      label: subsection.name,
+    })),
+  },
+  {
+    key: "to",
+    kind: "select",
+    label: "To",
+    placeholder: "Any location",
+    options: locations.map((location) => ({
+      value: location.uuid,
+      label: location.name,
     })),
   },
 ];

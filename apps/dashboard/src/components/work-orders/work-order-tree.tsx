@@ -57,6 +57,12 @@ type Props<T extends WorkOrderTreeRow> = {
   /** Where the work-order number links to. */
   workOrderHref: (row: T) => string;
   emptyMessage: string;
+  /**
+   * The tree column's header. The warehouse panel reads `Dag / Type /
+   * Opdracht / Regel`, the production panel `Dag / Optie (Machine) /
+   * Opdracht / Regel` (327402 and 327247, 8/9-10-2026).
+   */
+  levelsHeader?: string;
 };
 
 type Node<T> = {
@@ -92,6 +98,7 @@ export const WorkOrderTree = <T extends WorkOrderTreeRow>({
   onSelectedChange,
   workOrderHref,
   emptyMessage,
+  levelsHeader = "Day / Option (Machine) / Order / Line",
 }: Props<T>) => {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
@@ -124,6 +131,28 @@ export const WorkOrderTree = <T extends WorkOrderTreeRow>({
       ),
     [rows],
   );
+
+  // The reference's `1 2 3 4` buttons: open the tree down to that level and
+  // fold everything below it — 1 shows the days, 4 shows every line.
+  const showToLevel = (level: number) => {
+    const fold = new Set<string>();
+    for (const dateNode of tree) {
+      if (level <= 1) {
+        fold.add(dateNode.key);
+      }
+      for (const groupNode of dateNode.children) {
+        if (level <= 2) {
+          fold.add(groupNode.key);
+        }
+        for (const orderNode of groupNode.children) {
+          if (level <= 3) {
+            fold.add(orderNode.key);
+          }
+        }
+      }
+    }
+    setCollapsed(fold);
+  };
 
   const toggle = (key: string) =>
     setCollapsed((prev) => {
@@ -228,12 +257,26 @@ export const WorkOrderTree = <T extends WorkOrderTreeRow>({
   };
 
   return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4].map((level) => (
+          <button
+            key={level}
+            type="button"
+            onClick={() => showToLevel(level)}
+            aria-label={`Show the tree to level ${level}`}
+            className="text-muted-foreground hover:bg-muted hover:text-foreground size-7 rounded-md border text-sm font-medium"
+          >
+            {level}
+          </button>
+        ))}
+      </div>
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-8" />
-            <TableHead>Day / Option (Machine) / Order / Line</TableHead>
+            <TableHead>{levelsHeader}</TableHead>
             <TableHead>Status</TableHead>
             {columns.map((column) => (
               <TableHead
@@ -328,6 +371,7 @@ export const WorkOrderTree = <T extends WorkOrderTreeRow>({
           )}
         </TableBody>
       </Table>
+    </div>
     </div>
   );
 };
