@@ -1,12 +1,23 @@
+import { ReactNode } from "react";
 import Link from "next/link";
 import {
+  ArrowDown,
+  ArrowUp,
+  PackageSearch,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import {
+  OrderLineOptionRow,
   OrderLinePanels,
   OrderLinePreviousOrderRow,
   OrderLinePreviousQuoteRow,
   OrderLineRevenueAndProfit,
   OrderLineStockRow,
+  OrderTextRow,
+  OrderTransportWorkOrderRow,
 } from "@/app/(dashboard)/orders/[uuid]/actions";
-import { TransportWorkOrderTable } from "@/components/orders/panels/order-work-orders-panel";
+import { Button } from "@/components/shadcn/button";
 import {
   Table,
   TableBody,
@@ -15,13 +26,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { BooleanFlag } from "@/components/ui/boolean-flag";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
-import { DetailField } from "@/components/ui/detail-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   cn,
+  formatDateColumn,
   formatMoney,
+  formatNumber,
   formatPercent,
+  orDash,
   PriceCascade,
   pluralize,
   yesNo,
@@ -29,12 +43,20 @@ import {
 import {
   ORDER_LINE_STATUS_LABELS,
   STOCK_UNIT_LABELS,
+  TRIP_STATUS_LABELS,
   WAREHOUSE_LOCATION_TYPE_LABELS,
 } from "@/lib/labels";
+
+const OPTIONS_NOT_BUILT =
+  "Not built: a line's options are fixed when its charges are generated";
+const DELIVERIES_NOT_BUILT =
+  "Not built: deliveries are planned from the transport work orders";
 
 type Props = {
   panels: OrderLinePanels;
   lineLabel: string;
+  /** The order's text lines; the order has no per-line texts. */
+  texts: OrderTextRow[];
 };
 
 type PricingProps = {
@@ -46,10 +68,43 @@ type PricingProps = {
   lineDiscount: string | null;
   extraDiscount: string | null;
   groupDiscount: string | null;
+  lineDiscountAmount: number;
+  extraDiscountAmount: number;
+  options: OrderLineOptionRow[];
 };
 
 type RevenueProps = {
   revenueAndProfit: OrderLineRevenueAndProfit;
+};
+
+type ProfitFigureProps = {
+  /** Null where the basis is unknown — printed as a dash, never as € 0,00. */
+  profit: number | null;
+  revenue: number;
+};
+
+type RevenueRowProps = {
+  label: string;
+  revenue: number;
+  app: number;
+  fsp: number | null;
+  repl: number;
+  emphasis?: boolean;
+};
+
+type OptionsProps = {
+  rows: OrderLineOptionRow[];
+};
+
+type DeliveriesProps = {
+  rows: OrderTransportWorkOrderRow[];
+  blocked: boolean;
+  options: string | null;
+  unit: OrderLinePanels["line"]["unit"];
+};
+
+type TextLinesProps = {
+  rows: OrderTextRow[];
 };
 
 type StockProps = {
@@ -64,6 +119,10 @@ type PreviousQuotesProps = {
   rows: OrderLinePreviousQuoteRow[];
 };
 
+type PanelToolbarProps = {
+  children: ReactNode;
+};
+
 const dimensions = (
   length: number | null,
   width: number | null,
@@ -71,8 +130,302 @@ const dimensions = (
 ): string =>
   [thickness, width, length].filter((part) => part !== null).join(" × ") || "—";
 
+/** Money plus the share of revenue it is, e.g. "€ 508,05 (7,09%)". */
+const ProfitFigure = ({ profit, revenue }: ProfitFigureProps) =>
+  profit === null ? (
+    <span className="text-muted-foreground">—</span>
+  ) : (
+    <span className="tabular-nums">
+      {formatMoney(profit)}{" "}
+      <span className="text-muted-foreground">
+        ({formatPercent(revenue === 0 ? 0 : (profit / revenue) * 100)})
+      </span>
+    </span>
+  );
+
+const PanelToolbar = ({ children }: PanelToolbarProps) => (
+  <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-muted/30 px-2 py-1">
+    {children}
+  </div>
+);
+
 /**
- * `Pricing` — the build-up on the left, the discount cascade on the right.
+ * `Options` — what is charged on top of the selected line's material.
+ *
+ * Read-only: there is no action that adds or removes one option on one line,
+ * so `New · Delete · Earlier · Later` are drawn greyed, the way the reference
+ * greys them on an invoiced order (100629, 8-10-2026).
+ */
+const OptionsPanel = ({ rows }: OptionsProps) => (
+  <div className="space-y-2">
+    <PanelToolbar>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled
+        title={OPTIONS_NOT_BUILT}
+      >
+        <Plus className="size-4" />
+        New
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled
+        title={OPTIONS_NOT_BUILT}
+      >
+        <Trash2 className="size-4" />
+        Delete
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled
+        title={OPTIONS_NOT_BUILT}
+      >
+        <ArrowUp className="size-4" />
+        Earlier
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled
+        title={OPTIONS_NOT_BUILT}
+      >
+        <ArrowDown className="size-4" />
+        Later
+      </Button>
+    </PanelToolbar>
+    <div className="overflow-x-auto rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="text-right">Sort</TableHead>
+            <TableHead>Option</TableHead>
+            <TableHead className="text-right">Qty</TableHead>
+            <TableHead>U</TableHead>
+            <TableHead className="text-right">Price</TableHead>
+            <TableHead>Per</TableHead>
+            <TableHead className="text-right">Amount</TableHead>
+            <TableHead className="text-right">Profit</TableHead>
+            <TableHead className="text-right">Purchase price</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={9}
+                className="h-16 text-center text-muted-foreground"
+              >
+                No options on this line.
+              </TableCell>
+            </TableRow>
+          ) : (
+            rows.map((row, index) => (
+              <TableRow key={row.uuid} className="whitespace-nowrap">
+                <TableCell className="text-right tabular-nums">
+                  {(index + 1) * 10}
+                </TableCell>
+                <TableCell>{orDash(row.optionName ?? row.optionCode)}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatNumber(Number(row.quantity ?? 0))}
+                </TableCell>
+                <TableCell>
+                  {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatMoney(Number(row.price ?? 0))}
+                </TableCell>
+                <TableCell>{orDash(row.priceUnit)}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatMoney(Number(row.amount ?? 0))}
+                </TableCell>
+                <TableCell className="text-right">
+                  <ProfitFigure
+                    profit={Number(row.profit ?? 0)}
+                    revenue={Number(row.amount ?? 0)}
+                  />
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatMoney(Number(row.costPrice ?? 0))}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  </div>
+);
+
+/**
+ * `Deliveries` — how the selected line goes out, one row per drop, in the
+ * reference's columns (100629, 8-10-2026). `Blocked`, `Options` and `U` are the
+ * line's own; the rest come off the transport line that carries it.
+ */
+const DeliveriesPanel = ({ rows, blocked, options, unit }: DeliveriesProps) => (
+  <div className="space-y-2">
+    <PanelToolbar>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled
+        title={DELIVERIES_NOT_BUILT}
+      >
+        <Plus className="size-4" />
+        New
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled
+        title={DELIVERIES_NOT_BUILT}
+      >
+        <Trash2 className="size-4" />
+        Delete
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled
+        title="Not built: PAC"
+      >
+        PAC
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled
+        title="Not built: stock is chosen when the line is entered"
+      >
+        <PackageSearch className="size-4" />
+        Select stock
+      </Button>
+    </PanelToolbar>
+    <div className="overflow-x-auto rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Blocked</TableHead>
+            <TableHead>Delivery date</TableHead>
+            <TableHead>Product</TableHead>
+            <TableHead className="text-right">Length</TableHead>
+            <TableHead className="text-right">Width</TableHead>
+            <TableHead className="text-right">Thickness</TableHead>
+            <TableHead className="text-right">Kg (p)</TableHead>
+            <TableHead>Options</TableHead>
+            <TableHead>U</TableHead>
+            <TableHead className="text-right">Qty (p)</TableHead>
+            <TableHead className="text-right">Qty (a)</TableHead>
+            <TableHead className="text-right">Kg (a)</TableHead>
+            <TableHead>Bill of lading</TableHead>
+            <TableHead>Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={14}
+                className="h-16 text-center text-muted-foreground"
+              >
+                No deliveries planned for this line.
+              </TableCell>
+            </TableRow>
+          ) : (
+            rows.map((row) => (
+              <TableRow key={row.uuid} className="whitespace-nowrap">
+                <TableCell>
+                  <BooleanFlag on={blocked} label="Blocked" />
+                </TableCell>
+                <TableCell>{formatDateColumn(row.tripDate)}</TableCell>
+                <TableCell>
+                  {orDash(row.productCodeResolved ?? row.productCode)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.lengthMm)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.widthMm)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.thicknessMm)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatNumber(Number(row.kgPlanned ?? 0))}
+                </TableCell>
+                <TableCell>{orDash(options)}</TableCell>
+                <TableCell>{unit ? STOCK_UNIT_LABELS[unit] : "—"}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatNumber(Number(row.qtyPlanned ?? 0))}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatNumber(Number(row.qtyActual ?? 0))}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatNumber(Number(row.kgActual ?? 0))}
+                </TableCell>
+                <TableCell>{orDash(row.billOfLading)}</TableCell>
+                <TableCell>
+                  <StatusBadge
+                    value={row.status}
+                    label={TRIP_STATUS_LABELS[row.status]}
+                  />
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  </div>
+);
+
+/** `Text lines` — the texts printed on the order's documents. */
+const TextLinesPanel = ({ rows }: TextLinesProps) => (
+  <Table>
+    <TableHeader>
+      <TableRow>
+        <TableHead>Title</TableHead>
+        <TableHead>Text</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {rows.length === 0 ? (
+        <TableRow>
+          <TableCell
+            colSpan={2}
+            className="h-16 text-center text-muted-foreground"
+          >
+            No text lines on this order.
+          </TableCell>
+        </TableRow>
+      ) : (
+        rows.map((row) => (
+          <TableRow key={row.uuid}>
+            <TableCell className="font-medium">{row.title}</TableCell>
+            <TableCell className="whitespace-pre-wrap">
+              {row.textBlock}
+            </TableCell>
+          </TableRow>
+        ))
+      )}
+    </TableBody>
+  </Table>
+);
+
+/**
+ * `Pricing` — the build-up on the left, the discount cascade on the right, and
+ * the line's option prices beside them.
  *
  * Laid out the way the reference lays it out, because the layout IS the finding:
  * four additive components reach a gross price, then line and extra discount
@@ -92,143 +445,253 @@ const PricingPanel = ({
   lineDiscount,
   extraDiscount,
   groupDiscount,
+  lineDiscountAmount,
+  extraDiscountAmount,
+  options,
 }: PricingProps) => (
-  <div className="grid gap-6 sm:grid-cols-2">
-    <dl className="space-y-1.5 text-sm">
-      <div className="flex justify-between gap-4">
-        <dt className="text-muted-foreground">Base price</dt>
-        <dd className="tabular-nums">{formatMoney(Number(basePrice ?? 0))}</dd>
-      </div>
-      <div className="flex justify-between gap-4">
-        <dt className="text-muted-foreground">Quantity surcharge</dt>
-        <dd className="tabular-nums">
-          {formatMoney(Number(quantitySurcharge ?? 0))}
-        </dd>
-      </div>
-      <div className="flex justify-between gap-4">
-        <dt className="text-muted-foreground">Colour surcharge</dt>
-        <dd className="tabular-nums">
-          {formatMoney(Number(colorSurcharge ?? 0))}
-        </dd>
-      </div>
-      <div className="flex justify-between gap-4">
-        <dt className="text-muted-foreground">Length surcharge</dt>
-        <dd className="tabular-nums">
-          {formatMoney(Number(lengthSurcharge ?? 0))}
-        </dd>
-      </div>
-      <div className="flex justify-between gap-4 border-t pt-1.5 font-medium">
-        <dt>Gross price</dt>
-        <dd className="tabular-nums">{formatMoney(pricing.grossPrice)}</dd>
-      </div>
-    </dl>
+  <div className="grid gap-6 xl:grid-cols-2">
+    <div className="space-y-3">
+      <label
+        className="flex cursor-not-allowed items-center gap-2 text-sm text-muted-foreground"
+        title="Not built: the price setting is not transferred to the order line"
+      >
+        <input type="checkbox" checked={false} readOnly disabled />
+        Transfer price setting to order line
+      </label>
+      <div className="grid gap-6 sm:grid-cols-2">
+        <dl className="space-y-1.5 text-sm">
+          <div className="flex justify-between gap-4">
+            <dt className="text-muted-foreground">Base price</dt>
+            <dd className="tabular-nums">
+              {formatMoney(Number(basePrice ?? 0))}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-muted-foreground">Quantity surcharge</dt>
+            <dd className="tabular-nums">
+              {formatMoney(Number(quantitySurcharge ?? 0))}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-muted-foreground">Colour surcharge</dt>
+            <dd className="tabular-nums">
+              {formatMoney(Number(colorSurcharge ?? 0))}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-muted-foreground">Length surcharge</dt>
+            <dd className="tabular-nums">
+              {formatMoney(Number(lengthSurcharge ?? 0))}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4 border-t pt-1.5 font-medium">
+            <dt>Gross price</dt>
+            <dd className="tabular-nums">{formatMoney(pricing.grossPrice)}</dd>
+          </div>
+        </dl>
 
-    <dl className="space-y-1.5 text-sm">
-      <div className="flex justify-between gap-4">
-        <dt className="text-muted-foreground">
-          Line discount{" "}
-          <span className="tabular-nums">
-            {formatPercent(Number(lineDiscount ?? 0))}
-          </span>
-        </dt>
-        <dd className="tabular-nums" />
+        <dl className="space-y-1.5 text-sm">
+          <div className="flex justify-between gap-4">
+            <dt className="text-muted-foreground">
+              Line discount{" "}
+              <span className="tabular-nums">
+                {formatPercent(Number(lineDiscount ?? 0))}
+              </span>
+            </dt>
+            <dd className="tabular-nums">{formatMoney(lineDiscountAmount)}</dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-muted-foreground">
+              Extra discount{" "}
+              <span className="tabular-nums">
+                {formatPercent(Number(extraDiscount ?? 0))}
+              </span>
+            </dt>
+            <dd className="tabular-nums">{formatMoney(extraDiscountAmount)}</dd>
+          </div>
+          <div className="flex justify-between gap-4 border-t pt-1.5">
+            <dt className="text-muted-foreground">
+              Line discount total{" "}
+              <span className="tabular-nums">
+                {formatPercent(pricing.lineDiscountTotalPercent)}
+              </span>
+            </dt>
+            <dd className="tabular-nums">
+              {formatMoney(pricing.lineDiscountTotalAmount)}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-muted-foreground">
+              Group discount{" "}
+              <span className="tabular-nums">
+                {formatPercent(Number(groupDiscount ?? 0))}
+              </span>
+            </dt>
+            <dd className="tabular-nums">
+              {formatMoney(pricing.groupDiscountAmount)}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4 border-t pt-1.5 font-medium">
+            <dt>Net price</dt>
+            <dd className="tabular-nums">{formatMoney(pricing.netPrice)}</dd>
+          </div>
+        </dl>
       </div>
-      <div className="flex justify-between gap-4">
-        <dt className="text-muted-foreground">
-          Extra discount{" "}
-          <span className="tabular-nums">
-            {formatPercent(Number(extraDiscount ?? 0))}
-          </span>
-        </dt>
-        <dd className="tabular-nums" />
+    </div>
+
+    <div className="space-y-3">
+      <label
+        className="flex cursor-not-allowed items-center gap-2 text-sm text-muted-foreground"
+        title="Not built: the pricing determination is not transferred to the options"
+      >
+        <input type="checkbox" checked={false} readOnly disabled />
+        Transfer pricing determination to options
+      </label>
+      <div className="overflow-x-auto rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Option</TableHead>
+              <TableHead className="text-right">Net price</TableHead>
+              <TableHead>U</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {options.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={3}
+                  className="h-12 text-center text-muted-foreground"
+                >
+                  No options on this line.
+                </TableCell>
+              </TableRow>
+            ) : (
+              options.map((option) => (
+                <TableRow key={option.uuid}>
+                  <TableCell>
+                    {orDash(option.optionName ?? option.optionCode)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatMoney(Number(option.price ?? 0))}
+                  </TableCell>
+                  <TableCell>{orDash(option.priceUnit)}</TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
-      <div className="flex justify-between gap-4 border-t pt-1.5">
-        <dt className="text-muted-foreground">
-          Line discount total{" "}
-          <span className="tabular-nums">
-            {formatPercent(pricing.lineDiscountTotalPercent)}
-          </span>
-        </dt>
-        <dd className="tabular-nums">
-          {formatMoney(pricing.lineDiscountTotalAmount)}
-        </dd>
-      </div>
-      <div className="flex justify-between gap-4">
-        <dt className="text-muted-foreground">
-          Group discount{" "}
-          <span className="tabular-nums">
-            {formatPercent(Number(groupDiscount ?? 0))}
-          </span>
-        </dt>
-        <dd className="tabular-nums">
-          {formatMoney(pricing.groupDiscountAmount)}
-        </dd>
-      </div>
-      <div className="flex justify-between gap-4 border-t pt-1.5 font-medium">
-        <dt>Net price</dt>
-        <dd className="tabular-nums">{formatMoney(pricing.netPrice)}</dd>
-      </div>
-    </dl>
+    </div>
   </div>
+);
+
+const RevenueRow = ({
+  label,
+  revenue,
+  app,
+  fsp,
+  repl,
+  emphasis = false,
+}: RevenueRowProps) => (
+  <TableRow className={cn(emphasis && "border-t-2 font-medium")}>
+    <TableCell>{label}</TableCell>
+    <TableCell className="text-right tabular-nums">
+      {formatMoney(revenue)}
+    </TableCell>
+    <TableCell className="text-right">
+      <ProfitFigure profit={app} revenue={revenue} />
+    </TableCell>
+    <TableCell className="text-right">
+      <ProfitFigure profit={fsp} revenue={revenue} />
+    </TableCell>
+    <TableCell className="text-right">
+      <ProfitFigure profit={repl} revenue={revenue} />
+    </TableCell>
+    {/* LIP: what it stands for is still unknown (K4), and a column of zeros
+        would read as an answer — so the cell says nothing is known. */}
+    <TableCell className="text-right">
+      <ProfitFigure profit={null} revenue={revenue} />
+    </TableCell>
+  </TableRow>
 );
 
 /**
- * `Revenue+Profit` for the selected line — the panel that proved the scoping.
+ * `Revenue+Profit` for the selected line — the reference's 5-column grid
+ * (316, order 100785): `Revenue · Profit w.r.t. APP · FSP · Repl. price · LIP`
+ * against `Materials · Options · Total`.
  *
- * On a nine-line order it reads one line's amount, not the order's total, which
- * is how the line scope was established in the first place.
+ * An option is charged at one agreed cost, so its profit is the same figure
+ * whichever basis the material is measured against.
  */
-const RevenueAndProfitPanel = ({ revenueAndProfit }: RevenueProps) => (
-  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-    <DetailField
-      label="Revenue"
-      value={formatMoney(revenueAndProfit.revenue)}
-    />
-    <DetailField
-      label="Cost"
-      value={formatMoney(revenueAndProfit.costAmount)}
-    />
-    <DetailField label="Profit" value={formatMoney(revenueAndProfit.profit)} />
-    <div>
-      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        Margin
-      </p>
-      <p
-        className={cn(
-          "text-sm tabular-nums",
-          revenueAndProfit.profitTooLow && "text-destructive",
-        )}
-      >
-        {formatPercent(revenueAndProfit.profitMargin)}
-      </p>
+const RevenueAndProfitPanel = ({ revenueAndProfit }: RevenueProps) => {
+  const {
+    revenue,
+    costPrice,
+    profit,
+    profitFsp,
+    profitReplPrice,
+    replacementCost,
+    optionsRevenue,
+    optionsProfit,
+    profitTooLow,
+  } = revenueAndProfit;
+  // A product with no settlement price reads € 0,00 on the reference; here it
+  // is a dash, so a missing FSP is not mistaken for a zero margin.
+  const materialsFsp = profitFsp ? profitFsp : null;
+
+  return (
+    <div className="space-y-3">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead />
+              <TableHead className="text-right">Revenue</TableHead>
+              <TableHead className="text-right">
+                Profit w.r.t. APP ({formatMoney(costPrice)})
+              </TableHead>
+              <TableHead className="text-right">Profit w.r.t. FSP</TableHead>
+              <TableHead className="text-right">
+                Profit w.r.t. Repl. price ({formatMoney(replacementCost)})
+              </TableHead>
+              <TableHead className="text-right">Profit w.r.t. LIP</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <RevenueRow
+              label="Materials"
+              revenue={revenue}
+              app={profit}
+              fsp={materialsFsp}
+              repl={profitReplPrice}
+            />
+            <RevenueRow
+              label="Options"
+              revenue={optionsRevenue}
+              app={optionsProfit}
+              fsp={materialsFsp === null ? null : optionsProfit}
+              repl={optionsProfit}
+            />
+            <RevenueRow
+              label="Total"
+              revenue={revenue + optionsRevenue}
+              app={profit + optionsProfit}
+              fsp={materialsFsp === null ? null : materialsFsp + optionsProfit}
+              repl={profitReplPrice + optionsProfit}
+              emphasis
+            />
+          </TableBody>
+        </Table>
+      </div>
+      {profitTooLow && (
+        <p className="text-sm text-destructive">
+          The margin is under the product group&apos;s floor.
+        </p>
+      )}
     </div>
-    <DetailField
-      label="Replacement price"
-      value={formatMoney(revenueAndProfit.replacementCost)}
-    />
-    <DetailField
-      label="Profit on replacement"
-      value={formatMoney(revenueAndProfit.profitReplPrice)}
-    />
-    {/* The third basis the reference measures against. Its own panel prints
-        four — APP, FSP, replacement price and LIP — and shows FSP as € 0,00 on
-        a product that carries no settlement price, which is what an em dash
-        says here. LIP is absent on purpose: what it stands for is still
-        unknown, and a column of zeros would read as an answer. */}
-    <DetailField
-      label="Profit on FSP"
-      value={
-        revenueAndProfit.profitFsp
-          ? formatMoney(revenueAndProfit.profitFsp)
-          : "—"
-      }
-    />
-    <DetailField
-      label="Margin too low"
-      value={yesNo(revenueAndProfit.profitTooLow)}
-    />
-  </div>
-);
+  );
+};
 
 /**
  * `Stock` — what is on the shelf for this line's article.
@@ -475,7 +938,9 @@ const PreviousQuotesPanel = ({ rows }: PreviousQuotesProps) => (
 );
 
 /**
- * Every panel that follows the SELECTED order line.
+ * Every panel that follows the SELECTED order line, in the reference's order
+ * (316, 438): Options, Deliveries, Stock, Text lines, Revenue+Profit, Pricing,
+ * Stock other affiliates, Previous orders, Previous quotes.
  *
  * This is the structural finding of the G1 capture: with one line highlighted
  * on a nine-line order, `Deliveries` reads one delivery and `Revenue+Profit`
@@ -483,71 +948,122 @@ const PreviousQuotesPanel = ({ rows }: PreviousQuotesProps) => (
  * asks what stock there is, what this customer paid before, and what has
  * shipped. See `docs/reference-system/order-detail.md` §10.
  */
-export const OrderLinePanelsView = ({ panels, lineLabel }: Props) => (
-  <div className="space-y-3">
-    <h2 className="border-b pb-2 text-base font-semibold">
-      Line {lineLabel}
-      <span className="ml-2 text-xs font-normal text-muted-foreground">
-        the panels below follow the selected line
-      </span>
-    </h2>
+export const OrderLinePanelsView = ({
+  panels,
+  lineLabel,
+  texts,
+}: Props) => {
+  const { revenueAndProfit } = panels;
+  const totalRevenue = revenueAndProfit.revenue + revenueAndProfit.optionsRevenue;
+  const totalProfit = revenueAndProfit.profit + revenueAndProfit.optionsProfit;
 
-    <CollapsibleSection title="Pricing" defaultOpen>
-      <PricingPanel
-        pricing={panels.pricing}
-        basePrice={panels.line.basePrice}
-        quantitySurcharge={panels.line.quantitySurcharge}
-        colorSurcharge={panels.line.colorSurcharge}
-        lengthSurcharge={panels.line.lengthSurcharge}
-        lineDiscount={panels.line.lineDiscount}
-        extraDiscount={panels.line.extraDiscount}
-        groupDiscount={panels.line.groupDiscount}
-      />
-    </CollapsibleSection>
+  return (
+    <div className="space-y-3">
+      <h2 className="border-b pb-2 text-base font-semibold">
+        Line {lineLabel}
+        <span className="ml-2 text-xs font-normal text-muted-foreground">
+          the panels below follow the selected line
+        </span>
+      </h2>
 
-    <CollapsibleSection
-      title="Revenue + Profit"
-      summary={formatMoney(panels.revenueAndProfit.revenue)}
-    >
-      <RevenueAndProfitPanel revenueAndProfit={panels.revenueAndProfit} />
-    </CollapsibleSection>
+      <CollapsibleSection
+        title="Options"
+        summary={
+          panels.options.length === 0
+            ? "No options"
+            : panels.options
+                .map((option) => option.optionName ?? option.optionCode)
+                .filter(Boolean)
+                .join(", ")
+        }
+        defaultOpen={panels.options.length > 0}
+      >
+        <OptionsPanel rows={panels.options} />
+      </CollapsibleSection>
 
-    <CollapsibleSection
-      title="Deliveries"
-      summary={`${panels.deliveries.length} ${pluralize(
-        panels.deliveries.length,
-        "delivery",
-        "deliveries",
-      )}`}
-    >
-      <TransportWorkOrderTable rows={panels.deliveries} />
-    </CollapsibleSection>
+      <CollapsibleSection
+        title="Deliveries"
+        summary={`${panels.deliveries.length} ${pluralize(
+          panels.deliveries.length,
+          "delivery",
+          "deliveries",
+        )}`}
+      >
+        <DeliveriesPanel
+          rows={panels.deliveries}
+          blocked={panels.line.transportBlock ?? false}
+          options={panels.line.options}
+          unit={panels.line.unit}
+        />
+      </CollapsibleSection>
 
-    <CollapsibleSection
-      title="Stock"
-      summary={`${panels.stock.length} ${pluralize(panels.stock.length, "lot")}`}
-    >
-      <StockPanel rows={panels.stock} />
-    </CollapsibleSection>
+      <CollapsibleSection
+        title="Stock"
+        summary={`${panels.stock.length} ${pluralize(panels.stock.length, "lot")}`}
+      >
+        <StockPanel rows={panels.stock} />
+      </CollapsibleSection>
 
-    <CollapsibleSection
-      title="Previous orders"
-      summary={`${panels.previousOrders.length} ${pluralize(
-        panels.previousOrders.length,
-        "line",
-      )}`}
-    >
-      <PreviousOrdersPanel rows={panels.previousOrders} />
-    </CollapsibleSection>
+      <CollapsibleSection
+        title="Text lines"
+        summary={`${texts.length} ${pluralize(texts.length, "text")}`}
+      >
+        <TextLinesPanel rows={texts} />
+      </CollapsibleSection>
 
-    <CollapsibleSection
-      title="Previous quotes"
-      summary={`${panels.previousQuotes.length} ${pluralize(
-        panels.previousQuotes.length,
-        "line",
-      )}`}
-    >
-      <PreviousQuotesPanel rows={panels.previousQuotes} />
-    </CollapsibleSection>
-  </div>
-);
+      <CollapsibleSection
+        title="Revenue + Profit"
+        summary={`CURRENT APP: ${formatMoney(
+          revenueAndProfit.costPrice,
+        )}  Profit w.r.t. CURRENT APP: ${formatMoney(totalProfit)} (${formatPercent(
+          totalRevenue === 0 ? 0 : (totalProfit / totalRevenue) * 100,
+        )})`}
+      >
+        <RevenueAndProfitPanel revenueAndProfit={revenueAndProfit} />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Pricing">
+        <PricingPanel
+          pricing={panels.pricing}
+          basePrice={panels.line.basePrice}
+          quantitySurcharge={panels.line.quantitySurcharge}
+          colorSurcharge={panels.line.colorSurcharge}
+          lengthSurcharge={panels.line.lengthSurcharge}
+          lineDiscount={panels.line.lineDiscount}
+          extraDiscount={panels.line.extraDiscount}
+          groupDiscount={panels.line.groupDiscount}
+          lineDiscountAmount={panels.lineDiscountAmount}
+          extraDiscountAmount={panels.extraDiscountAmount}
+          options={panels.options}
+        />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Stock other affiliates" summary="Not built">
+        <p className="text-sm text-muted-foreground">
+          Not built: this installation holds one affiliate&apos;s stock, so
+          there is no other affiliate to look in.
+        </p>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Previous orders"
+        summary={`${panels.previousOrders.length} ${pluralize(
+          panels.previousOrders.length,
+          "line",
+        )}`}
+      >
+        <PreviousOrdersPanel rows={panels.previousOrders} />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Previous quotes"
+        summary={`${panels.previousQuotes.length} ${pluralize(
+          panels.previousQuotes.length,
+          "line",
+        )}`}
+      >
+        <PreviousQuotesPanel rows={panels.previousQuotes} />
+      </CollapsibleSection>
+    </div>
+  );
+};

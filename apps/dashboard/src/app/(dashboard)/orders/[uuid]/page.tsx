@@ -4,16 +4,19 @@ import { ChevronLeft } from "lucide-react";
 import {
   getOrderCallOffAddresses,
   getOrderCallOffs,
+  getOrderHeader,
   getOrderInvoiceLines,
   getOrderLinePanels,
   getOrderCommunications,
   getOrderCompetitors,
+  getOrderTexts,
   getOrderWorkOrders,
 } from "@/app/(dashboard)/orders/[uuid]/actions";
 import { getOrderDetail } from "@/app/(dashboard)/orders/actions";
 import { OrderDetailView } from "@/components/orders/order-detail";
 import { PageHeading } from "@/components/layout/page-heading";
 import { getClerkUserNames } from "@/lib/server/clerk";
+import { ORDER_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -38,22 +41,38 @@ const OrderDetailPage = async ({ params, searchParams }: Props) => {
     order.items[0]?.uuid;
 
   // Sequential rather than parallel: the shared MySQL instance caps
-  // connections, and three panels on one screen do not justify three at once.
+  // connections, and the panels on one screen do not justify one each.
+  const header = await getOrderHeader(uuid);
   const workOrders = await getOrderWorkOrders(uuid);
   const invoiceLines = await getOrderInvoiceLines(uuid);
   const linePanels = selectedUuid
     ? await getOrderLinePanels(selectedUuid)
     : null;
+  const texts = await getOrderTexts(uuid);
   const communications = await getOrderCommunications(uuid);
   const competitors = await getOrderCompetitors(uuid);
+  const userNames = await getClerkUserNames();
   const callOffs =
     order.orderType === "call_off"
       ? {
           rows: await getOrderCallOffs(uuid),
           addresses: await getOrderCallOffAddresses(uuid),
-          userNames: await getClerkUserNames(),
+          userNames,
         }
       : null;
+
+  // The reference's banner: `Order 100785, Allva Edelstahl GmbH, Tel: …,
+  // Fax: … - Partially invoiced, Printed, Mailed`.
+  const title = `Order ${order.id}, ${order.companyName ?? "—"}, Tel: ${
+    header?.telephone ?? ""
+  }, Fax: ${header?.fax ?? ""} - ${[
+    ORDER_STATUS_LABELS[order.status],
+    order.isPrinted ? "Printed" : null,
+    order.isMailed ? "Mailed" : null,
+    order.isFaxed ? "Faxed" : null,
+  ]
+    .filter(Boolean)
+    .join(", ")}`;
 
   return (
     <div className="space-y-4">
@@ -66,11 +85,14 @@ const OrderDetailPage = async ({ params, searchParams }: Props) => {
           Orders
         </Link>
       </div>
-      <PageHeading title={`Order #${order.id}`} />
+      <PageHeading title={title} titleClassName="text-xl" />
       <OrderDetailView
         order={order}
+        header={header}
+        userNames={userNames}
         workOrders={workOrders}
         invoiceLines={invoiceLines}
+        texts={texts}
         linePanels={linePanels}
         communications={communications}
         competitors={competitors}

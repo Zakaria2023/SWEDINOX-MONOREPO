@@ -163,6 +163,9 @@ export type OrderOption = Pick<SelectOrders, "uuid" | "id">;
 export type OrderItemDetail = SelectOrderItems & {
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
+  /** `Category` and `Quality` on the reference's line grid: the lot's own. */
+  stockCategory: SelectStock["stockCategory"] | null;
+  quality: SelectStock["quality"] | null;
 };
 
 export type OrderDetail = SelectOrders & {
@@ -970,10 +973,14 @@ export const getOrderDetail = async (
       ...getTableColumns(OrderItems),
       productCode: Products.productCode,
       productName: Products.name,
+      stockCategory: Stock.stockCategory,
+      quality: Stock.quality,
     })
     .from(OrderItems)
     .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
-    .where(eq(OrderItems.orderUuid, uuid));
+    .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
+    .where(eq(OrderItems.orderUuid, uuid))
+    .orderBy(asc(OrderItems.lineNumber), asc(OrderItems.id));
 
   return { ...order, items };
 };

@@ -46,7 +46,7 @@ import {
   userName,
 } from "@/lib/helpers";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Mail, Pencil, Plus, Printer, Trash2 } from "lucide-react";
 import {
   startTransition,
   useActionState,
@@ -280,6 +280,25 @@ export const OrderCallOffsPanel = ({
           >
             <Pencil size={16} />
             Change
+          </Button>
+          {/* `Print call-off · Send…` on the reference (314, 100785). */}
+          <Button
+            type="button"
+            variant="outline"
+            disabled
+            title="Not built: printing a call-off"
+          >
+            <Printer size={16} />
+            Print call-off
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled
+            title="Not built: sending a call-off"
+          >
+            <Mail size={16} />
+            Send…
           </Button>
         </div>
 

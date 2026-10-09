@@ -1,6 +1,15 @@
 "use server";
 
-import { and, asc, desc, eq, getTableColumns, ne } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  isNotNull,
+  ne,
+  sql,
+} from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 import { db } from "@/db";
 import { Communications, SelectCommunications } from "@/db/schema/communications";
@@ -13,7 +22,22 @@ import {
   CompanyAddresses,
   SelectCompanyAddresses,
 } from "@/db/schema/company-addresses";
+import {
+  CustomerProjects,
+  SelectCustomerProjects,
+} from "@/db/schema/customer-projects";
 import { InvoiceItems, SelectInvoiceItems } from "@/db/schema/invoice-items";
+import {
+  OrderItemOptions,
+  SelectOrderItemOptions,
+} from "@/db/schema/order-item-options";
+import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
+import {
+  PurchaseOrders,
+  SelectPurchaseOrders,
+} from "@/db/schema/purchase-orders";
+import { SalesOptions, SelectSalesOptions } from "@/db/schema/sales-options";
+import { SelectTexts, Texts } from "@/db/schema/texts";
 import {
   OrderCallOffs,
   SelectOrderCallOffs,
@@ -41,6 +65,7 @@ import {
   SelectWarehouseWorkOrderLines,
   SelectWarehouseWorkOrders,
   WarehouseWorkOrderLines,
+  WarehouseWorkOrderPicks,
   WarehouseWorkOrders,
 } from "@/db/schema/warehouse-work-orders";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
@@ -49,9 +74,11 @@ import { requireAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import {
   daysInSystem,
+  discountAmount,
   generateUuid,
   priceCascade,
   PriceCascade,
+  timestampFromDriver,
 } from "@/lib/helpers";
 
 // The reference caps each of these panels rather than paging them — a seller
@@ -82,13 +109,22 @@ export type OrderWarehouseWorkOrderRow = SelectWarehouseWorkOrderLines & {
   orderLineNumber: SelectOrderItems["lineNumber"] | null;
   fromLocationName: SelectWarehouses["name"] | null;
   toLocationName: SelectWarehouses["name"] | null;
+  stockUnit: SelectProducts["stockUnit"] | null;
+  purchaseOrderId: SelectPurchaseOrders["id"] | null;
+  stockCategory: SelectStock["stockCategory"] | null;
+  /** Computed: the latest pick reported on the line — `Date finished`. */
+  dateFinished: Date | null;
 };
 
 export type OrderProductionWorkOrderRow = SelectProductionWorkOrderLines & {
   workOrderNumber: SelectProductionWorkOrders["number"];
   workOrderDate: SelectProductionWorkOrders["plannedDate"];
   workOrderStatus: SelectProductionWorkOrders["status"];
+  workOrderOption: SelectProductionWorkOrders["option"];
   orderLineNumber: SelectOrderItems["lineNumber"] | null;
+  /** The purchase the order line's lot came in on, and the day it arrived. */
+  purchaseOrderId: SelectPurchaseOrders["id"] | null;
+  receiptDate: SelectStock["receiptDate"] | null;
 };
 
 export type OrderTransportWorkOrderRow = SelectTransportWorkOrderLines & {
@@ -167,6 +203,8 @@ export type OrderLinePreviousQuoteRow = {
 
 export type OrderLineRevenueAndProfit = {
   revenue: number;
+  /** The line's APP per unit — the cost price snapshotted at reservation. */
+  costPrice: number;
   costAmount: number;
   profit: number;
   profitMargin: number;
@@ -174,6 +212,9 @@ export type OrderLineRevenueAndProfit = {
   profitReplPrice: number;
   profitFsp: number;
   profitTooLow: boolean;
+  /** The line's options, summed — the `Options` row of the panel. */
+  optionsRevenue: number;
+  optionsProfit: number;
 };
 
 /**
@@ -190,7 +231,11 @@ export type OrderLinePanels = {
    *  the cascade computed from them. */
   line: SelectOrderItems;
   pricing: PriceCascade;
+  /** The € the line and extra discount each take off, beside their %. */
+  lineDiscountAmount: number;
+  extraDiscountAmount: number;
   revenueAndProfit: OrderLineRevenueAndProfit;
+  options: OrderLineOptionRow[];
   stock: OrderLineStockRow[];
   deliveries: OrderTransportWorkOrderRow[];
   previousOrders: OrderLinePreviousOrderRow[];
@@ -218,6 +263,47 @@ export type SaveOrderCallOffInput = CallOffValues & {
 
 export type OrderCallOffResult = { success?: boolean; error?: string };
 
+/** One row of the selected line's `Options` panel. */
+export type OrderLineOptionRow = Pick<
+  SelectOrderItemOptions,
+  | "uuid"
+  | "quantity"
+  | "unit"
+  | "price"
+  | "priceUnit"
+  | "costPrice"
+  | "amount"
+  | "profit"
+> & {
+  optionCode: SelectSalesOptions["code"] | null;
+  optionName: SelectSalesOptions["name"] | null;
+};
+
+/**
+ * What the read-only header prints beyond the order's own columns: the
+ * banner's `Tel`/`Fax`, the customer code, the project, the delivery address,
+ * the `Delivered:` date and `Converted from quote …`.
+ */
+export type OrderHeaderInfo = {
+  customerCode: SelectCompanies["id"] | null;
+  telephone: SelectCompanyAddresses["telephone"] | null;
+  fax: SelectCompanyAddresses["fax"] | null;
+  projectName: SelectCustomerProjects["projectName"] | null;
+  deliveryAddress: Pick<
+    SelectCompanyAddresses,
+    "streetAndNo" | "postalCode" | "city" | "country"
+  > | null;
+  /** Computed: the latest completed trip that carried a line of the order. */
+  deliveredOn: string | null;
+  sourceQuotes: Pick<SelectQuotes, "uuid" | "id">[];
+};
+
+/** One of the order's text lines. */
+export type OrderTextRow = Pick<
+  SelectTexts,
+  "uuid" | "title" | "textBlock" | "sequenceNumber"
+>;
+
 const toNumber = (value: string | number | null): number =>
   value === null ? 0 : Number(value);
 
@@ -243,6 +329,14 @@ export const getOrderWorkOrders = async (
       orderLineNumber: OrderItems.lineNumber,
       fromLocationName: FromLocation.name,
       toLocationName: ToLocation.name,
+      stockUnit: Products.stockUnit,
+      purchaseOrderId: PurchaseOrders.id,
+      stockCategory: Stock.stockCategory,
+      dateFinished: sql<Date | null>`(
+        SELECT MAX(${WarehouseWorkOrderPicks.executedAt})
+        FROM ${WarehouseWorkOrderPicks}
+        WHERE ${WarehouseWorkOrderPicks.workOrderLineUuid} = ${WarehouseWorkOrderLines.uuid}
+      )`,
     })
     .from(WarehouseWorkOrderLines)
     .innerJoin(
@@ -261,6 +355,16 @@ export const getOrderWorkOrders = async (
       ToLocation,
       eq(WarehouseWorkOrderLines.toLocationUuid, ToLocation.uuid),
     )
+    .leftJoin(Products, eq(WarehouseWorkOrderLines.productUuid, Products.uuid))
+    .leftJoin(
+      PurchaseOrderItems,
+      eq(WarehouseWorkOrderLines.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
+    )
+    .leftJoin(
+      PurchaseOrders,
+      eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
+    )
+    .leftJoin(Stock, eq(WarehouseWorkOrderLines.stockUuid, Stock.uuid))
     .where(eq(OrderItems.orderUuid, orderUuid))
     .orderBy(OrderItems.lineNumber);
 
@@ -270,7 +374,10 @@ export const getOrderWorkOrders = async (
       workOrderNumber: ProductionWorkOrders.number,
       workOrderDate: ProductionWorkOrders.plannedDate,
       workOrderStatus: ProductionWorkOrders.status,
+      workOrderOption: ProductionWorkOrders.option,
       orderLineNumber: OrderItems.lineNumber,
+      purchaseOrderId: PurchaseOrders.id,
+      receiptDate: Stock.receiptDate,
     })
     .from(ProductionWorkOrderLines)
     .innerJoin(
@@ -281,6 +388,8 @@ export const getOrderWorkOrders = async (
       OrderItems,
       eq(ProductionWorkOrderLines.orderItemUuid, OrderItems.uuid),
     )
+    .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
+    .leftJoin(PurchaseOrders, eq(Stock.purchaseOrderUuid, PurchaseOrders.uuid))
     .where(eq(OrderItems.orderUuid, orderUuid))
     .orderBy(OrderItems.lineNumber);
 
@@ -306,7 +415,14 @@ export const getOrderWorkOrders = async (
     .where(eq(OrderItems.orderUuid, orderUuid))
     .orderBy(OrderItems.lineNumber);
 
-  return { warehouse, production, transport };
+  return {
+    warehouse: warehouse.map((row) => ({
+      ...row,
+      dateFinished: timestampFromDriver(row.dateFinished),
+    })),
+    production,
+    transport,
+  };
 };
 
 /**
@@ -397,11 +513,43 @@ export const getOrderLinePanels = async (
         }
       : pricing;
 
+  // The € each of the two line-level discounts takes off, which the panel
+  // prints beside its percentage. Both are taken on gross, as the cascade does.
+  const lineDiscountAmount = discountAmount(
+    resolvedPricing.grossPrice,
+    toNumber(item.lineDiscount),
+    item.lineDiscountUnit,
+  );
+  const extraDiscountAmount = discountAmount(
+    resolvedPricing.grossPrice,
+    toNumber(item.extraDiscount),
+    item.lineDiscountUnit,
+  );
+
+  const options = await db
+    .select({
+      uuid: OrderItemOptions.uuid,
+      quantity: OrderItemOptions.quantity,
+      unit: OrderItemOptions.unit,
+      price: OrderItemOptions.price,
+      priceUnit: OrderItemOptions.priceUnit,
+      costPrice: OrderItemOptions.costPrice,
+      amount: OrderItemOptions.amount,
+      profit: OrderItemOptions.profit,
+      optionCode: SalesOptions.code,
+      optionName: SalesOptions.name,
+    })
+    .from(OrderItemOptions)
+    .leftJoin(SalesOptions, eq(OrderItemOptions.optionUuid, SalesOptions.uuid))
+    .where(eq(OrderItemOptions.orderItemUuid, orderItemUuid))
+    .orderBy(asc(OrderItemOptions.id));
+
   const amount = toNumber(item.amount);
   const costAmount = toNumber(item.costAmount);
 
   const revenueAndProfit: OrderLineRevenueAndProfit = {
     revenue: amount,
+    costPrice: toNumber(item.costPrice),
     costAmount,
     profit: toNumber(item.profit),
     profitMargin: toNumber(item.profitMargin),
@@ -409,6 +557,14 @@ export const getOrderLinePanels = async (
     profitReplPrice: toNumber(item.profitReplPrice),
     profitFsp: toNumber(item.profitFsp),
     profitTooLow: item.profitTooLow ?? false,
+    optionsRevenue: options.reduce(
+      (sum, option) => sum + toNumber(option.amount),
+      0,
+    ),
+    optionsProfit: options.reduce(
+      (sum, option) => sum + toNumber(option.profit),
+      0,
+    ),
   };
 
   const stockRows = await db
@@ -521,7 +677,10 @@ export const getOrderLinePanels = async (
     orderItemUuid,
     line: item,
     pricing: resolvedPricing,
+    lineDiscountAmount,
+    extraDiscountAmount,
     revenueAndProfit,
+    options,
     stock,
     deliveries,
     previousOrders: previousOrderRows.map((row) => ({
@@ -752,4 +911,123 @@ export const deleteOrderCallOff = async (
   await db.delete(OrderCallOffs).where(eq(OrderCallOffs.uuid, callOffUuid));
   revalidatePath(`/orders/${callOff.orderUuid}`);
   return {};
+};
+
+/**
+ * Everything the read-only header and the title banner print that is not a
+ * column of the order itself. One query after another: the shared MySQL
+ * instance caps connections.
+ */
+export const getOrderHeader = async (
+  orderUuid: string,
+): Promise<OrderHeaderInfo | null> => {
+  await requireAuth();
+
+  const [order] = await db
+    .select({
+      companyUuid: Orders.companyUuid,
+      customerCode: Companies.id,
+      projectName: CustomerProjects.projectName,
+      streetAndNo: CompanyAddresses.streetAndNo,
+      postalCode: CompanyAddresses.postalCode,
+      city: CompanyAddresses.city,
+      country: CompanyAddresses.country,
+      deliveryAddressUuid: Orders.deliveryAddressUuid,
+    })
+    .from(Orders)
+    .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+    .leftJoin(CustomerProjects, eq(Orders.projectUuid, CustomerProjects.uuid))
+    .leftJoin(
+      CompanyAddresses,
+      eq(Orders.deliveryAddressUuid, CompanyAddresses.uuid),
+    )
+    .where(eq(Orders.uuid, orderUuid))
+    .limit(1);
+
+  if (!order) {
+    return null;
+  }
+
+  // The banner's `Tel` and `Fax` are the company's, which live on its
+  // addresses: the first address that carries a telephone speaks for it.
+  const [phone] = await db
+    .select({
+      telephone: CompanyAddresses.telephone,
+      fax: CompanyAddresses.fax,
+    })
+    .from(CompanyAddresses)
+    .where(
+      and(
+        eq(CompanyAddresses.companyUuid, order.companyUuid),
+        isNotNull(CompanyAddresses.telephone),
+      ),
+    )
+    .orderBy(asc(CompanyAddresses.sequenceNumber), asc(CompanyAddresses.id))
+    .limit(1);
+
+  const [delivered] = await db
+    .select({
+      // Formatted in SQL: a bare MAX() of a DATE comes back as a JS Date.
+      deliveredOn: sql<string | null>`DATE_FORMAT(
+        MAX(${TransportWorkOrders.date}),
+        '%Y-%m-%d'
+      )`,
+    })
+    .from(TransportWorkOrderLines)
+    .innerJoin(
+      TransportWorkOrders,
+      eq(TransportWorkOrderLines.workOrderUuid, TransportWorkOrders.uuid),
+    )
+    .innerJoin(
+      OrderItems,
+      eq(TransportWorkOrderLines.orderItemUuid, OrderItems.uuid),
+    )
+    .where(
+      and(
+        eq(OrderItems.orderUuid, orderUuid),
+        eq(TransportWorkOrders.status, "completed"),
+      ),
+    );
+
+  // `Converted from quote 300013` — the quote whose lines became this order.
+  const sourceQuotes = await db
+    .selectDistinct({ uuid: Quotes.uuid, id: Quotes.id })
+    .from(QuoteItems)
+    .innerJoin(Quotes, eq(QuoteItems.quoteUuid, Quotes.uuid))
+    .where(eq(QuoteItems.convertedToOrderUuid, orderUuid))
+    .orderBy(asc(Quotes.id));
+
+  return {
+    customerCode: order.customerCode,
+    telephone: phone?.telephone ?? null,
+    fax: phone?.fax ?? null,
+    projectName: order.projectName,
+    deliveryAddress: order.deliveryAddressUuid
+      ? {
+          streetAndNo: order.streetAndNo,
+          postalCode: order.postalCode,
+          city: order.city,
+          country: order.country,
+        }
+      : null,
+    deliveredOn: delivered?.deliveredOn ?? null,
+    sourceQuotes,
+  };
+};
+
+/** The order's text lines, in the order they print. */
+export const getOrderTexts = async (
+  orderUuid: string,
+): Promise<OrderTextRow[]> => {
+  await requireAuth();
+  return db
+    .select({
+      uuid: Texts.uuid,
+      title: Texts.title,
+      textBlock: Texts.textBlock,
+      sequenceNumber: Texts.sequenceNumber,
+    })
+    .from(Texts)
+    .where(eq(Texts.orderUuid, orderUuid))
+    .orderBy(asc(Texts.sequenceNumber), asc(Texts.id));
 };
