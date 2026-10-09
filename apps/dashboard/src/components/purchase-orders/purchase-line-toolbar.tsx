@@ -8,8 +8,21 @@ import { Button } from "@/components/shadcn/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
 import { formatNumber, purchaseLineActions } from "@/lib/helpers";
-import { CircleSlash } from "lucide-react";
+import {
+  BellRing,
+  Calculator,
+  CircleSlash,
+  Plus,
+  Scissors,
+  X,
+} from "lucide-react";
 import { useState, useTransition } from "react";
+
+// The reference's Lines toolbar on a saved order: `New · Delete · Sawing
+// specifications · Calculate · Pre-notify`, then the option shortcuts.
+// Adding and deleting lines on a saved order is not built yet, so those two
+// are greyed with the reason; `Close line` is ours.
+const OPTION_SHORTCUTS = ["DUPK320", "NG", "K320", "BF", "F", "L", "K", "LSR"];
 
 type Props = {
   selected: PurchaseOrderItemDetail | null;
@@ -44,10 +57,58 @@ export const PurchaseLineToolbar = ({ selected }: Props) => {
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-muted/30 px-2 py-1">
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
+          size="sm"
+          disabled
+          title="Adding a line to a saved order is not built yet"
+        >
+          <Plus size={16} className="text-primary" />
+          New
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled
+          title="Deleting a line from a saved order is not built yet"
+        >
+          <X size={16} className="text-destructive" />
+          Delete
+        </Button>
+        <Button type="button" variant="ghost" size="sm" disabled>
+          <Scissors size={16} />
+          Sawing specifications
+        </Button>
+        <Button type="button" variant="ghost" size="sm" disabled>
+          <Calculator size={16} />
+          Calculate
+        </Button>
+        <Button type="button" variant="ghost" size="sm" disabled>
+          <BellRing size={16} />
+          Pre-notify
+        </Button>
+        <span className="mx-1 h-5 border-l" />
+        {OPTION_SHORTCUTS.map((option) => (
+          <Button
+            key={option}
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled
+            className="h-7 px-2 text-xs"
+            title="Options are added on the Options panel"
+          >
+            {option}
+          </Button>
+        ))}
+        <span className="mx-1 h-5 border-l" />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
           disabled={!permitted.canClose || isPending}
           onClick={() => setIsCloseOpen(true)}
         >
