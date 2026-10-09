@@ -33,6 +33,7 @@ import {
   generateUuid,
   lotOrigin,
   moneyString,
+  nextInternalCharge,
   NON_SELLABLE_LOCATION_TYPES,
   normaliseCharge,
   PrintMedium,
@@ -585,6 +586,24 @@ export const getWarehouseWorkOrderLineDetail = async (
  * Blocked lots and other people's metal stay out, as everywhere else. What does
  * *not* filter anything here is the reservation — see `PickableLot`.
  */
+/**
+ * The internal charge the next receipt will be given — `26AQWF` on every row
+ * of the reference's Gereedmelden dialog before anything was typed (327402,
+ * 9-10-2026). Minted the way the receipt mints it, so the dialog shows what
+ * the shelf will carry; a typed one still wins on save.
+ */
+export const previewNextInternalCharge = async (): Promise<string> => {
+  const year = new Date().getFullYear();
+  const prefix = String(year % 100).padStart(2, "0");
+  const [lastOfYear] = await db
+    .select({ charge: sql<string | null>`MAX(${Stock.internalCharge})` })
+    .from(Stock)
+    .where(
+      sql`${Stock.internalCharge} REGEXP ${`^${prefix}[A-Z]{4}$`}`,
+    );
+  return nextInternalCharge(year, lastOfYear?.charge ?? null);
+};
+
 export const getPickableLotsForLine = async (
   lineUuid: string,
 ): Promise<PickableLot[]> => {
@@ -1282,10 +1301,9 @@ export const reportWarehouseWorkOrderLineCompletion = async (
 
     const { line, workOrder } = row;
 
-    // An unloading is reported straight away: on 327402 (9-10-2026)
-    // `Vrijgeven` was greyed and `Gereedmelden…` live while the slip was
-    // still New — a lorry is not released onto the floor, it arrives.
-    if (workOrder.status === "new" && workOrder.type !== "unloading") {
+    // Every slip is released before it is reported, an unloading included:
+    // Gereedmelden stayed greyed on 327402 until Vrijgeven (9-10-2026).
+    if (workOrder.status === "new") {
       return {
         error: "Release the work order before reporting work against it.",
       };

@@ -154,13 +154,10 @@ export const WarehouseWorkOrdersTable = ({
   const statuses = new Set(picked.map((row) => row.workOrderStatus));
   const only = (status: WorkOrderStatus) =>
     statuses.size === 1 && statuses.has(status);
-  // An unloading line can be reported while its slip is still New: on
-  // 327402 (9-10-2026) Gereedmelden was live on the line before any release,
-  // and Vrijgeven lived on the order node beside it.
+  // Gereedmelden stays greyed until the slip is released, an unloading
+  // included (327402, 9-10-2026): Vrijgeven on the order node first.
   const canReport =
-    !!oneLine &&
-    oneLine.status !== "approved" &&
-    (only("released") || (oneLine.type === "unloading" && only("new")));
+    !!oneLine && oneLine.status !== "approved" && only("released");
 
   const run = (
     action: () => Promise<{ error?: string; success?: boolean }>,
@@ -369,6 +366,7 @@ export const WarehouseWorkOrdersTable = ({
       <ReportCompletionDialog
         line={reportingLine}
         workOrderType={reportingLine?.type ?? "picking"}
+        workOrderNumber={reportingLine?.workOrderNumber ?? null}
         locations={locations}
         users={users}
         onOpenChange={(open) => {

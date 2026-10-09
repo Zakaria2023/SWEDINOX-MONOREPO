@@ -9,6 +9,7 @@ import {
   getPickableLotsForLine,
   getWarehouseWorkOrderPicks,
   PickableLot,
+  previewNextInternalCharge,
   reportWarehouseWorkOrderLineCompletion,
   WorkOrderLineListItem,
   WorkOrderPickRow,
@@ -44,18 +45,27 @@ import { TimePicker } from "@/components/shadcn/time-picker";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { ClerkUserOption } from "@/lib/server/clerk";
+import { WAREHOUSE_WORK_ORDER_TYPE_LABELS } from "@/lib/labels";
 import { WarehouseWorkOrderType } from "@/lib/enums";
 import {
   cn,
+  formatNumber,
   nowTimeString,
   orDash,
   todayDateString,
   warehouseWorkOrderTypeMetaOf,
 } from "@/lib/helpers";
 
+// The reference opens an unloading with one row per piece — ten rows for ten
+// plates, the first carrying the whole quantity (327402, 9-10-2026). Past
+// this many pieces a coil or a bar bundle is reported as one row.
+const ROWS_PER_PIECE_UP_TO = 25;
+
 type Props = {
   line: WorkOrderLineListItem | null;
   workOrderType: WarehouseWorkOrderType;
+  /** For the title — `Gereedmelden losopdracht 327402/1`. */
+  workOrderNumber?: number | null;
   locations: LocationOption[];
   users: ClerkUserOption[];
   onOpenChange: (open: boolean) => void;
@@ -78,6 +88,7 @@ const lotLabel = (lot: PickableLot): string =>
 export const ReportCompletionDialog = ({
   line,
   workOrderType,
+  workOrderNumber = null,
   locations,
   users,
   onOpenChange,
@@ -137,10 +148,22 @@ export const ReportCompletionDialog = ({
       const pickable: PickableLot[] = await getPickableLotsForLine(
         line.uuid,
       ).catch(() => []);
+      const receiptMeta = warehouseWorkOrderTypeMetaOf(workOrderType);
+      const incoming = receiptMeta?.stockEffect === "in";
+      // The charge every bundle of this unloading will carry, shown before
+      // anything is typed — as the reference shows `26AQWF` on every row.
+      const mintedCharge =
+        incoming && !line.internalCharge
+          ? await previewNextInternalCharge().catch(() => "")
+          : (line.internalCharge ?? "");
 
       if (request.cancelled) {
         return;
       }
+
+      const plannedPieces = Math.round(Number(line.qtyPlanned ?? 0));
+      const perPiece =
+        incoming && plannedPieces > 1 && plannedPieces <= ROWS_PER_PIECE_UP_TO;
 
       const rows = prepared.length
         ? prepared.map((pick) => ({
@@ -154,18 +177,29 @@ export const ReportCompletionDialog = ({
               pick.stockInternalCharge ?? line.internalCharge ?? "",
             internalBatch: pick.internalBatch ?? line.internalBatch ?? "",
           }))
-        : [
-            {
+        : perPiece
+          ? Array.from({ length: plannedPieces }, (_, index) => ({
               uuid: undefined,
-              stockUuid: line.stockUuid ?? "",
-              qtyPlanned: line.qtyPlanned ?? "0",
-              qtyActual: line.qtyPlanned ?? "",
-              kgActual: line.kgPlanned ?? "",
+              stockUuid: "",
+              qtyPlanned: index === 0 ? (line.qtyPlanned ?? "0") : "0",
+              qtyActual: index === 0 ? (line.qtyPlanned ?? "") : "",
+              kgActual: index === 0 ? (line.kgPlanned ?? "") : "",
               charge: line.charge ?? "",
-              internalCharge: line.internalCharge ?? "",
+              internalCharge: mintedCharge,
               internalBatch: line.internalBatch ?? "",
-            },
-          ];
+            }))
+          : [
+              {
+                uuid: undefined,
+                stockUuid: line.stockUuid ?? "",
+                qtyPlanned: line.qtyPlanned ?? "0",
+                qtyActual: line.qtyPlanned ?? "",
+                kgActual: line.kgPlanned ?? "",
+                charge: line.charge ?? "",
+                internalCharge: mintedCharge,
+                internalBatch: line.internalBatch ?? "",
+              },
+            ];
 
       setLots(pickable);
       reset({
@@ -183,7 +217,7 @@ export const ReportCompletionDialog = ({
     return () => {
       request.cancelled = true;
     };
-  }, [line, reset]);
+  }, [line, reset, workOrderType]);
 
   const onSubmit = handleSubmit((values) => {
     if (!line) {
@@ -329,22 +363,28 @@ export const ReportCompletionDialog = ({
     value: user.value,
   }));
 
-  const columnCount = isDrawnFromStock ? 8 : 7;
+  const columnCount = isReceipt ? 16 : isDrawnFromStock ? 8 : 7;
 
   return (
     <Dialog open={!!line} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl">
         <DialogHeader>
-          <DialogTitle>Report Completion</DialogTitle>
+          <DialogTitle>
+            Report completion{" "}
+            {WAREHOUSE_WORK_ORDER_TYPE_LABELS[workOrderType].toLowerCase()}{" "}
+            {workOrderNumber ?? ""}/{line?.lineNumber ?? ""},{" "}
+            {formatNumber(Number(line?.qtyPlanned ?? 0))} {line?.productName ?? ""}
+            {line?.length || line?.width || line?.thickness
+              ? ` ${[line?.length, line?.width, line?.thickness]
+                  .filter((value) => value !== null && Number(value) > 0)
+                  .map((value) => String(Number(value)))
+                  .join("x")}mm`
+              : ""}
+          </DialogTitle>
           <DialogDescription>
-            {line &&
-              `Line ${line.lineNumber ?? ""} — ${line.qtyPlanned ?? 0} of ${
-                line.productCode ?? "product"
-              }. ${
-                isCount
-                  ? "The quantity you report replaces what the lot is recorded as holding."
-                  : "This is the moment the stock actually moves."
-              }`}
+            {isCount
+              ? "The quantity you report replaces what the lot is recorded as holding."
+              : "This is the moment the stock actually moves."}
           </DialogDescription>
         </DialogHeader>
 
@@ -428,6 +468,31 @@ export const ReportCompletionDialog = ({
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
+                  {isReceipt ? (
+                    /* The reference's Gereedmelden losopdracht, column for
+                       column: Voor order · Hvh · Lengte · Breedte · Dikte ·
+                       Gewicht · Gewicht bruto · Gewogen gewicht · Meters ·
+                       Naar · Interne charge · Interne partij · Charge · Partij
+                       · Plaatnummer. */
+                    <TableRow>
+                      <TableHead>For order</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Length</TableHead>
+                      <TableHead className="text-right">Width</TableHead>
+                      <TableHead className="text-right">Thickness</TableHead>
+                      <TableHead className="text-right">Weight</TableHead>
+                      <TableHead className="text-right">Gross weight</TableHead>
+                      <TableHead className="text-right">Weighed weight</TableHead>
+                      <TableHead className="text-right">Metres</TableHead>
+                      <TableHead>To</TableHead>
+                      <TableHead>Internal charge</TableHead>
+                      <TableHead>Internal batch</TableHead>
+                      <TableHead>Charge</TableHead>
+                      <TableHead>Batch</TableHead>
+                      <TableHead>Plate number</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  ) : (
                   <TableRow>
                     {isDrawnFromStock ? <TableHead>Lot</TableHead> : null}
                     <TableHead className="text-right">Qty planned</TableHead>
@@ -440,6 +505,7 @@ export const ReportCompletionDialog = ({
                     <TableHead>Internal batch</TableHead>
                     <TableHead />
                   </TableRow>
+                  )}
                 </TableHeader>
                 <TableBody>
                   {loading ? (
@@ -454,6 +520,11 @@ export const ReportCompletionDialog = ({
                   ) : (
                     fields.map((field, index) => (
                       <TableRow key={field.id}>
+                        {isReceipt ? (
+                          <>
+                            <TableCell />
+                          </>
+                        ) : null}
                         {isDrawnFromStock ? (
                           <TableCell className="min-w-72">
                             <Controller
@@ -480,18 +551,20 @@ export const ReportCompletionDialog = ({
                             />
                           </TableCell>
                         ) : null}
-                        <TableCell className="text-right">
-                          <Input
-                            className="text-right"
-                            readOnly
-                            {...register(`picks.${index}.qtyPlanned`)}
-                          />
-                        </TableCell>
+                        {!isReceipt ? (
+                          <TableCell className="text-right">
+                            <Input
+                              className="text-right"
+                              readOnly
+                              {...register(`picks.${index}.qtyPlanned`)}
+                            />
+                          </TableCell>
+                        ) : null}
                         <TableCell className="text-right">
                           <Input
                             type="text"
                             inputMode="decimal"
-                            className="text-right"
+                            className="w-20 text-right"
                             {...register(`picks.${index}.qtyActual`, {
                               onChange: (event) =>
                                 restateWeight(index, event.target.value),
@@ -499,15 +572,75 @@ export const ReportCompletionDialog = ({
                             disabled={isPending}
                           />
                         </TableCell>
+                        {isReceipt ? (
+                          <>
+                            <TableCell className="text-right tabular-nums">
+                              {orDash(line?.length ?? null)}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {orDash(line?.width ?? null)}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {line?.thickness === null ||
+                              line?.thickness === undefined
+                                ? "—"
+                                : formatNumber(Number(line.thickness))}
+                            </TableCell>
+                            {/* What the plan said this row weighs; the
+                                weighed figure beside it is the scale's. */}
+                            <TableCell className="text-right tabular-nums">
+                              {formatNumber(
+                                Number(watchedPicks?.[index]?.qtyPlanned ?? 0) > 0
+                                  ? Number(line?.kgPlanned ?? 0)
+                                  : 0,
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              0
+                            </TableCell>
+                          </>
+                        ) : null}
                         <TableCell className="text-right">
                           <Input
                             type="text"
                             inputMode="decimal"
-                            className="text-right"
+                            className="w-24 text-right"
                             {...register(`picks.${index}.kgActual`)}
                             disabled={isPending}
                           />
                         </TableCell>
+                        {isReceipt ? (
+                          <>
+                            <TableCell className="text-right tabular-nums">
+                              {formatNumber(
+                                (Number(
+                                  String(
+                                    watchedPicks?.[index]?.qtyActual ?? "0",
+                                  ).replace(",", "."),
+                                ) *
+                                  Number(line?.length ?? 0)) /
+                                  1000,
+                              )}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {orDash(line?.toLocationName ?? null)}
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                className="w-24"
+                                {...register(`picks.${index}.internalCharge`)}
+                                disabled={isPending}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                className="w-24"
+                                {...register(`picks.${index}.internalBatch`)}
+                                disabled={isPending}
+                              />
+                            </TableCell>
+                          </>
+                        ) : null}
                         {/* Off a shelf these three describe the parcel, so they
                             are read off it rather than typed over it. On an
                             unloading there is no parcel yet and they are the
@@ -518,6 +651,7 @@ export const ReportCompletionDialog = ({
                             disabled={isPending}
                             readOnly={isDrawnFromStock}
                             className={cn(
+                              isReceipt && "w-28",
                               isReceipt &&
                                 Number(
                                   String(
@@ -531,20 +665,31 @@ export const ReportCompletionDialog = ({
                             )}
                           />
                         </TableCell>
-                        <TableCell>
-                          <Input
-                            {...register(`picks.${index}.internalCharge`)}
-                            disabled={isPending}
-                            readOnly={isDrawnFromStock}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            {...register(`picks.${index}.internalBatch`)}
-                            disabled={isPending}
-                            readOnly={isDrawnFromStock}
-                          />
-                        </TableCell>
+                        {isReceipt ? (
+                          <>
+                            {/* Batch and plate number are not taken here yet;
+                                the reference's columns are kept in place. */}
+                            <TableCell>—</TableCell>
+                            <TableCell>—</TableCell>
+                          </>
+                        ) : (
+                          <>
+                            <TableCell>
+                              <Input
+                                {...register(`picks.${index}.internalCharge`)}
+                                disabled={isPending}
+                                readOnly={isDrawnFromStock}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                {...register(`picks.${index}.internalBatch`)}
+                                disabled={isPending}
+                                readOnly={isDrawnFromStock}
+                              />
+                            </TableCell>
+                          </>
+                        )}
                         <TableCell>
                           <Button
                             type="button"
@@ -563,6 +708,51 @@ export const ReportCompletionDialog = ({
                 </TableBody>
               </Table>
             </div>
+
+            {isReceipt ? (
+              <dl className="flex flex-wrap gap-x-10 gap-y-1 text-sm">
+                <div className="flex gap-2">
+                  <dt className="text-muted-foreground">Total qty</dt>
+                  <dd className="tabular-nums">
+                    {formatNumber(
+                      (watchedPicks ?? []).reduce(
+                        (sum, pick) =>
+                          sum +
+                          Number(String(pick?.qtyActual ?? "0").replace(",", ".")),
+                        0,
+                      ),
+                    )}
+                  </dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="text-muted-foreground">Total length</dt>
+                  <dd className="tabular-nums">
+                    {formatNumber(
+                      (watchedPicks ?? []).reduce(
+                        (sum, pick) =>
+                          sum +
+                          Number(String(pick?.qtyActual ?? "0").replace(",", ".")) *
+                            Number(line?.length ?? 0),
+                        0,
+                      ),
+                    )}
+                  </dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="text-muted-foreground">Total weight</dt>
+                  <dd className="tabular-nums">
+                    {formatNumber(
+                      (watchedPicks ?? []).reduce(
+                        (sum, pick) =>
+                          sum +
+                          Number(String(pick?.kgActual ?? "0").replace(",", ".")),
+                        0,
+                      ),
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            ) : null}
 
             <div className="flex flex-wrap items-center gap-4">
               {/* One planned line is routinely reported as several parcels —
@@ -587,7 +777,7 @@ export const ReportCompletionDialog = ({
                 disabled={isPending}
               >
                 <Plus className="size-4" />
-                Add parcel
+                New
               </Button>
 
               {isDrawnFromStock && lots.some((lot) => lot.onLineLocation) ? (
@@ -644,7 +834,7 @@ export const ReportCompletionDialog = ({
                 rowsMissingLot > 0
               }
             >
-              {isPending ? "Reporting..." : "Report completion"}
+              {isPending ? "Reporting..." : "OK"}
             </Button>
           </DialogFooter>
         </form>
