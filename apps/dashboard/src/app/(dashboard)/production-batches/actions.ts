@@ -8,7 +8,23 @@ import {
 } from "@/db/schema/production-batches";
 import { Machines, SelectMachines } from "@/db/schema/machines";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import {
+  dateRangeFilter,
+  runPaged,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
+import { count, desc, eq, getTableColumns } from "drizzle-orm";
+
+const BATCH_SEARCH = [
+  ProductionBatches.code,
+  Machines.name,
+  Warehouses.name,
+] as const;
+
+const BATCH_FILTERS = {
+  createdOn: dateRangeFilter(ProductionBatches.createdOn),
+};
 
 export type ProductionBatchListItem = SelectProductionBatches & {
   machineName: SelectMachines["name"] | null;
@@ -20,23 +36,46 @@ export type ProductionBatchDetail = ProductionBatchListItem & {
   machineProduction: SelectMachines["production"] | null;
 };
 
-export const getProductionBatches = async (): Promise<
-  ProductionBatchListItem[]
-> => {
+export const getProductionBatches = async (
+  query: TableQuery,
+): Promise<Paged<ProductionBatchListItem>> => {
   try {
-    return await db
-      .select({
-        ...getTableColumns(ProductionBatches),
-        machineName: Machines.name,
-        toLocationName: Warehouses.name,
-      })
-      .from(ProductionBatches)
-      .leftJoin(Machines, eq(ProductionBatches.machineUuid, Machines.uuid))
-      .leftJoin(
-        Warehouses,
-        eq(ProductionBatches.toLocationUuid, Warehouses.uuid),
-      )
-      .orderBy(desc(ProductionBatches.createdAt));
+    const where = tableWhere({
+      query,
+      search: BATCH_SEARCH,
+      filters: BATCH_FILTERS,
+    });
+    return await runPaged(query, {
+      rows: (limit, offset) =>
+        db
+          .select({
+            ...getTableColumns(ProductionBatches),
+            machineName: Machines.name,
+            toLocationName: Warehouses.name,
+          })
+          .from(ProductionBatches)
+          .leftJoin(Machines, eq(ProductionBatches.machineUuid, Machines.uuid))
+          .leftJoin(
+            Warehouses,
+            eq(ProductionBatches.toLocationUuid, Warehouses.uuid),
+          )
+          .where(where)
+          .orderBy(desc(ProductionBatches.createdAt), desc(ProductionBatches.id))
+          .limit(limit)
+          .offset(offset),
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(ProductionBatches)
+          .leftJoin(Machines, eq(ProductionBatches.machineUuid, Machines.uuid))
+          .leftJoin(
+            Warehouses,
+            eq(ProductionBatches.toLocationUuid, Warehouses.uuid),
+          )
+          .where(where);
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch production batches"));
   }

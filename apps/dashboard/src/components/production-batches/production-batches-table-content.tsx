@@ -11,21 +11,55 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  TableRowActionItem,
+  TableRowToolbar,
+} from "@/components/ui/table-row-toolbar";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { cn } from "@/lib/helpers";
+import { Paged, TableFilterControl } from "@/lib/table-query";
+import { Eye, FileText, Tag } from "lucide-react";
+import { useState } from "react";
 
 type Props = {
-  batches: ProductionBatchListItem[];
+  page: Paged<ProductionBatchListItem>;
+  filters: TableFilterControl[];
 };
 
-export const ProductionBatchesTable = ({ batches }: Props) => (
-  <div>
+export const ProductionBatchesTable = ({ page, filters }: Props) => {
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+  const selected = page.rows.find((row) => row.uuid === selectedUuid) ?? null;
+
+  // The reference's toolbar is `Batch labels` · `Texts`, greyed until a batch
+  // is picked. Neither is built here — no batch label print, no texts on a
+  // batch — so both stay greyed; `Open batch` is the one that goes somewhere.
+  const rowActions: TableRowActionItem[] = [
+    {
+      label: "Open batch",
+      icon: <Eye className="size-4" />,
+      href: selected ? `/production-batches/${selected.uuid}` : null,
+    },
+    { label: "Batch labels", icon: <Tag className="size-4" />, href: null },
+    { label: "Texts", icon: <FileText className="size-4" />, href: null },
+  ];
+
+  return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <TableToolbar
+        searchPlaceholder="Search code, machine or location…"
+        filters={filters}
+      >
         <TableExportButton
           tableId="production-batches-table"
           fileName="production-batches"
           sheetName="Production batches"
         />
-      </div>
+      </TableToolbar>
+      <TableRowToolbar
+        actions={rowActions}
+        selectedLabel={selected?.code ?? null}
+      />
       <Table id="production-batches-table">
         <TableHeader>
           <TableRow>
@@ -36,7 +70,7 @@ export const ProductionBatchesTable = ({ batches }: Props) => (
           </TableRow>
         </TableHeader>
         <TableBody>
-          {batches.length === 0 ? (
+          {page.rows.length === 0 ? (
             <TableRow>
               <TableCell
                 colSpan={4}
@@ -46,8 +80,15 @@ export const ProductionBatchesTable = ({ batches }: Props) => (
               </TableCell>
             </TableRow>
           ) : (
-            batches.map((row) => (
-              <TableRow key={row.uuid}>
+            page.rows.map((row) => (
+              <TableRow
+                key={row.uuid}
+                onClick={() => setSelectedUuid(row.uuid)}
+                className={cn(
+                  "cursor-pointer",
+                  row.uuid === selectedUuid && "bg-muted",
+                )}
+              >
                 <TableCell className="font-medium">
                   <Link
                     href={`/production-batches/${row.uuid}`}
@@ -64,6 +105,7 @@ export const ProductionBatchesTable = ({ batches }: Props) => (
           )}
         </TableBody>
       </Table>
+      <TablePagination page={page} singular="batch" plural="batches" />
     </div>
-  </div>
-);
+  );
+};

@@ -1,15 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import {
+  getStockLotDialog,
+  StockLotDialogData,
+} from "@/app/(dashboard)/stock/actions";
 import { exportStockOnLocation } from "@/app/(dashboard)/stock-on-location/actions";
 import {
   STOCK_LOT_COLUMNS,
   StockLotColumnKey,
 } from "@/app/(dashboard)/stock-on-location/columns";
+import { Button } from "@/components/shadcn/button";
+import { StockReservationsDialog } from "@/components/stock/stock-reservations-dialog";
 import { OverviewTable } from "@/components/ui/overview-table";
 import { RelatedRecordsBar } from "@/components/ui/related-records-bar";
 import type { StockLotOverviewRow } from "@/lib/server/stock-lot-overview";
 import { Paged, TableFilterControl } from "@/lib/table-query";
+import { useState, useTransition } from "react";
 
 type Props = {
   page: Paged<StockLotOverviewRow>;
@@ -65,20 +72,86 @@ export const renderStockLotSelection = (selected: StockLotOverviewRow | null) =>
   />
 );
 
-export const StockOnLocationTable = ({ page, filters }: Props) => (
-  <OverviewTable
-    page={page}
-    filters={filters}
-    columns={STOCK_LOT_COLUMNS}
-    sortable={STOCK_LOT_SORTABLE}
-    rowKey={(row) => row.uuid}
-    renderCell={renderStockLotCell}
-    selectionToolbar={renderStockLotSelection}
-    exportAction={exportStockOnLocation}
-    fileName="stock-on-location"
-    searchPlaceholder="Search product, charge or bundle…"
-    emptyText="No stock on location found."
-    singular="lot"
-    plural="lots"
-  />
-);
+/**
+ * `Toon reserveringen…` opens the lot's reservations over the grid, as the
+ * reference does, rather than navigating away to the lot's own screen — the
+ * same dialog the lot screen and the stock search open, with `Order` and
+ * `Verwijder` on each reservation.
+ */
+export const StockOnLocationTable = ({ page, filters }: Props) => {
+  const [reservations, setReservations] = useState<StockLotDialogData | null>(
+    null,
+  );
+  const [isLoading, startTransition] = useTransition();
+
+  const showReservations = (stockUuid: string) => {
+    startTransition(async () => {
+      setReservations(await getStockLotDialog(stockUuid));
+    });
+  };
+
+  return (
+    <>
+      <OverviewTable
+        page={page}
+        filters={filters}
+        columns={STOCK_LOT_COLUMNS}
+        sortable={STOCK_LOT_SORTABLE}
+        rowKey={(row) => row.uuid}
+        renderCell={renderStockLotCell}
+        selectionToolbar={(selected) => (
+          <div className="flex flex-wrap gap-2">
+            <RelatedRecordsBar
+              records={[
+                {
+                  label: "Show product",
+                  href: selected ? `/products/${selected.productUuid}` : null,
+                },
+              ]}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!selected || isLoading}
+              onClick={() => {
+                if (selected) {
+                  showReservations(selected.uuid);
+                }
+              }}
+            >
+              Show reservations…
+            </Button>
+            <RelatedRecordsBar
+              records={[
+                {
+                  label: "Purchase lines",
+                  href: selected
+                    ? `/purchase-lines?product=${selected.productUuid}`
+                    : null,
+                },
+              ]}
+            />
+          </div>
+        )}
+        exportAction={exportStockOnLocation}
+        fileName="stock-on-location"
+        searchPlaceholder="Search product, charge or bundle…"
+        emptyText="No stock on location found."
+        singular="lot"
+        plural="lots"
+      />
+      {reservations && (
+        <StockReservationsDialog
+          data={reservations}
+          open
+          onOpenChange={(next) => {
+            if (!next) {
+              setReservations(null);
+            }
+          }}
+        />
+      )}
+    </>
+  );
+};

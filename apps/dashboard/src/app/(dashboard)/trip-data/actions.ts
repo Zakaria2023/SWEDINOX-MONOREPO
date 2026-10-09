@@ -11,6 +11,7 @@ import { describeError } from "@/lib/helpers";
 import { exportRows } from "@/lib/server/excel";
 import {
   Paged,
+  parseRangeValue,
   parseTableQuery,
   SearchParams,
   TableQuery,
@@ -103,8 +104,7 @@ const tripRows = async (query: TableQuery): Promise<TripDataRow[]> => {
   });
 
   const term = query.q?.toLowerCase() ?? null;
-  const years = query.filters.year ?? [];
-  const months = query.filters.month ?? [];
+  const { from, to } = parseRangeValue(query.filters.tripDate?.[0]);
 
   return all.filter((row) => {
     if (
@@ -115,10 +115,11 @@ const tripRows = async (query: TableQuery): Promise<TripDataRow[]> => {
     ) {
       return false;
     }
-    if (years.length > 0 && !years.includes(String(row.year))) {
+    // ISO days compare as strings, so the range needs no date parsing.
+    if (from && (!row.tripDate || row.tripDate < from)) {
       return false;
     }
-    if (months.length > 0 && !months.includes(String(row.month))) {
+    if (to && (!row.tripDate || row.tripDate > to)) {
       return false;
     }
     return true;
@@ -156,16 +157,4 @@ export const exportTripData = async (
     rows: (limit, offset) =>
       Promise.resolve(rows.slice(offset, offset + limit)),
   });
-};
-
-/** The years trips were dated in, for the period filter. */
-export const getTripYears = async (): Promise<number[]> => {
-  const rows = await db
-    .selectDistinct({ year: sql<number>`YEAR(${TransportWorkOrders.date})` })
-    .from(TransportWorkOrders);
-
-  return rows
-    .map((row) => Number(row.year))
-    .filter((year) => Number.isFinite(year) && year > 0)
-    .sort((a, b) => b - a);
 };

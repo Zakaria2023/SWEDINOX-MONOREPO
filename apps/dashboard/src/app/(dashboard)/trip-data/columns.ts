@@ -15,9 +15,14 @@ import {
  * haulier that actually ran the trip. They are named apart here.
  *
  * The seven costing columns — `Km`, `Hours`, `Cost price`, `Cost price per
- * stop`, `Driver`, `Cost price per Km`, `Cost price per Kg` — are empty on all
- * 438 reference trips: the reference can cost a trip and nobody does. They are
- * carried blank and hidden; transport costing is deliberately not built.
+ * stop`, `Driver`, `Cost price per Km`, `Cost price per Kg` — are zero (the
+ * driver blank) on all 438 reference trips: the reference can cost a trip and
+ * nobody does. Transport costing is deliberately not built, so they read 0 the
+ * way the reference prints them.
+ *
+ * Every column is on by default: the reference's default view (`-leeg-`,
+ * 8-10-2026) shows all twenty. `Alles` is a saved view of seven, not the
+ * default.
  */
 
 export type TripDataColumnKey =
@@ -52,7 +57,7 @@ const column = (
 ): Column => ({ key, label, defaultVisible, value });
 
 const notCosted = (key: TripDataColumnKey, label: string): Column =>
-  column(key, label, false, () => null);
+  column(key, label, true, () => (key === "driver" ? null : 0));
 
 export const TRIP_DATA_COLUMNS: Column[] = [
   column("year", "Year (Trip date)", true, (row) => numberCell(row.year)),

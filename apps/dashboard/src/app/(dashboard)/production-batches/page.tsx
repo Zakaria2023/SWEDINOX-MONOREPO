@@ -1,12 +1,18 @@
 import { getProductionBatches } from "@/app/(dashboard)/production-batches/actions";
+import { PRODUCTION_BATCH_FILTERS } from "@/app/(dashboard)/production-batches/filters";
 import { ProductionBatchesTable } from "@/components/production-batches/production-batches-table-content";
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
-const ProductionBatchesPage = async () => {
-  const batches = await getProductionBatches();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const ProductionBatchesPage = async ({ searchParams }: Props) => {
+  const page = await getProductionBatches(parseTableQuery(await searchParams));
 
   return (
     <div className="space-y-4">
-      <ProductionBatchesTable batches={batches} />
+      <ProductionBatchesTable page={page} filters={PRODUCTION_BATCH_FILTERS} />
     </div>
   );
 };

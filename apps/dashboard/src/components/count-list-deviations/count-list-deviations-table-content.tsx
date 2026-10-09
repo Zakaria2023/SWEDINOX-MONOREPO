@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { CountListDeviationListItem } from "@/app/(dashboard)/count-list-deviations/actions";
 import {
   Table,
@@ -10,30 +9,68 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { STOCK_UNIT_LABELS } from "@/lib/labels";
-import { formatDateValue } from "@/lib/helpers";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  TableRowActionItem,
+  TableRowToolbar,
+} from "@/components/ui/table-row-toolbar";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { STOCK_UNIT_LABELS } from "@/lib/labels";
+import { cn, formatDateValue } from "@/lib/helpers";
+import { Paged, TableFilterControl } from "@/lib/table-query";
+import { Eye, Package } from "lucide-react";
+import { useState } from "react";
 
 type Props = {
-  deviations: CountListDeviationListItem[];
+  page: Paged<CountListDeviationListItem>;
+  filters: TableFilterControl[];
 };
 
-export const CountListDeviationsTable = ({ deviations }: Props) => (
-  <div>
+// The reference prints no `#` and no `Workorder date` column — the date is a
+// filter there, not a column.
+export const CountListDeviationsTable = ({ page, filters }: Props) => {
+  // The reference's `Show Product` acts on the selected row from the toolbar.
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+  const selected = page.rows.find((row) => row.uuid === selectedUuid) ?? null;
+
+  const rowActions: TableRowActionItem[] = [
+    {
+      label: "Show Product",
+      icon: <Package className="size-4" />,
+      href: selected ? `/products/${selected.productUuid}` : null,
+    },
+    {
+      label: "Open deviation",
+      icon: <Eye className="size-4" />,
+      href: selected ? `/count-list-deviations/${selected.uuid}` : null,
+    },
+  ];
+
+  return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <TableToolbar
+        searchPlaceholder="Search product, workorder or location…"
+        filters={filters}
+      >
         <TableExportButton
           tableId="count-list-deviations-table"
           fileName="count-list-deviations"
           sheetName="Deviations in Count Lists"
         />
-      </div>
+      </TableToolbar>
+      <TableRowToolbar
+        actions={rowActions}
+        selectedLabel={
+          selected
+            ? `${selected.workOrderNumber ?? "—"} · ${selected.productCode ?? "—"}`
+            : null
+        }
+      />
       <Table id="count-list-deviations-table">
         <TableHeader>
           <TableRow>
-            <TableHead>#</TableHead>
             <TableHead>Workorder #</TableHead>
-            <TableHead>Workorder date</TableHead>
             <TableHead>Booked by</TableHead>
             <TableHead>Location</TableHead>
             <TableHead>Product</TableHead>
@@ -51,29 +88,27 @@ export const CountListDeviationsTable = ({ deviations }: Props) => (
           </TableRow>
         </TableHeader>
         <TableBody>
-          {deviations.length === 0 ? (
+          {page.rows.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={17}
+                colSpan={15}
                 className="h-24 text-center text-muted-foreground"
               >
                 No count-list deviations found.
               </TableCell>
             </TableRow>
           ) : (
-            deviations.map((row) => (
-              <TableRow key={row.uuid}>
+            page.rows.map((row) => (
+              <TableRow
+                key={row.uuid}
+                onClick={() => setSelectedUuid(row.uuid)}
+                className={cn(
+                  "cursor-pointer",
+                  row.uuid === selectedUuid && "bg-muted",
+                )}
+              >
                 <TableCell className="font-medium">
-                  <Link
-                    href={`/count-list-deviations/${row.uuid}`}
-                    className="underline-offset-4 hover:underline"
-                  >
-                    {row.id}
-                  </Link>
-                </TableCell>
-                <TableCell>{row.workOrderNumber ?? "—"}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {formatDateValue(row.workOrderDate)}
+                  {row.workOrderNumber ?? "—"}
                 </TableCell>
                 <TableCell>{row.bookedBy ?? "—"}</TableCell>
                 <TableCell>{row.location ?? "—"}</TableCell>
@@ -114,6 +149,7 @@ export const CountListDeviationsTable = ({ deviations }: Props) => (
           )}
         </TableBody>
       </Table>
+      <TablePagination page={page} singular="deviation" plural="deviations" />
     </div>
-  </div>
-);
+  );
+};
