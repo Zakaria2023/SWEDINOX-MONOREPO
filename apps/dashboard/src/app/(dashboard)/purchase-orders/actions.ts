@@ -13,8 +13,10 @@ import {
   SelectPurchaseOrderItems,
 } from "@/db/schema/purchase-order-items";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { Warehouses } from "@/db/schema/warehouses";
+import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
 import {
+  SelectWarehouseWorkOrderLines,
+  SelectWarehouseWorkOrders,
   WarehouseWorkOrderLines,
   WarehouseWorkOrders,
 } from "@/db/schema/warehouse-work-orders";
@@ -409,6 +411,34 @@ export type PurchaseOrderReturnLine = {
   amount: SelectPurchaseReturnOrderItems["amount"];
 };
 
+/**
+ * A row of the order's `Warehouse workorders` panel (404355, 9-10-2026):
+ * the slip and the line of it that serves one of this order's lines.
+ */
+export type PurchaseOrderWorkOrderLine = {
+  uuid: SelectWarehouseWorkOrderLines["uuid"];
+  workOrderUuid: SelectWarehouseWorkOrders["uuid"];
+  number: SelectWarehouseWorkOrders["number"];
+  type: SelectWarehouseWorkOrders["type"];
+  plannedDate: SelectWarehouseWorkOrders["plannedDate"];
+  workOrderStatus: SelectWarehouseWorkOrders["status"];
+  lineNumber: SelectWarehouseWorkOrderLines["lineNumber"];
+  lineStatus: SelectWarehouseWorkOrderLines["status"];
+  productUuid: SelectWarehouseWorkOrderLines["productUuid"];
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  length: SelectWarehouseWorkOrderLines["length"];
+  width: SelectWarehouseWorkOrderLines["width"];
+  thickness: SelectWarehouseWorkOrderLines["thickness"];
+  qtyPlanned: SelectWarehouseWorkOrderLines["qtyPlanned"];
+  qtyActual: SelectWarehouseWorkOrderLines["qtyActual"];
+  kgPlanned: SelectWarehouseWorkOrderLines["kgPlanned"];
+  kgActual: SelectWarehouseWorkOrderLines["kgActual"];
+  unit: SelectPurchaseOrderItems["unit"] | null;
+  fromLocation: SelectWarehouses["name"] | null;
+  toLocation: SelectWarehouses["name"] | null;
+};
+
 export type PurchaseOrderDetail = SelectPurchaseOrders & {
   supplierName: SelectCompanies["companyName"] | null;
   agentName: SelectCompanies["companyName"] | null;
@@ -418,6 +448,8 @@ export type PurchaseOrderDetail = SelectPurchaseOrders & {
   contactEmail: SelectContacts["email"] | null;
   contactFax: SelectContacts["fax"] | null;
   items: PurchaseOrderItemDetail[];
+  // The slips raised to receive it — the `Warehouse workorders` panel.
+  warehouseWorkOrders: PurchaseOrderWorkOrderLine[];
   // What has actually arrived against this order.
   receipts: PurchaseReceiptDocument[];
   receiptDocuments: PurchaseOrderReceiptDocumentRow[];
@@ -1244,10 +1276,60 @@ export const getPurchaseOrderDetail = async (
     .where(eq(PurchaseOrderItemOptions.purchaseOrderUuid, uuid))
     .orderBy(asc(PurchaseOrderItemOptions.sortOrder));
 
+  // The slips that serve this order's lines, read after the rest — the
+  // connection ceiling.
+  const FromLocation = alias(Warehouses, "wo_from_location");
+  const ToLocation = alias(Warehouses, "wo_to_location");
+  const warehouseWorkOrders = await db
+    .select({
+      uuid: WarehouseWorkOrderLines.uuid,
+      workOrderUuid: WarehouseWorkOrders.uuid,
+      number: WarehouseWorkOrders.number,
+      type: WarehouseWorkOrders.type,
+      plannedDate: WarehouseWorkOrders.plannedDate,
+      workOrderStatus: WarehouseWorkOrders.status,
+      lineNumber: WarehouseWorkOrderLines.lineNumber,
+      lineStatus: WarehouseWorkOrderLines.status,
+      productUuid: WarehouseWorkOrderLines.productUuid,
+      productCode: Products.productCode,
+      productName: Products.name,
+      length: WarehouseWorkOrderLines.length,
+      width: WarehouseWorkOrderLines.width,
+      thickness: WarehouseWorkOrderLines.thickness,
+      qtyPlanned: WarehouseWorkOrderLines.qtyPlanned,
+      qtyActual: WarehouseWorkOrderLines.qtyActual,
+      kgPlanned: WarehouseWorkOrderLines.kgPlanned,
+      kgActual: WarehouseWorkOrderLines.kgActual,
+      unit: PurchaseOrderItems.unit,
+      fromLocation: FromLocation.name,
+      toLocation: ToLocation.name,
+    })
+    .from(WarehouseWorkOrderLines)
+    .innerJoin(
+      WarehouseWorkOrders,
+      eq(WarehouseWorkOrderLines.workOrderUuid, WarehouseWorkOrders.uuid),
+    )
+    .innerJoin(
+      PurchaseOrderItems,
+      eq(WarehouseWorkOrderLines.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
+    )
+    .leftJoin(Products, eq(WarehouseWorkOrderLines.productUuid, Products.uuid))
+    .leftJoin(
+      FromLocation,
+      eq(WarehouseWorkOrderLines.fromLocationUuid, FromLocation.uuid),
+    )
+    .leftJoin(
+      ToLocation,
+      eq(WarehouseWorkOrderLines.toLocationUuid, ToLocation.uuid),
+    )
+    .where(eq(PurchaseOrderItems.purchaseOrderUuid, uuid))
+    .orderBy(asc(WarehouseWorkOrders.number), asc(WarehouseWorkOrderLines.lineNumber));
+
   return {
     ...order,
     agentName: agent?.companyName ?? null,
     items,
+    warehouseWorkOrders,
     receipts,
     receiptDocuments,
     supplies,
@@ -1557,6 +1639,22 @@ export const preNotifyPurchaseOrder = async (
             eq(PurchaseLineReceivals.kgActual, "0.00"),
           ),
         );
+
+      // The line follows: Confirm had left it at 12-10-2026, Pre-notify
+      // moved it to 14-10-2026 (404355, 9-10-2026).
+      const advised = await tx
+        .select({ itemUuid: PurchaseLineReceivals.purchaseOrderItemUuid })
+        .from(PurchaseLineReceivals)
+        .where(inArray(PurchaseLineReceivals.uuid, receivalUuids));
+      const itemUuids = advised.flatMap((row) =>
+        row.itemUuid ? [row.itemUuid] : [],
+      );
+      if (itemUuids.length > 0) {
+        await tx
+          .update(PurchaseOrderItems)
+          .set({ receiptDate: advisedDate })
+          .where(inArray(PurchaseOrderItems.uuid, itemUuids));
+      }
     });
 
     // 🔑 Pre-notify raises the unloading by itself: the reception on 404355
@@ -1767,6 +1865,34 @@ export const createUnloadingWorkOrder = async (
       return {
         error:
           "This order is still provisional, so no goods are expected of anybody yet. Make it final first.",
+      };
+    }
+
+    // One open unloading at a time: pressing Workorder on 404355 while 327402
+    // was still New raised nothing (9-10-2026). The slip that exists is the
+    // one the floor will report on.
+    const [openSlip] = await db
+      .select({ number: WarehouseWorkOrders.number })
+      .from(WarehouseWorkOrderLines)
+      .innerJoin(
+        WarehouseWorkOrders,
+        eq(WarehouseWorkOrderLines.workOrderUuid, WarehouseWorkOrders.uuid),
+      )
+      .innerJoin(
+        PurchaseOrderItems,
+        eq(WarehouseWorkOrderLines.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
+      )
+      .where(
+        and(
+          eq(PurchaseOrderItems.purchaseOrderUuid, purchaseOrderUuid),
+          eq(WarehouseWorkOrders.type, "unloading"),
+          inArray(WarehouseWorkOrders.status, ["new", "released"]),
+        ),
+      )
+      .limit(1);
+    if (openSlip) {
+      return {
+        error: `Unloading work order ${openSlip.number} is already open for this order. Release and report that one.`,
       };
     }
 

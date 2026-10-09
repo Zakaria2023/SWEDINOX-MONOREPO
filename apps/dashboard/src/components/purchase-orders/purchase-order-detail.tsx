@@ -74,7 +74,10 @@ import {
   PURCHASE_RETURN_ORDER_REASON_LABELS,
   RECEIPT_STATUS_LABELS,
   STOCK_STATUS_LABELS,
+  WORK_ORDER_STATUS_LABELS,
+  WAREHOUSE_WORK_ORDER_TYPE_LABELS,
 } from "@/lib/labels";
+import { BooleanFlag } from "@/components/ui/boolean-flag";
 
 type Props = {
   purchaseOrder: PurchaseOrderDetail;
@@ -104,6 +107,13 @@ export const PurchaseOrderDetailView = ({
     null,
   );
   const [selectedLineUuid, setSelectedLineUuid] = useState<string | null>(null);
+  const [selectedWorkOrderLine, setSelectedWorkOrderLine] = useState<
+    string | null
+  >(null);
+  const selectedWorkOrderProduct =
+    purchaseOrder.warehouseWorkOrders.find(
+      (line) => line.uuid === selectedWorkOrderLine,
+    )?.productUuid ?? null;
 
   const canCancel = purchaseOrder.status !== "cancelled";
   // `Make final` exists only on a provisional order; `Confirm` and
@@ -321,7 +331,169 @@ export const PurchaseOrderDetailView = ({
 
       <section className="space-y-2">
         <h2 className="border-b pb-2 text-base font-semibold">Workorders</h2>
-        <PurchaseOrderNewPanels panels={WORK_ORDER_PANELS} />
+        {/* The slips that serve this order, in the reference's columns
+            (404355 → 327402, 9-10-2026); New and Delete are greyed there. */}
+        <CollapsibleSection
+          title="Warehouse workorders"
+          summary={pluralize(purchaseOrder.warehouseWorkOrders.length, "line")}
+          defaultOpen={purchaseOrder.warehouseWorkOrders.length > 0}
+        >
+          <div className="space-y-2 p-3">
+            <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-muted/30 px-2 py-1">
+              <Button type="button" variant="ghost" size="sm" disabled>
+                New
+              </Button>
+              <Button type="button" variant="ghost" size="sm" disabled>
+                Delete
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                nativeButton={false}
+                disabled={!selectedWorkOrderProduct}
+                render={
+                  <Link
+                    href={
+                      selectedWorkOrderProduct
+                        ? `/products/${selectedWorkOrderProduct}`
+                        : "#"
+                    }
+                  />
+                }
+              >
+                Show product
+              </Button>
+            </div>
+            <div className="overflow-x-auto rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">Item</TableHead>
+                    <TableHead>Workorder</TableHead>
+                    <TableHead className="text-right">Line</TableHead>
+                    <TableHead>Workorder date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Length</TableHead>
+                    <TableHead className="text-right">Width</TableHead>
+                    <TableHead className="text-right">Qty (p)</TableHead>
+                    <TableHead>U (p)</TableHead>
+                    <TableHead className="text-right">Kg (p)</TableHead>
+                    <TableHead>Qty checked</TableHead>
+                    <TableHead className="text-right">Qty (a)</TableHead>
+                    <TableHead>U (a)</TableHead>
+                    <TableHead>Kg checked</TableHead>
+                    <TableHead className="text-right">Kg (a)</TableHead>
+                    <TableHead>From</TableHead>
+                    <TableHead>To</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {purchaseOrder.warehouseWorkOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={20} className="text-muted-foreground">
+                        None — raised when the delivery is pre-notified, or
+                        with Workorder.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    purchaseOrder.warehouseWorkOrders.map((line, index) => (
+                      <TableRow
+                        key={line.uuid}
+                        onClick={() => setSelectedWorkOrderLine(line.uuid)}
+                        className={cn(
+                          "cursor-pointer",
+                          line.uuid === selectedWorkOrderLine && "bg-accent",
+                        )}
+                      >
+                        <TableCell className="text-right tabular-nums">
+                          {(index + 1) * 10}
+                        </TableCell>
+                        <TableCell>
+                          <Link
+                            href={`/warehouse-work-orders/${line.workOrderUuid}`}
+                            className="text-primary hover:underline"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            {line.number}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {orDash(line.lineNumber)}
+                        </TableCell>
+                        <TableCell>{formatDateColumn(line.plannedDate)}</TableCell>
+                        <TableCell>
+                          {WAREHOUSE_WORK_ORDER_TYPE_LABELS[line.type]}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge
+                            value={line.lineStatus ?? line.workOrderStatus}
+                            label={
+                              WORK_ORDER_STATUS_LABELS[
+                                line.lineStatus ?? line.workOrderStatus
+                              ]
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>{orDash(line.productCode)}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {orDash(line.productName)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {orDash(line.length)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {orDash(line.width)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatNumber(Number(line.qtyPlanned ?? 0))}
+                        </TableCell>
+                        <TableCell>
+                          {orDash(line.unit ? line.unit.toUpperCase() : null)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatNumber(Number(line.kgPlanned ?? 0))}
+                        </TableCell>
+                        <TableCell>
+                          <BooleanFlag
+                            on={line.qtyActual !== null}
+                            label="Qty checked"
+                          />
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatNumber(Number(line.qtyActual ?? 0))}
+                        </TableCell>
+                        <TableCell>
+                          {line.qtyActual !== null && line.unit
+                            ? line.unit.toUpperCase()
+                            : "-leeg-"}
+                        </TableCell>
+                        <TableCell>
+                          <BooleanFlag
+                            on={line.kgActual !== null}
+                            label="Kg checked"
+                          />
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatNumber(Number(line.kgActual ?? 0))}
+                        </TableCell>
+                        <TableCell>{orDash(line.fromLocation)}</TableCell>
+                        <TableCell>{orDash(line.toLocation)}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </CollapsibleSection>
+        <PurchaseOrderNewPanels
+          panels={WORK_ORDER_PANELS.filter(
+            (panel) => panel.title !== "Warehouse workorders",
+          )}
+        />
       </section>
 
       <div className="space-y-3">
