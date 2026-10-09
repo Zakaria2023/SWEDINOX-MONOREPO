@@ -1,5 +1,24 @@
-import { CompanyDetail } from "@/app/(dashboard)/companies/actions";
+import {
+  CompanyDetail,
+  CompanyRelatedRecords,
+} from "@/app/(dashboard)/companies/actions";
 import { CompanyDocumentCell } from "@/components/companies/company-document-cell";
+import { CompanyQuoteOrderLinesPanel } from "@/components/companies/company-quote-order-lines-panel";
+import {
+  CompanyAddressesPanel,
+  CompanyCommunicationPanel,
+  CompanyContactsPanel,
+  CompanyContractsPanel,
+  CompanyCustomerStockPanel,
+  CompanyInvoicesPanel,
+  CompanyOrdersPanel,
+  CompanyPurchaseLinesPanel,
+  CompanyPurchaseOrdersPanel,
+  CompanyPurchaseQuotesPanel,
+  CompanyPurchaseRequestsPanel,
+  CompanyQuotesPanel,
+  CompanyRelatedPanels,
+} from "@/components/companies/company-related-panels";
 import {
   Table,
   TableBody,
@@ -8,7 +27,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { companyRoles } from "@/lib/enums";
 import { MONTHS } from "@/lib/constants";
 import {
   daysInSystem,
@@ -16,11 +37,11 @@ import {
   formatDateValue,
   formatRevenue,
   needsCurrencyConversion,
+  pluralize,
   userName,
   visitReasonsLabel,
   yesNo,
 } from "@/lib/helpers";
-import { SelectInvoices } from "@/db";
 import {
   COMPANY_CLASSIFICATION_LABELS,
   COMPANY_LANGUAGE_LABELS,
@@ -31,13 +52,11 @@ import {
   COUNTER_ORDER_STATUS_LABELS,
   CURRENCY_LABELS,
   CUSTOMER_GROUP_LABELS,
-  CUSTOMER_STOCK_REASON_LABELS,
   DEV_THEOR_WT_LABELS,
   EDI_OPTION_LABELS,
   GROUP_LINES_BY_DESCRIPTION_LABELS,
   INVOICE_FREQUENCY_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
-  INVOICE_VAT_SCENARIO_LABELS,
   INVOICING_METHOD_LABELS,
   MISCELLANEOUS_OPTION_LABELS,
   ORDER_OPTION_LABELS,
@@ -51,14 +70,12 @@ import {
   SFN_COUNTERPARTY_ROLE_LABELS,
   VISIT_REPORT_CONTACT_METHOD_LABELS,
   VISIT_REPORT_REASON_LABELS,
-  PURCHASE_ORDER_STATUS_LABELS,
 } from "@/lib/labels";
-import { Plus } from "lucide-react";
-import Link from "next/link";
+import { Square, SquareCheck } from "lucide-react";
 
 type Props = {
   company: CompanyDetail;
-  invoices?: SelectInvoices[];
+  related: CompanyRelatedRecords;
   userNames: Record<string, string>;
 };
 
@@ -108,8 +125,7 @@ const OptionList = ({ label, values, labels }: OptionListProps) => (
   </div>
 );
 
-export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
-  const isCustomer = company.roles?.includes("customer");
+export const CompanyDetailView = ({ company, related, userNames }: Props) => {
   const na = "—";
 
   const visitPlanning = MONTHS.map((month, index) => {
@@ -126,41 +142,34 @@ export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
     .join(", ");
 
   return (
-    <div className="space-y-8">
-      {/* General info */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
-          General
-        </h2>
-        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-3">
+      {/* The reference's header: the nine roles as ticks, the company
+          code and its creation date, the names and language, the search
+          codes. */}
+      <section className="grid gap-6 rounded-lg border border-border p-4 lg:grid-cols-4">
+        <ul className="space-y-1">
+          {companyRoles.map((role) => (
+            <li key={role} className="flex items-center gap-2 text-sm">
+              {company.roles?.includes(role) ? (
+                <SquareCheck className="size-4 text-primary" />
+              ) : (
+                <Square className="size-4 text-muted-foreground" />
+              )}
+              {COMPANY_ROLE_LABELS[role]}
+            </li>
+          ))}
+        </ul>
+        <dl className="grid gap-4 sm:grid-cols-2 lg:col-span-2">
+          <div className="text-sm text-muted-foreground sm:col-span-2">
+            Company (created on {formatDateValue(company.createdAt, na)})
+          </div>
+          <Field label="Company code" value={company.id} />
           <Field label="Company Name" value={company.companyName} />
           <Field label="Correspondence Name" value={company.correspName} />
           <Field
             label="Language"
             value={company.lang ? COMPANY_LANGUAGE_LABELS[company.lang] : null}
           />
-          <Field label="Search Code 1" value={company.searchCode1} />
-          <Field label="Search Code 2" value={company.searchCode2} />
-          <Field label="Search Code 3" value={company.searchCode3} />
-          <div className="sm:col-span-2 lg:col-span-3">
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Roles
-            </dt>
-            <dd className="mt-1 flex flex-wrap gap-1.5">
-              {company.roles && company.roles.length > 0 ? (
-                company.roles.map((role) => (
-                  <span
-                    key={role}
-                    className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700"
-                  >
-                    {COMPANY_ROLE_LABELS[role]}
-                  </span>
-                ))
-              ) : (
-                <span className="text-sm text-muted-foreground">{na}</span>
-              )}
-            </dd>
-          </div>
           <Field
             label="Blocked by"
             value={
@@ -172,24 +181,365 @@ export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
           <Field label="Blocking note" value={company.blockedByNote} />
           <Field label="Inactive" value={yesNo(company.isInactive)} />
           <Field
-            label="Created"
-            value={formatDateValue(company.createdAt, na)}
-          />
-          <Field
             label="Last updated"
             value={formatDateValue(company.updatedAt, na)}
           />
-          <div className="sm:col-span-2 lg:col-span-3">
-            <Field label="Remarks" value={company.remarks} />
-          </div>
+        </dl>
+        <dl className="grid content-start gap-4">
+          <Field label="Search Code 1" value={company.searchCode1} />
+          <Field label="Search Code 2" value={company.searchCode2} />
+          <Field label="Search Code 3" value={company.searchCode3} />
         </dl>
       </section>
 
+      <CompanyAddressesPanel
+        companyUuid={company.uuid}
+        addresses={company.addresses}
+      />
+      <CompanyContactsPanel
+        companyUuid={company.uuid}
+        contacts={related.contacts}
+      />
+      <CollapsibleSection
+        title="Remarks"
+        summary={company.remarks ? null : "No remarks"}
+      >
+        <p className="text-sm whitespace-pre-wrap">{company.remarks}</p>
+      </CollapsibleSection>
+      <CompanyQuotesPanel quotes={related.quotes} />
+      <CompanyOrdersPanel orders={related.orders} />
+      <CompanyQuoteOrderLinesPanel lines={related.quoteAndOrderLines} />
+      <CompanyPurchaseRequestsPanel requests={related.purchaseRequests} />
+      <CompanyPurchaseQuotesPanel quotes={related.purchaseQuotes} />
+      <CompanyPurchaseOrdersPanel purchaseOrders={company.purchaseOrders} />
+      <CompanyPurchaseLinesPanel lines={related.purchaseLines} />
+      <CompanyCustomerStockPanel
+        companyUuid={company.uuid}
+        companyName={company.companyName}
+        stock={company.customerStock}
+      />
+      <CompanyInvoicesPanel invoices={related.invoices} />
+      {/* Counter Orders */}
+      <CollapsibleSection
+        title="Counter Orders"
+        summary={`${company.counterOrders.length} ${pluralize(company.counterOrders.length, "counter order")}`}
+      >
+        <div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Order no</TableHead>
+                <TableHead>Blocked</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Order date</TableHead>
+                <TableHead>Delivery date</TableHead>
+                <TableHead className="text-right">Amount (ex VAT)</TableHead>
+                <TableHead className="text-right">Weight (kg)</TableHead>
+                <TableHead>Customer reference</TableHead>
+                <TableHead className="text-right">Gain%</TableHead>
+                <TableHead className="text-right">Days in system</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {company.counterOrders.map((order) => (
+                <TableRow key={order.uuid}>
+                  <TableCell className="font-medium">{order.id}</TableCell>
+                  <TableCell>
+                    {order.handlingBlocked ? "Yes" : "No"}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge
+                      value={order.status}
+                      label={
+                        order.status
+                          ? COUNTER_ORDER_STATUS_LABELS[order.status]
+                          : null
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>{order.orderDate ?? na}</TableCell>
+                  <TableCell>{order.deliveryDate ?? na}</TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    € {order.amountExVat}
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    {order.weightKg}
+                  </TableCell>
+                  <TableCell>{order.customerRef ?? na}</TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    {order.gainPercent} %
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {daysInSystem(order.createdAt)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CollapsibleSection>
+
+      {/* Documents */}
+      <CollapsibleSection
+        title="Documents"
+        summary={`${company.documents?.length ?? 0} Documents`}
+      >
+        <CompanyDocumentCell company={company} />
+      </CollapsibleSection>
+
+      {/* Visit Reports */}
+      <CollapsibleSection
+        title="Visit reports"
+        summary={`${company.visitReports.length} ${pluralize(company.visitReports.length, "visit report")}`}
+      >
+        <div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Visit date</TableHead>
+                <TableHead>Visit time</TableHead>
+                <TableHead>Sort</TableHead>
+                <TableHead>Took place</TableHead>
+                <TableHead>Reason</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead className="text-right">Days in system</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {company.visitReports.map((report) => (
+                <TableRow key={report.uuid}>
+                  <TableCell>{report.visitDate ?? na}</TableCell>
+                  <TableCell>{report.visitTime ?? na}</TableCell>
+                  <TableCell>
+                    {report.contactMethod
+                      ? VISIT_REPORT_CONTACT_METHOD_LABELS[
+                          report.contactMethod
+                        ]
+                      : na}
+                  </TableCell>
+                  <TableCell>{report.hasTakenPlace ? "Yes" : "No"}</TableCell>
+                  <TableCell>
+                    {visitReasonsLabel(report.visitReasons) ?? na}
+                  </TableCell>
+                  <TableCell>{report.representative ?? na}</TableCell>
+                  <TableCell className="text-right">
+                    {daysInSystem(report.createdAt)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CollapsibleSection>
+
+      <CompanyCommunicationPanel communications={related.communications} />
+      <CompanyContractsPanel contracts={related.contracts} />
+
+      {/* Debtor */}
+      <CollapsibleSection
+        title="Debtor"
+        summary={`Debtor no: ${company.debtorNumber ?? ""}`}
+      >
+        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field label="Debtor number" value={company.debtorNumber} />
+          {/* The payables twin the reference's `Creditor` panel leads with. */}
+          <Field label="Creditor number" value={company.creditorNumber} />
+          <Field label="Debtor company" value={company.debtorCompanyName} />
+          {/* The reference panel's summary line: both limits together, and
+              the room left against them. Excl. VAT, as the credit rule weighs. */}
+          <Field
+            label="Total credit limit"
+            value={formatCurrencyAmount(
+              company.creditStanding.totalCreditLimit,
+              company.currency,
+            )}
+          />
+          <Field
+            label="Credit space"
+            value={formatCurrencyAmount(
+              company.creditStanding.creditSpace,
+              company.currency,
+            )}
+          />
+          <Field
+            label="Open entrees (excl. VAT)"
+            value={formatCurrencyAmount(
+              company.creditStanding.openReceivables,
+              company.currency,
+            )}
+          />
+          <Field
+            label="Open orders (excl. VAT)"
+            value={formatCurrencyAmount(
+              company.creditStanding.committedOrders,
+              company.currency,
+            )}
+          />
+          <Field
+            label="Oldest invoice date open entrees"
+            value={formatDateValue(
+              company.creditStanding.oldestOpenInvoiceDate,
+              na,
+            )}
+          />
+          <Field
+            label="Oldest due date open entrees"
+            value={formatDateValue(company.creditStanding.oldestOpenDueDate, na)}
+          />
+          <Field label="Purchase org." value={company.purchaseOrgCompanyName} />
+          <Field
+            label="Member number purchase org."
+            value={company.memberNumberPurchaseOrg}
+          />
+          <Field
+            label="Payment terms"
+            value={
+              company.paymentTerms
+                ? INVOICE_PAYMENT_TERM_LABELS[company.paymentTerms]
+                : null
+            }
+          />
+          <Field
+            label="Different payment terms ex works"
+            value={
+              company.differentPaymentTermsExWorks
+                ? INVOICE_PAYMENT_TERM_LABELS[
+                    company.differentPaymentTermsExWorks
+                  ]
+                : null
+            }
+          />
+          <Field
+            label="Currency"
+            value={company.currency ? CURRENCY_LABELS[company.currency] : null}
+          />
+          <Field label="IBAN" value={company.iban} />
+          <Field label="BIC" value={company.bic} />
+          <Field label="Bank account" value={company.bankAccount} />
+          <Field label="Postbank account" value={company.postbankAccount} />
+          <Field label="VAT number" value={company.vatNumber} />
+          <Field label="COC number" value={company.cocNumber} />
+          <Field label="Journal code" value={company.journalCode} />
+          {/* A blank credit limit is not a limit of zero — nobody set one, and
+              the credit check never blocks on it. Left as an em dash.
+
+              The three limits print in the currency the customer agreed them
+              in. A limit settled in dollars shown with a euro sign reads as a
+              different number entirely. */}
+          <Field
+            label="Credit limit"
+            value={
+              company.creditLimit
+                ? formatCurrencyAmount(company.creditLimit, company.currency)
+                : null
+            }
+          />
+          {/* The insurer's policy number, not an amount. */}
+          <Field
+            label="Credit limit insurance"
+            value={company.creditLimitInsurance || null}
+          />
+          <Field
+            label="Credit limit uninsured"
+            value={
+              company.creditLimitUninsured
+                ? formatCurrencyAmount(
+                    company.creditLimitUninsured,
+                    company.currency,
+                  )
+                : null
+            }
+          />
+          {/* The ledger is kept in euro, so a limit agreed in anything else has
+              to be converted before it can be compared with a balance. */}
+          <Field
+            label="Needs conversion"
+            value={
+              company.currency
+                ? yesNo(needsCurrencyConversion(company.currency))
+                : null
+            }
+          />
+          <Field
+            label="Credit limit uninsured date"
+            value={formatDateValue(company.creditLimitUninsuredDate, na)}
+          />
+          <Field
+            label="Insurance valid until"
+            value={formatDateValue(company.insuranceValidUntil, na)}
+          />
+          <Field label="Calculate VAT" value={yesNo(company.calculateVat)} />
+          <Field label="Reminder" value={yesNo(company.reminder)} />
+          <Field
+            label="Collect invoices in mandate"
+            value={yesNo(company.collectInvoicesInMandate)}
+          />
+        </dl>
+      </CollapsibleSection>
+
+      {/* Invoicing */}
+      <CollapsibleSection title="Invoicing">
+        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field
+            label="Invoicing method"
+            value={
+              company.invoicingMethod
+                ? INVOICING_METHOD_LABELS[company.invoicingMethod]
+                : null
+            }
+          />
+          <Field
+            label="Frequency of sending invoices"
+            value={
+              company.invoiceFrequency
+                ? INVOICE_FREQUENCY_LABELS[company.invoiceFrequency]
+                : null
+            }
+          />
+          <Field
+            label="Collective invoicing"
+            value={yesNo(company.collectiveInvoicing)}
+          />
+          <Field
+            label="Invoice packaging at zero price"
+            value={yesNo(company.invoicePackagingAtZeroPrice)}
+          />
+          <Field
+            label="Print commodity code"
+            value={yesNo(company.printCommodityCode)}
+          />
+          <Field
+            label="Print invoice"
+            value={
+              company.invoicePrintEnabled
+                ? `Yes — ${company.invoicePrintCount ?? 1}×`
+                : "No"
+            }
+          />
+          <Field
+            label="E-mail invoice to"
+            value={
+              company.invoiceEmailEnabled
+                ? (company.invoiceEmailTo ?? "Contact person")
+                : "No"
+            }
+          />
+          <Field
+            label="Print / e-mail zero value invoices"
+            value={yesNo(company.printEmailZeroValueInvoices)}
+          />
+          <Field
+            label="Send XML with invoice"
+            value={yesNo(company.sendXmlWithInvoice)}
+          />
+        </dl>
+      </CollapsibleSection>
+
       {/* Sales settings */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
-          Sales
-        </h2>
+      <CollapsibleSection
+        title="Sales"
+        summary={`Customer group: ${company.customerGroup ? CUSTOMER_GROUP_LABELS[company.customerGroup] : ""}`}
+      >
         <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field
             label="Customer group"
@@ -348,13 +698,10 @@ export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
             }
           />
         </dl>
-      </section>
+      </CollapsibleSection>
 
       {/* Marketing */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
-          Marketing
-        </h2>
+      <CollapsibleSection title="Marketing">
         <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field
             label="Industry"
@@ -421,384 +768,11 @@ export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
             <Field label="Visit planning" value={visitPlanning} />
           </div>
         </dl>
-      </section>
-
-      {/* Debtor */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
-          Debtor
-        </h2>
-        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Debtor number" value={company.debtorNumber} />
-          {/* The payables twin the reference's `Creditor` panel leads with. */}
-          <Field label="Creditor number" value={company.creditorNumber} />
-          <Field label="Debtor company" value={company.debtorCompanyName} />
-          {/* The reference panel's summary line: both limits together, and
-              the room left against them. Excl. VAT, as the credit rule weighs. */}
-          <Field
-            label="Total credit limit"
-            value={formatCurrencyAmount(
-              company.creditStanding.totalCreditLimit,
-              company.currency,
-            )}
-          />
-          <Field
-            label="Credit space"
-            value={formatCurrencyAmount(
-              company.creditStanding.creditSpace,
-              company.currency,
-            )}
-          />
-          <Field
-            label="Open entrees (excl. VAT)"
-            value={formatCurrencyAmount(
-              company.creditStanding.openReceivables,
-              company.currency,
-            )}
-          />
-          <Field
-            label="Open orders (excl. VAT)"
-            value={formatCurrencyAmount(
-              company.creditStanding.committedOrders,
-              company.currency,
-            )}
-          />
-          <Field
-            label="Oldest invoice date open entrees"
-            value={formatDateValue(
-              company.creditStanding.oldestOpenInvoiceDate,
-              na,
-            )}
-          />
-          <Field
-            label="Oldest due date open entrees"
-            value={formatDateValue(company.creditStanding.oldestOpenDueDate, na)}
-          />
-          <Field label="Purchase org." value={company.purchaseOrgCompanyName} />
-          <Field
-            label="Member number purchase org."
-            value={company.memberNumberPurchaseOrg}
-          />
-          <Field
-            label="Payment terms"
-            value={
-              company.paymentTerms
-                ? INVOICE_PAYMENT_TERM_LABELS[company.paymentTerms]
-                : null
-            }
-          />
-          <Field
-            label="Different payment terms ex works"
-            value={
-              company.differentPaymentTermsExWorks
-                ? INVOICE_PAYMENT_TERM_LABELS[
-                    company.differentPaymentTermsExWorks
-                  ]
-                : null
-            }
-          />
-          <Field
-            label="Currency"
-            value={company.currency ? CURRENCY_LABELS[company.currency] : null}
-          />
-          <Field label="IBAN" value={company.iban} />
-          <Field label="BIC" value={company.bic} />
-          <Field label="Bank account" value={company.bankAccount} />
-          <Field label="Postbank account" value={company.postbankAccount} />
-          <Field label="VAT number" value={company.vatNumber} />
-          <Field label="COC number" value={company.cocNumber} />
-          <Field label="Journal code" value={company.journalCode} />
-          {/* A blank credit limit is not a limit of zero — nobody set one, and
-              the credit check never blocks on it. Left as an em dash.
-
-              The three limits print in the currency the customer agreed them
-              in. A limit settled in dollars shown with a euro sign reads as a
-              different number entirely. */}
-          <Field
-            label="Credit limit"
-            value={
-              company.creditLimit
-                ? formatCurrencyAmount(company.creditLimit, company.currency)
-                : null
-            }
-          />
-          {/* The insurer's policy number, not an amount. */}
-          <Field
-            label="Credit limit insurance"
-            value={company.creditLimitInsurance || null}
-          />
-          <Field
-            label="Credit limit uninsured"
-            value={
-              company.creditLimitUninsured
-                ? formatCurrencyAmount(
-                    company.creditLimitUninsured,
-                    company.currency,
-                  )
-                : null
-            }
-          />
-          {/* The ledger is kept in euro, so a limit agreed in anything else has
-              to be converted before it can be compared with a balance. */}
-          <Field
-            label="Needs conversion"
-            value={
-              company.currency
-                ? yesNo(needsCurrencyConversion(company.currency))
-                : null
-            }
-          />
-          <Field
-            label="Credit limit uninsured date"
-            value={formatDateValue(company.creditLimitUninsuredDate, na)}
-          />
-          <Field
-            label="Insurance valid until"
-            value={formatDateValue(company.insuranceValidUntil, na)}
-          />
-          <Field label="Calculate VAT" value={yesNo(company.calculateVat)} />
-          <Field label="Reminder" value={yesNo(company.reminder)} />
-          <Field
-            label="Collect invoices in mandate"
-            value={yesNo(company.collectInvoicesInMandate)}
-          />
-        </dl>
-      </section>
-
-      {/* Invoicing */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
-          Invoicing
-        </h2>
-        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field
-            label="Invoicing method"
-            value={
-              company.invoicingMethod
-                ? INVOICING_METHOD_LABELS[company.invoicingMethod]
-                : null
-            }
-          />
-          <Field
-            label="Frequency of sending invoices"
-            value={
-              company.invoiceFrequency
-                ? INVOICE_FREQUENCY_LABELS[company.invoiceFrequency]
-                : null
-            }
-          />
-          <Field
-            label="Collective invoicing"
-            value={yesNo(company.collectiveInvoicing)}
-          />
-          <Field
-            label="Invoice packaging at zero price"
-            value={yesNo(company.invoicePackagingAtZeroPrice)}
-          />
-          <Field
-            label="Print commodity code"
-            value={yesNo(company.printCommodityCode)}
-          />
-          <Field
-            label="Print invoice"
-            value={
-              company.invoicePrintEnabled
-                ? `Yes — ${company.invoicePrintCount ?? 1}×`
-                : "No"
-            }
-          />
-          <Field
-            label="E-mail invoice to"
-            value={
-              company.invoiceEmailEnabled
-                ? (company.invoiceEmailTo ?? "Contact person")
-                : "No"
-            }
-          />
-          <Field
-            label="Print / e-mail zero value invoices"
-            value={yesNo(company.printEmailZeroValueInvoices)}
-          />
-          <Field
-            label="Send XML with invoice"
-            value={yesNo(company.sendXmlWithInvoice)}
-          />
-        </dl>
-      </section>
-
-      {/* Documents */}
-      <section className="space-y-3">
-        <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
-          Documents{" "}
-          <span className="ml-1 text-xs font-normal text-muted-foreground">
-            {company.documents?.length ?? 0}
-          </span>
-        </h2>
-        <CompanyDocumentCell company={company} />
-      </section>
-
-      {/* Addresses */}
-      {company.addresses.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
-            Addresses{" "}
-            <span className="ml-1 text-xs font-normal text-muted-foreground">
-              {company.addresses.length}
-            </span>
-          </h2>
-          <div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Street</TableHead>
-                  <TableHead>City</TableHead>
-                  <TableHead>Postal Code</TableHead>
-                  <TableHead>Country</TableHead>
-                  <TableHead>Telephone</TableHead>
-                  <TableHead>Email</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {company.addresses.map((addr) => (
-                  <TableRow key={addr.uuid}>
-                    <TableCell>{addr.streetAndNo ?? na}</TableCell>
-                    <TableCell>{addr.city ?? na}</TableCell>
-                    <TableCell>{addr.postalCode ?? na}</TableCell>
-                    <TableCell>{addr.country ?? na}</TableCell>
-                    <TableCell>{addr.telephone ?? na}</TableCell>
-                    <TableCell>{addr.email ?? na}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </section>
-      )}
-
-      {/* Counter Orders */}
-      {company.counterOrders.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
-            Counter Orders{" "}
-            <span className="ml-1 text-xs font-normal text-muted-foreground">
-              {company.counterOrders.length}
-            </span>
-          </h2>
-          <div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order no</TableHead>
-                  <TableHead>Blocked</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Order date</TableHead>
-                  <TableHead>Delivery date</TableHead>
-                  <TableHead className="text-right">Amount (ex VAT)</TableHead>
-                  <TableHead className="text-right">Weight (kg)</TableHead>
-                  <TableHead>Customer reference</TableHead>
-                  <TableHead className="text-right">Gain%</TableHead>
-                  <TableHead className="text-right">Days in system</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {company.counterOrders.map((order) => (
-                  <TableRow key={order.uuid}>
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>
-                      {order.handlingBlocked ? "Yes" : "No"}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge
-                        value={order.status}
-                        label={
-                          order.status
-                            ? COUNTER_ORDER_STATUS_LABELS[order.status]
-                            : null
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>{order.orderDate ?? na}</TableCell>
-                    <TableCell>{order.deliveryDate ?? na}</TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      € {order.amountExVat}
-                    </TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      {order.weightKg}
-                    </TableCell>
-                    <TableCell>{order.customerRef ?? na}</TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      {order.gainPercent} %
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {daysInSystem(order.createdAt)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </section>
-      )}
-
-      {/* Visit Reports */}
-      {company.visitReports.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
-            Visit Reports{" "}
-            <span className="ml-1 text-xs font-normal text-muted-foreground">
-              {company.visitReports.length}
-            </span>
-          </h2>
-          <div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Visit date</TableHead>
-                  <TableHead>Visit time</TableHead>
-                  <TableHead>Sort</TableHead>
-                  <TableHead>Took place</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead className="text-right">Days in system</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {company.visitReports.map((report) => (
-                  <TableRow key={report.uuid}>
-                    <TableCell>{report.visitDate ?? na}</TableCell>
-                    <TableCell>{report.visitTime ?? na}</TableCell>
-                    <TableCell>
-                      {report.contactMethod
-                        ? VISIT_REPORT_CONTACT_METHOD_LABELS[
-                            report.contactMethod
-                          ]
-                        : na}
-                    </TableCell>
-                    <TableCell>{report.hasTakenPlace ? "Yes" : "No"}</TableCell>
-                    <TableCell>
-                      {visitReasonsLabel(report.visitReasons) ?? na}
-                    </TableCell>
-                    <TableCell>{report.representative ?? na}</TableCell>
-                    <TableCell className="text-right">
-                      {daysInSystem(report.createdAt)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </section>
-      )}
+      </CollapsibleSection>
 
       {/* Complaints */}
       {company.complaints.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
-            Complaints{" "}
-            <span className="ml-1 text-xs font-normal text-muted-foreground">
-              {company.complaints.length}
-            </span>
-          </h2>
+        <CollapsibleSection title="Complaints">
           <div>
             <Table>
               <TableHeader>
@@ -857,18 +831,12 @@ export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
               </TableBody>
             </Table>
           </div>
-        </section>
+        </CollapsibleSection>
       )}
 
       {/* Follow-up */}
       {company.followUps.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
-            Follow-up{" "}
-            <span className="ml-1 text-xs font-normal text-muted-foreground">
-              {company.followUps.length}
-            </span>
-          </h2>
+        <CollapsibleSection title="Follow-up">
           <div>
             <Table>
               <TableHeader>
@@ -897,81 +865,12 @@ export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
               </TableBody>
             </Table>
           </div>
-        </section>
-      )}
-
-      {/* Purchase Orders */}
-      {company.purchaseOrders.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
-            Purchase Orders{" "}
-            <span className="ml-1 text-xs font-normal text-muted-foreground">
-              {company.purchaseOrders.length}
-            </span>
-          </h2>
-          <div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order no</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Order date</TableHead>
-                  <TableHead>Delivery date</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-right">Weight (kg)</TableHead>
-                  <TableHead>Reference</TableHead>
-                  <TableHead>Printed</TableHead>
-                  <TableHead>Mailed</TableHead>
-                  <TableHead className="text-right">Days in system</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {company.purchaseOrders.map((order) => (
-                  <TableRow key={order.uuid}>
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>
-                      <StatusBadge
-                        value={order.status}
-                        label={
-                          order.status
-                            ? PURCHASE_ORDER_STATUS_LABELS[order.status]
-                            : null
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>{order.orderDate ?? na}</TableCell>
-                    <TableCell>
-                      {formatDateValue(order.deliveryDate, "—")}
-                    </TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      € {order.amount}
-                    </TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      {order.weightKg}
-                    </TableCell>
-                    <TableCell>{order.reference ?? na}</TableCell>
-                    <TableCell>{order.isPrinted ? "Yes" : "No"}</TableCell>
-                    <TableCell>{order.isMailed ? "Yes" : "No"}</TableCell>
-                    <TableCell className="text-right">
-                      {daysInSystem(order.createdAt)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </section>
+        </CollapsibleSection>
       )}
 
       {/* Return Orders */}
       {company.returnOrders.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
-            Return Orders{" "}
-            <span className="ml-1 text-xs font-normal text-muted-foreground">
-              {company.returnOrders.length}
-            </span>
-          </h2>
+        <CollapsibleSection title="Return Orders">
           <div>
             <Table>
               <TableHeader>
@@ -1025,167 +924,10 @@ export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
               </TableBody>
             </Table>
           </div>
-        </section>
+        </CollapsibleSection>
       )}
 
-      {/* Customer Stock */}
-      {company.customerStock.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
-            Customer Stock{" "}
-            <span className="ml-1 text-xs font-normal text-muted-foreground">
-              {company.customerStock.length}
-            </span>
-          </h2>
-          <div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Product code</TableHead>
-                  <TableHead>Product</TableHead>
-                  <TableHead className="text-right">Quantity</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Days in system</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {company.customerStock.map((stock) => (
-                  <TableRow key={stock.uuid}>
-                    <TableCell>{stock.location ?? na}</TableCell>
-                    <TableCell>{stock.productCode ?? na}</TableCell>
-                    <TableCell>{stock.productName ?? na}</TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      {stock.quantity}
-                    </TableCell>
-                    <TableCell>
-                      {stock.reason
-                        ? CUSTOMER_STOCK_REASON_LABELS[stock.reason]
-                        : na}
-                    </TableCell>
-                    <TableCell>{stock.description ?? na}</TableCell>
-                    <TableCell className="text-right">
-                      {daysInSystem(stock.createdAt)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </section>
-      )}
-
-      {/* Invoices — customer role only */}
-      {isCustomer && (
-        <section className="space-y-3">
-          <div className="flex items-center justify-between border-b pb-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground">
-              Invoices{" "}
-              <span className="ml-1 text-xs font-normal text-muted-foreground">
-                {invoices?.length ?? 0}
-              </span>
-            </h2>
-            <Link
-              href="/invoices/add"
-              className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-sm hover:bg-accent"
-            >
-              <Plus className="size-3.5" />
-              New Invoice
-            </Link>
-          </div>
-
-          {invoices && invoices.length > 0 ? (
-            <div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Invoice No.</TableHead>
-                    <TableHead>Invoice Date</TableHead>
-                    <TableHead>Expiration Date</TableHead>
-                    <TableHead className="text-right">Excl. VAT</TableHead>
-                    <TableHead className="text-right">Incl. VAT</TableHead>
-                    <TableHead className="text-right">
-                      Credit Restriction
-                    </TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="text-right">Outstanding</TableHead>
-                    <TableHead>VAT Scenario</TableHead>
-                    <TableHead>Payment Terms</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoices.map((inv) => (
-                    <TableRow key={inv.uuid}>
-                      <TableCell className="font-medium whitespace-nowrap">
-                        {inv.id}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {inv.invoiceDate?.toLocaleDateString() ?? na}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {inv.expirationDate?.toLocaleDateString() ?? na}
-                      </TableCell>
-                      <TableCell className="text-right whitespace-nowrap">
-                        € {inv.invoiceAmountExclVat}
-                      </TableCell>
-                      <TableCell className="text-right whitespace-nowrap">
-                        € {inv.invoiceAmountInclVat}
-                      </TableCell>
-                      <TableCell className="text-right whitespace-nowrap">
-                        € {inv.creditRestriction}
-                      </TableCell>
-                      <TableCell className="text-right whitespace-nowrap">
-                        € {inv.invoiceTotal}
-                      </TableCell>
-                      <TableCell className="text-right whitespace-nowrap">
-                        € {inv.outstanding}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {inv.vatScenario
-                          ? INVOICE_VAT_SCENARIO_LABELS[inv.vatScenario]
-                          : na}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {inv.paymentTerms
-                          ? INVOICE_PAYMENT_TERM_LABELS[inv.paymentTerms]
-                          : na}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {inv.calculateVat && (
-                            <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">
-                              VAT
-                            </span>
-                          )}
-                          {inv.printed && (
-                            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                              Printed
-                            </span>
-                          )}
-                          {inv.mailed && (
-                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                              Mailed
-                            </span>
-                          )}
-                          {!inv.calculateVat && !inv.printed && !inv.mailed && (
-                            <span className="text-xs text-muted-foreground">
-                              —
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No invoices yet.</p>
-          )}
-        </section>
-      )}
+      <CompanyRelatedPanels records={related} />
     </div>
   );
 };

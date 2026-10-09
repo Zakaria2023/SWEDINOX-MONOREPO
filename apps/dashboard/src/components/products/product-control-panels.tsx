@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
-import { formatDateColumn, yesNo } from "@/lib/helpers";
+import { describeStockLimit, formatDateColumn, yesNo } from "@/lib/helpers";
 import {
   COUNT_STOCK_BASIS_LABELS,
   CUSTOMER_LABEL_OPTION_LABELS,
@@ -269,7 +269,7 @@ export const ProductControlPanels = ({ product }: Props) => {
 
       <CollapsibleSection
         title="Stock policy"
-        summary={`StockOp ${yesNo(product.useStockOpForThisProduct)}; order advice code ${product.orderAdviceCode ?? "—"}`}
+        summary={`Min. stock: ${describeStockLimit(product.minStockMode, product.minStockMultiplier, product.minStockFixedValue)}; Max. stock: ${describeStockLimit(product.maxStockMode, product.maxStockMultiplier, product.maxStockFixedValue)}`}
       >
         <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-3">
           <ProductField
@@ -301,7 +301,7 @@ export const ProductControlPanels = ({ product }: Props) => {
             value={product.orderAdviceCode}
           />
           <ProductField
-            label="PAC classification"
+            label="ABC classification code"
             value={product.pacClassification}
           />
           <ProductField

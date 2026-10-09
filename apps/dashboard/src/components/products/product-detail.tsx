@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
+  copyProduct,
   deleteProduct,
   ProductDetail,
 } from "@/app/(dashboard)/products/actions";
@@ -22,10 +23,12 @@ import {
   yesNo,
 } from "@/lib/helpers";
 import {
+  ARTICLE_GROUP_LABELS,
   CERTIFICAAT_LABELS,
   DISPATCH_STRATEGY_LABELS,
   MATERIAL_FAMILY_LABELS,
   MATERIAL_SURFACE_FINISH_LABELS,
+  PROCESSED_OPTION_LABELS,
   PRODUCT_DIMENSION_SHAPE_LABELS,
   SALES_UNIT_LABELS,
 } from "@/lib/labels";
@@ -40,6 +43,16 @@ export const ProductDetailView = ({ product }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [error, setError] = useState<string | undefined>();
+
+  // `Kopieer artikel(groep)en` — the action opens the copy in the editor.
+  const handleCopy = () => {
+    startTransition(async () => {
+      const result = await copyProduct(product.uuid);
+      if (result.error) {
+        setError(result.error);
+      }
+    });
+  };
 
   const handleDelete = () => {
     startTransition(async () => {
@@ -80,7 +93,17 @@ export const ProductDetailView = ({ product }: Props) => {
             label="Product group"
             value={product.productGroupName}
           />
-          <ProductField label="Price" value={product.priceGroup} />
+          {/* `Producttype` and `Prijsstructuur` sit in the reference's header,
+              under the product code. */}
+          <ProductField
+            label="Product type"
+            value={
+              product.dimensionShape
+                ? PRODUCT_DIMENSION_SHAPE_LABELS[product.dimensionShape]
+                : null
+            }
+          />
+          <ProductField label="Price structure" value={product.priceGroup} />
           <ProductField label="EAN" value={product.ean} />
           <ProductField label="Material group" value={product.materialGroup} />
           <ProductField label="Commodity" value={product.commodityCode} />
@@ -110,28 +133,51 @@ export const ProductDetailView = ({ product }: Props) => {
         </div>
       </section>
 
+      {/* ── Selection codes ─────────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <h2 className="border-b pb-2 text-base font-semibold">
+          Selection codes
+        </h2>
+        {product.selectionCodes && product.selectionCodes.length > 0 ? (
+          <ul className="flex flex-wrap gap-1.5">
+            {product.selectionCodes.map((code) => (
+              <li
+                key={code}
+                className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium"
+              >
+                {code}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">No selection codes.</p>
+        )}
+      </section>
+
       {/* ── Basis ───────────────────────────────────────────────────────── */}
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-base font-semibold">Basis</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          <ProductField
-            label="Dimensions"
-            value={
-              product.dimensionShape
-                ? PRODUCT_DIMENSION_SHAPE_LABELS[product.dimensionShape]
-                : null
-            }
-          />
           <ProductField label="Length (mm)" value={product.length} />
           <ProductField label="Width / Ø (mm)" value={product.widthDiameter} />
           <ProductField label="Thickness (mm)" value={product.thickness} />
           <ProductField label="Trade length (mm)" value={product.tradeLength} />
           <ProductField
-            label="Trade length fixed"
+            label="Fixed dimensions"
             value={yesNo(product.tradeLengthFixed)}
           />
           <ProductField label="Overlength (mm)" value={product.overlength} />
           <ProductField label="Weight (KG/M1)" value={product.weightPerM1} />
+          {/* The reference's `Kenmerken — Gewicht 7.850 KG/M3`: the product's
+              own density, stored per dm³. */}
+          <ProductField
+            label="Weight (KG/M3)"
+            value={
+              product.densityKgDm3 === null
+                ? null
+                : formatNumber(Number(product.densityKgDm3) * 1000)
+            }
+          />
           <ProductField
             label="Paint surface (M2/M1)"
             value={product.paintSurfacePerM1}
@@ -207,9 +253,58 @@ export const ProductDetailView = ({ product }: Props) => {
             value={product.industryNumber}
           />
           <ProductField
+            label="Number of decimal places, weight"
+            value={product.decimalPlaces}
+          />
+          <ProductField
             label="Print dimensions"
             value={yesNo(product.printDimensions)}
           />
+          <ProductField
+            label="Processed — option"
+            value={
+              product.processedOption
+                ? PROCESSED_OPTION_LABELS[product.processedOption]
+                : null
+            }
+          />
+          <div>
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              Processed — source product
+            </p>
+            <p className="text-sm">
+              {product.sourceProductUuid ? (
+                <Link
+                  href={`/products/${product.sourceProductUuid}`}
+                  className="text-primary hover:underline"
+                >
+                  Show source product
+                </Link>
+              ) : (
+                "—"
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* The reference's `Opties` list: every option this article may be
+            ordered with, each `Possible`. */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium text-muted-foreground">Options</h3>
+          {product.options && product.options.length > 0 ? (
+            <table className="text-sm">
+              <tbody>
+                {product.options.map((option) => (
+                  <tr key={option}>
+                    <td className="pe-6">{option}</td>
+                    <td className="text-muted-foreground">Possible</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-sm text-muted-foreground">No options.</p>
+          )}
         </div>
       </section>
 
@@ -219,6 +314,14 @@ export const ProductDetailView = ({ product }: Props) => {
           Classification features
         </h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <ProductField
+            label="Article group"
+            value={
+              product.articleGroup
+                ? ARTICLE_GROUP_LABELS[product.articleGroup]
+                : null
+            }
+          />
           <ProductField
             label="Material"
             value={product.classificationMaterial}
@@ -358,26 +461,55 @@ export const ProductDetailView = ({ product }: Props) => {
       {/* ── Everything else, collapsed ──────────────────────────────────── */}
       <ProductPanels product={product} />
 
-      {/* `Show product group · Purchase lines` on the reference's product
-          toolbar, and `Stock on location` narrowed to the product. */}
-      <RelatedRecordsBar
-        records={[
-          {
-            label: "Show product group",
-            href: product.productGroupUuid
-              ? `/product-groups/${product.productGroupUuid}`
-              : null,
-          },
-          {
-            label: "Purchase lines",
-            href: `/purchase-lines?product=${product.uuid}`,
-          },
-          {
-            label: "Stock on location",
-            href: `/stock-on-location?product=${product.uuid}`,
-          },
-        ]}
-      />
+      {/* The reference's article toolbar (244/249): `Toon artikelgroep`,
+          `Corrigeer artikelen en voorraad`, `Activeren` (grey),
+          `Productieopdracht voor voorraad` (grey), `Kopieer artikel(groep)en`,
+          `Order lines` — then `Purchase lines` and `Stock on location`
+          narrowed to the product. Correcting stock happens lot by lot, so
+          that button opens the article's lots. */}
+      <div className="flex flex-wrap gap-2">
+        <RelatedRecordsBar
+          records={[
+            {
+              label: "Show product group",
+              href: product.productGroupUuid
+                ? `/product-groups/${product.productGroupUuid}`
+                : null,
+            },
+            {
+              label: "Correct articles and stock",
+              href: `/stock?product=${product.uuid}`,
+            },
+            { label: "Activate", href: null },
+            { label: "Production order for stock", href: null },
+          ]}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleCopy}
+          disabled={isPending}
+        >
+          Copy article(s)
+        </Button>
+        <RelatedRecordsBar
+          records={[
+            {
+              label: "Order lines",
+              href: `/order-lines?product=${product.uuid}`,
+            },
+            {
+              label: "Purchase lines",
+              href: `/purchase-lines?product=${product.uuid}`,
+            },
+            {
+              label: "Stock on location",
+              href: `/stock-on-location?product=${product.uuid}`,
+            },
+          ]}
+        />
+      </div>
 
       <div className="flex gap-2">
         <Button

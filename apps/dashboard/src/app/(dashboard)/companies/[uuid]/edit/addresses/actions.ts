@@ -50,6 +50,7 @@ export type DeleteAddressPayload = {
 const revalidateAddressPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/addresses`);
   revalidatePath(`/companies/${companyUuid}/edit`);
+  revalidatePath(`/companies/${companyUuid}`);
 };
 
 export const getCompanyAddresses = async (

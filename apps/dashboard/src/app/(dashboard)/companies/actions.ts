@@ -45,7 +45,7 @@ import { Orders, SelectOrders } from "@/db/schema/orders";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { QuoteItems } from "@/db/schema/quote-items";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { Invoices } from "@/db/schema/invoices";
+import { Invoices, SelectInvoices } from "@/db/schema/invoices";
 import { InvoiceItems } from "@/db/schema/invoice-items";
 import {
   PurchaseQuotes,
@@ -59,6 +59,15 @@ import {
   PurchaseReturnOrders,
   SelectPurchaseReturnOrders,
 } from "@/db/schema/purchase-return-orders";
+import {
+  PurchaseRequests,
+  SelectPurchaseRequests,
+} from "@/db/schema/purchase-requests";
+import { PurchaseRequestItems } from "@/db/schema/purchase-request-items";
+import {
+  PurchaseOrderItems,
+  SelectPurchaseOrderItems,
+} from "@/db/schema/purchase-order-items";
 import {
   Communications,
   SelectCommunications,
@@ -305,9 +314,11 @@ export type CompanyRelatedRecords = {
     | "email"
     | "telephone"
     | "mobile"
+    | "fax"
     | "categories"
+    | "sequenceNumber"
   >[];
-  orders: Pick<
+  orders: (Pick<
     SelectOrders,
     | "uuid"
     | "id"
@@ -320,7 +331,10 @@ export type CompanyRelatedRecords = {
     | "customerRef"
     | "handlingBlocked"
     | "isConsignment"
-  >[];
+    | "materialsProfit"
+  > & {
+    projectName: SelectCustomerProjects["projectName"] | null;
+  })[];
   quotes: Pick<
     SelectQuotes,
     | "uuid"
@@ -341,7 +355,13 @@ export type CompanyRelatedRecords = {
     | "role"
     | "startingDate"
     | "endDate"
+    | "salesKg"
+    | "revenue"
+    | "maxWeightKg"
+    | "websiteSorting"
+    | "createdAt"
   >[];
+  purchaseRequests: CompanyPurchaseRequestRow[];
   purchaseQuotes: Pick<
     SelectPurchaseQuotes,
     | "uuid"
@@ -375,6 +395,8 @@ export type CompanyRelatedRecords = {
     | "totalWeightKg"
   >[];
   quoteAndOrderLines: CompanyQuoteOrderLine[];
+  purchaseLines: CompanyPurchaseLineRow[];
+  invoices: CompanyInvoiceRow[];
   communications: Pick<
     SelectCommunications,
     | "uuid"
@@ -429,6 +451,65 @@ export type CompanyQuoteOrderLine = {
   contractCode: SelectContracts["code"] | null;
   invoiceUuid: string | null;
   invoiceNo: number | null;
+};
+
+/** The supplier's `Purchase requests` panel: one row per request. */
+export type CompanyPurchaseRequestRow = Pick<
+  SelectPurchaseRequests,
+  | "uuid"
+  | "id"
+  | "status"
+  | "reference"
+  | "deliveryDate"
+  | "deadline"
+  | "createdAt"
+> & {
+  kg: number; // SUM of the request's lines
+};
+
+/** The supplier's `Inkoopregels` panel: its purchase lines, newest first. */
+export type CompanyPurchaseLineRow = Pick<
+  SelectPurchaseOrderItems,
+  | "uuid"
+  | "lineNumber"
+  | "status"
+  | "productUuid"
+  | "receiptDate"
+  | "quantity"
+  | "unit"
+  | "kgPurchased"
+  | "netPrice"
+  | "priceUnit"
+  | "amount"
+> & {
+  purchaseOrderUuid: SelectPurchaseOrders["uuid"];
+  purchaseOrderId: SelectPurchaseOrders["id"];
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+};
+
+/** The customer's `Invoices` panel, with the order each invoice billed. */
+export type CompanyInvoiceRow = Pick<
+  SelectInvoices,
+  | "uuid"
+  | "id"
+  | "invoiceDate"
+  | "expirationDate"
+  | "invoiceAmountExclVat"
+  | "invoiceAmountInclVat"
+  | "creditRestriction"
+  | "outstanding"
+  | "printed"
+  | "printedAt"
+  | "mailed"
+  | "mailedAt"
+  | "mailedTo"
+  | "cancelled"
+  | "createdAt"
+  | "updatedAt"
+> & {
+  orderUuid: SelectOrders["uuid"] | null;
+  orderId: SelectOrders["id"] | null;
 };
 
 export const updateCompanyDocuments = async (
@@ -970,7 +1051,9 @@ export const getCompanyRelatedRecords = async (
         email: Contacts.email,
         telephone: Contacts.telephone,
         mobile: Contacts.mobile,
+        fax: Contacts.fax,
         categories: Contacts.categories,
+        sequenceNumber: Contacts.sequenceNumber,
       })
       .from(Contacts)
       .where(eq(Contacts.companyUuid, companyUuid))
@@ -989,8 +1072,14 @@ export const getCompanyRelatedRecords = async (
         customerRef: Orders.customerRef,
         handlingBlocked: Orders.handlingBlocked,
         isConsignment: Orders.isConsignment,
+        materialsProfit: Orders.materialsProfit,
+        projectName: CustomerProjects.projectName,
       })
       .from(Orders)
+      .leftJoin(
+        CustomerProjects,
+        eq(Orders.projectUuid, CustomerProjects.uuid),
+      )
       .where(eq(Orders.companyUuid, companyUuid))
       .orderBy(desc(Orders.id))
       .limit(RELATED_RECORD_LIMIT);
@@ -1020,10 +1109,37 @@ export const getCompanyRelatedRecords = async (
         role: Contracts.role,
         startingDate: Contracts.startingDate,
         endDate: Contracts.endDate,
+        salesKg: Contracts.salesKg,
+        revenue: Contracts.revenue,
+        maxWeightKg: Contracts.maxWeightKg,
+        websiteSorting: Contracts.websiteSorting,
+        createdAt: Contracts.createdAt,
       })
       .from(Contracts)
       .where(eq(Contracts.companyUuid, companyUuid))
       .orderBy(asc(Contracts.code));
+
+    const purchaseRequestRows = await db
+      .select({
+        uuid: PurchaseRequests.uuid,
+        id: PurchaseRequests.id,
+        status: PurchaseRequests.status,
+        reference: PurchaseRequests.reference,
+        deliveryDate: PurchaseRequests.deliveryDate,
+        deadline: PurchaseRequests.deadline,
+        createdAt: PurchaseRequests.createdAt,
+        kg: sql<
+          string | null
+        >`(SELECT SUM(${PurchaseRequestItems.kg}) FROM ${PurchaseRequestItems} WHERE ${PurchaseRequestItems.purchaseRequestUuid} = ${PurchaseRequests.uuid})`,
+      })
+      .from(PurchaseRequests)
+      .where(eq(PurchaseRequests.companyUuid, companyUuid))
+      .orderBy(desc(PurchaseRequests.id))
+      .limit(RELATED_RECORD_LIMIT);
+    const purchaseRequests = purchaseRequestRows.map((row) => ({
+      ...row,
+      kg: Number(row.kg ?? 0),
+    }));
 
     const purchaseQuotes = await db
       .select({
@@ -1071,6 +1187,69 @@ export const getCompanyRelatedRecords = async (
       .where(eq(PurchaseReturnOrders.supplierUuid, companyUuid))
       .orderBy(desc(PurchaseReturnOrders.id))
       .limit(RELATED_RECORD_LIMIT);
+
+    const purchaseLines = await db
+      .select({
+        uuid: PurchaseOrderItems.uuid,
+        lineNumber: PurchaseOrderItems.lineNumber,
+        status: PurchaseOrderItems.status,
+        productUuid: PurchaseOrderItems.productUuid,
+        receiptDate: PurchaseOrderItems.receiptDate,
+        quantity: PurchaseOrderItems.quantity,
+        unit: PurchaseOrderItems.unit,
+        kgPurchased: PurchaseOrderItems.kgPurchased,
+        netPrice: PurchaseOrderItems.netPrice,
+        priceUnit: PurchaseOrderItems.priceUnit,
+        amount: PurchaseOrderItems.amount,
+        purchaseOrderUuid: PurchaseOrders.uuid,
+        purchaseOrderId: PurchaseOrders.id,
+        productCode: Products.productCode,
+        productName: Products.name,
+      })
+      .from(PurchaseOrderItems)
+      .innerJoin(
+        PurchaseOrders,
+        eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
+      )
+      .leftJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
+      .where(eq(PurchaseOrders.supplierUuid, companyUuid))
+      .orderBy(desc(PurchaseOrders.id), asc(PurchaseOrderItems.lineNumber))
+      .limit(RELATED_RECORD_LIMIT);
+
+    const invoiceRows = await db
+      .select({
+        uuid: Invoices.uuid,
+        id: Invoices.id,
+        invoiceDate: Invoices.invoiceDate,
+        expirationDate: Invoices.expirationDate,
+        invoiceAmountExclVat: Invoices.invoiceAmountExclVat,
+        invoiceAmountInclVat: Invoices.invoiceAmountInclVat,
+        creditRestriction: Invoices.creditRestriction,
+        outstanding: Invoices.outstanding,
+        printed: Invoices.printed,
+        printedAt: Invoices.printedAt,
+        mailed: Invoices.mailed,
+        mailedAt: Invoices.mailedAt,
+        mailedTo: Invoices.mailedTo,
+        cancelled: Invoices.cancelled,
+        createdAt: Invoices.createdAt,
+        updatedAt: Invoices.updatedAt,
+        // The reference's `Order` column: the order the invoice's lines bill.
+        orderUuid: sql<
+          string | null
+        >`(SELECT ${Orders.uuid} FROM ${InvoiceItems} JOIN ${OrderItems} ON ${OrderItems.uuid} = ${InvoiceItems.orderItemUuid} JOIN ${Orders} ON ${Orders.uuid} = ${OrderItems.orderUuid} WHERE ${InvoiceItems.invoiceUuid} = ${Invoices.uuid} LIMIT 1)`,
+        orderId: sql<
+          number | null
+        >`(SELECT ${Orders.id} FROM ${InvoiceItems} JOIN ${OrderItems} ON ${OrderItems.uuid} = ${InvoiceItems.orderItemUuid} JOIN ${Orders} ON ${Orders.uuid} = ${OrderItems.orderUuid} WHERE ${InvoiceItems.invoiceUuid} = ${Invoices.uuid} LIMIT 1)`,
+      })
+      .from(Invoices)
+      .where(eq(Invoices.companyUuid, companyUuid))
+      .orderBy(desc(Invoices.id))
+      .limit(RELATED_RECORD_LIMIT);
+    const invoices = invoiceRows.map((row) => ({
+      ...row,
+      orderId: row.orderId === null ? null : Number(row.orderId),
+    }));
 
     const communications = await db
       .select({
@@ -1211,10 +1390,13 @@ export const getCompanyRelatedRecords = async (
       orders,
       quotes,
       contracts,
+      purchaseRequests,
       purchaseQuotes,
       purchaseInvoices,
       purchaseReturns,
       quoteAndOrderLines,
+      purchaseLines,
+      invoices,
       communications,
     };
   } catch (error) {

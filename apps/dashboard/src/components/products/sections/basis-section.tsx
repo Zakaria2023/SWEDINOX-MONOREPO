@@ -146,7 +146,7 @@ export const BasisSection = ({ productOptions }: Props) => {
               name="tradeLengthFixed"
               render={({ field }) => (
                 <FormCheckboxCard
-                  label="Trade length fixed"
+                  label="Fixed dimensions"
                   checked={field.value}
                   active={field.value}
                   onChange={(e) => field.onChange(e.target.checked)}

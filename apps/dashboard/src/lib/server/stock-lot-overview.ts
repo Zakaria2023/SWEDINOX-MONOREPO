@@ -100,6 +100,8 @@ const LOT_FILTERS: FilterBindings = {
   location: relationFilter(Stock.locationUuid),
   // Set by the product screen's `Stock on location` button.
   product: relationFilter(Stock.productUuid),
+  // Set by the company screen's `Stock on location` button.
+  owner: relationFilter(Stock.ownerCompanyUuid),
   blocked: booleanFilter(Stock.blocked),
   stockCategory: valueFilter(Stock.stockCategory),
   reserved: (values) => {

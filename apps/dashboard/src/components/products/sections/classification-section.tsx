@@ -4,12 +4,14 @@ import { useFormContext } from "react-hook-form";
 import { ProductFormValues } from "@/app/(dashboard)/products/validation";
 import { Input } from "@/components/shadcn/input";
 import { FormLabel } from "@/components/ui/form-field";
+import { ARTICLE_GROUP_LABELS } from "@/lib/labels";
 
 // The classification taxonomy the reference groups under "Classification
 // features". Held as free text for now: the reference's dropdowns were empty on
 // every screen these were built from, so the option lists are still unknown.
 export const ClassificationSection = () => {
-  const { register } = useFormContext<ProductFormValues>();
+  const { register, watch } = useFormContext<ProductFormValues>();
+  const articleGroup = watch("articleGroup");
 
   return (
     <section className="space-y-4">
@@ -18,6 +20,19 @@ export const ClassificationSection = () => {
       </h2>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Greyed and first on the reference: the article group is picked in
+            the header, and repeated here as the root of the classification. */}
+        <div>
+          <FormLabel htmlFor="classificationArticleGroup">
+            Article group
+          </FormLabel>
+          <Input
+            id="classificationArticleGroup"
+            readOnly
+            className="bg-muted text-muted-foreground"
+            value={articleGroup ? ARTICLE_GROUP_LABELS[articleGroup] : ""}
+          />
+        </div>
         <div>
           <FormLabel htmlFor="classificationMaterial">Material</FormLabel>
           <Input

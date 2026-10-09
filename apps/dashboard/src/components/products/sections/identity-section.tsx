@@ -63,7 +63,7 @@ export const IdentitySection = ({
         />
 
         <div>
-          <FormLabel htmlFor="priceGroup">Price</FormLabel>
+          <FormLabel htmlFor="priceGroup">Price structure</FormLabel>
           <Input id="priceGroup" {...register("priceGroup")} />
         </div>
 
