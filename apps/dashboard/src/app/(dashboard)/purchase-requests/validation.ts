@@ -11,6 +11,7 @@ import {
   currentYear,
   dateStringInDays,
   isoWeekOf,
+  onWorkingDay,
   todayDateString,
 } from "@/lib/helpers";
 
@@ -18,6 +19,11 @@ import {
 // question being asked, and it comes back on the supplier's quote.
 export const purchaseRequestItemSchema = z.object({
   productUuid: z.string().optional(),
+  // The chosen article's code and what one piece of it weighs. Neither is
+  // stored: the code is what the grid's Product cell reads, and the piece
+  // weight is what turns Qty(p) into Kg(p) as it is typed.
+  productCode: z.string().optional(),
+  pieceWeightKg: z.string().optional(),
   // Which sales order line this material is being bought for, when it is being
   // bought for one rather than for stock.
   forOrderItemUuid: z.string().optional(),
@@ -39,6 +45,8 @@ export type PurchaseRequestItemFormValues = z.infer<
 
 export const DEFAULT_PURCHASE_REQUEST_ITEM: PurchaseRequestItemFormValues = {
   productUuid: "",
+  productCode: "",
+  pieceWeightKg: "",
   forOrderItemUuid: "",
   description: "",
   stockCategory: "",
@@ -105,7 +113,8 @@ export const DEFAULT_PURCHASE_REQUEST: PurchaseRequestFormValues = {
   ourReference: "",
 
   // A blank request in the reference opens as `Materials`, with `Overlength`
-  // ticked and a deadline of tomorrow (A6, 7-10-2026).
+  // ticked and a deadline of the next working day (A6, 7-10-2026; Monday
+  // 12-10-2026 when opened on Sunday 11-10-2026).
   purchaseOrderType: "materials",
   weightType: undefined,
   isOverlength: true,
@@ -129,9 +138,10 @@ export const DEFAULT_PURCHASE_REQUEST: PurchaseRequestFormValues = {
   deliveryYear: String(currentYear()),
   deliveryRemark: "",
 
-  deadline: dateStringInDays(1),
+  deadline: onWorkingDay(dateStringInDays(1)),
 
-  items: [DEFAULT_PURCHASE_REQUEST_ITEM],
+  // A blank request opens with `0 lines`; `New` adds the first.
+  items: [],
 };
 
 /**

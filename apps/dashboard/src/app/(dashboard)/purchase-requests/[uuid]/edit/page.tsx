@@ -47,7 +47,7 @@ const EditPurchaseRequestPage = async ({ params }: Props) => {
         <PurchaseRequestForm
           companies={companies}
           clerkUsers={clerkUsers}
-          purchaseRequestUuid={uuid}
+          existing={request}
           defaultValues={purchaseRequestToFormValues(request)}
           canEditLines={canEditPurchaseRequestLines(request.status)}
         />

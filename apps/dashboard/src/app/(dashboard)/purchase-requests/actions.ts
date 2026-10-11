@@ -197,10 +197,18 @@ export const updatePurchaseRequest = async (
     // been sent, its lines are the question the quotes on file are answering.
     const rewriteLines = canEditPurchaseRequestLines(request.status);
 
+    // The form carries no documents, so a null here means "not touched", not
+    // "remove them": saving the header must not wipe what was attached.
+    const { documents, ...headerFields } = fields;
+
     await db.transaction(async (tx) => {
       await tx
         .update(PurchaseRequests)
-        .set({ ...fields, companyType })
+        .set({
+          ...headerFields,
+          ...(documents === null ? {} : { documents }),
+          companyType,
+        })
         .where(eq(PurchaseRequests.uuid, uuid));
 
       if (!rewriteLines) {

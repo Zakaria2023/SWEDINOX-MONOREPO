@@ -1,33 +1,43 @@
 "use client";
 
-import { Controller } from "react-hook-form";
+import { FormProvider } from "react-hook-form";
 import { usePurchaseRequestSubmit } from "@/app/(dashboard)/purchase-requests/use-purchase-request-submit";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { PurchaseRequestFormValues } from "@/app/(dashboard)/purchase-requests/validation";
-import { DatePicker } from "@/components/shadcn/date-picker";
-import { Input } from "@/components/shadcn/input";
-import { Select } from "@/components/shadcn/select";
-import { RequestItemsSection } from "@/components/purchase-requests/sections/request-items-section";
+import {
+  NewOrderPanel,
+  panelsNamed,
+  PurchaseOrderNewPanels,
+} from "@/components/purchase-orders/purchase-order-new-panels";
+import { PurchaseOrderInformationSection } from "@/components/purchase-orders/sections/purchase-order-information-section";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
-import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { ClerkUserOption } from "@/lib/server/clerk";
-import { cn } from "@/lib/helpers";
+import { formatDateValue, todayDateString } from "@/lib/helpers";
+import { PURCHASE_REQUEST_STATUS_LABELS } from "@/lib/labels";
+import { PurchaseRequestLines } from "./purchase-request-lines";
+import {
+  PurchaseRequestHeader,
+  PurchaseRequestToolbar,
+} from "./purchase-request-toolbar";
+import { PurchaseRequestDeliverySection } from "./sections/purchase-request-delivery-section";
+import { PurchaseRequestTypeSection } from "./sections/purchase-request-type-section";
 
-const SENT_FLAGS = [
-  { name: "isPrinted", label: "Printed" },
-  { name: "isMailed", label: "Mailed" },
-  { name: "isFaxed", label: "Faxed" },
-  { name: "messageSentViaStaalWeb", label: "Message sent via StaalWeb" },
-] as const;
+// What the reference stacks under a request's lines, empty until it is saved.
+const REQUEST_DOCUMENTS_PANEL: NewOrderPanel = {
+  title: "Documents",
+  summary: "0 Documents",
+  toolbar: ["New"],
+  columns: ["Name", "Type", "Uploaded"],
+  empty: "Documents are attached to a saved request.",
+};
 
 type Props = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
-  /** Set when editing an existing request; omitted when creating one. */
-  purchaseRequestUuid?: string;
+  /** The saved request when editing; omitted when creating one. */
+  existing?: PurchaseRequestHeader | null;
   defaultValues?: PurchaseRequestFormValues;
   /**
    * False once the request has left draft: its lines are the question the
@@ -36,10 +46,15 @@ type Props = {
   canEditLines?: boolean;
 };
 
+/**
+ * The reference's `Purchase request` window (blank, 11-10-2026): the toolbar,
+ * the header — the document on the left, its type, stamps, follow-up and
+ * deadline on the right — then `Lines`, `Texts`, `Documents` and `PDF Files`.
+ */
 export const PurchaseRequestForm = ({
   companies,
   clerkUsers,
-  purchaseRequestUuid,
+  existing = null,
   defaultValues,
   canEditLines = true,
 }: Props) => {
@@ -51,7 +66,6 @@ export const PurchaseRequestForm = ({
     state,
     arrangeTransport,
     pickupDropoffCdPurchases,
-    deliveryType,
     hasSupplier,
     supplierOptions,
     agentOptions,
@@ -64,7 +78,10 @@ export const PurchaseRequestForm = ({
     paymentTermOptions,
     purchaserOptions,
     isLoadingSupplierData,
+    supplierDefaults,
     handleSupplierChange,
+    handleAgentChange,
+    handleDeliveryDateChange,
     handleCancel,
     itemFields,
     appendItem,
@@ -72,378 +89,118 @@ export const PurchaseRequestForm = ({
   } = usePurchaseRequestSubmit({
     companies,
     clerkUsers,
-    purchaseRequestUuid,
+    purchaseRequestUuid: existing?.uuid,
     defaultValues,
   });
 
-  const {
-    register,
-    control,
-    setValue,
-    formState: { errors },
-  } = form;
+  // The reference's banner, as on a purchase order: `Purchase request, {supplier},
+  // Tel: …, Fax:` — no fax prints as nothing.
+  const banner = [
+    existing ? `Purchase request ${existing.id}` : "Purchase request",
+    supplierDefaults?.companyName,
+    supplierDefaults
+      ? `Tel: ${supplierDefaults.telephone ?? "-"}, Fax:${supplierDefaults.fax ? ` ${supplierDefaults.fax}` : ""}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   return (
-    <form onSubmit={onSubmit} className="space-y-8">
-      <FormError>{state.error}</FormError>
+    <FormProvider {...form}>
+      <form onSubmit={onSubmit} className="space-y-6">
+        <FormError>{state.error}</FormError>
 
-      {/* ── Header ────────────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">
-          Purchase Request Information
-        </h2>
+        <PurchaseRequestToolbar existing={existing} isPending={isPending} />
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <FormLabel htmlFor="supplierUuid">
-              Supplier
-              {isLoadingSupplierData && (
-                <span className="ml-2 text-xs font-normal text-muted-foreground">
-                  Loading...
-                </span>
-              )}
-            </FormLabel>
-            <Controller
-              control={control}
-              name="supplierUuid"
-              render={({ field }) => (
-                <Select
-                  id="supplierUuid"
-                  value={field.value || ""}
-                  options={supplierOptions}
-                  onValueChange={handleSupplierChange}
-                  invalid={!!errors.supplierUuid}
-                />
-              )}
-            />
-            <FormFieldError message={errors.supplierUuid?.message} />
-          </div>
+        <section className="space-y-4 rounded-lg border p-4">
+          <h1 className="text-lg font-semibold">
+            {banner}
+            {existing
+              ? ` - ${PURCHASE_REQUEST_STATUS_LABELS[existing.status ?? "draft"]}`
+              : ""}
+          </h1>
 
-          <FormSelectField
-            control={control}
-            id="agentUuid"
-            name="agentUuid"
-            label="Agent"
-            options={agentOptions}
-            emptyValue=""
-          />
+          <div className="grid gap-x-10 gap-y-6 lg:grid-cols-[3fr_2fr]">
+            <div className="space-y-6">
+              <p className="text-sm text-muted-foreground">
+                Creation date:{" "}
+                {formatDateValue(existing?.createdAt ?? todayDateString())}
+              </p>
 
-          <FormSelectField
-            control={control}
-            id="contactUuid"
-            name="contactUuid"
-            label="Contact"
-            options={contactOptions}
-            emptyValue=""
-            disabled={contactOptions.length <= 1}
-          />
-
-          <FormSelectField
-            control={control}
-            id="purchaser"
-            name="purchaser"
-            label="Purchaser"
-            options={purchaserOptions}
-            emptyValue=""
-          />
-
-          <div>
-            <FormLabel htmlFor="orderCategory">Order Category</FormLabel>
-            <Input id="orderCategory" {...register("orderCategory")} />
-          </div>
-
-          <div>
-            <FormLabel htmlFor="reference">Reference</FormLabel>
-            <Input id="reference" {...register("reference")} />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Purchase Order Type ───────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">
-          Purchase Order Type
-        </h2>
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormSelectField
-            control={control}
-            id="purchaseOrderType"
-            name="purchaseOrderType"
-            label="Type"
-            options={purchaseOrderTypeOptions}
-            emptyValue=""
-          />
-
-          <FormSelectField
-            control={control}
-            id="weightType"
-            name="weightType"
-            label="Weight type"
-            options={weightTypeOptions}
-            emptyValue=""
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-4">
-          <Controller
-            control={control}
-            name="isOverlength"
-            render={({ field }) => (
-              <FormCheckboxCard
-                label="Overlength"
-                checked={field.value}
-                active={field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
+              {/* Supplier · Agent · Contact + Reference · Purchaser · Order
+                  category — the purchase order's own block, field for field. */}
+              <PurchaseOrderInformationSection
+                supplierOptions={supplierOptions}
+                agentOptions={agentOptions}
+                contactOptions={contactOptions}
+                purchaserOptions={purchaserOptions}
+                isLoadingSupplierData={isLoadingSupplierData}
+                handleSupplierChange={handleSupplierChange}
+                handleAgentChange={handleAgentChange}
+                locked={false}
               />
-            )}
-          />
-        </div>
 
-        {/* Greyed in the reference: printing, mailing and sending set these. */}
-        <div className="flex gap-6">
-          {SENT_FLAGS.map(({ name, label }) => (
-            <Controller
-              key={name}
-              control={control}
-              name={name}
-              render={({ field }) => (
-                <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={field.value}
-                    disabled
-                    readOnly
+              {/* Greyed until a supplier is chosen, which then fills it. */}
+              <section className="space-y-4">
+                <h2 className="text-sm font-semibold">Finances</h2>
+                <div className="max-w-sm">
+                  <FormSelectField
+                    control={form.control}
+                    id="paymentTerms"
+                    name="paymentTerms"
+                    label="Payment Terms"
+                    options={paymentTermOptions}
+                    emptyValue=""
+                    disabled={!hasSupplier}
                   />
-                  {label}
-                </label>
-              )}
-            />
-          ))}
-        </div>
-      </section>
+                </div>
+              </section>
 
-      {/* ── Finances ──────────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">Finances</h2>
-        <div className="max-w-sm">
-          <FormSelectField
-            control={control}
-            id="paymentTerms"
-            name="paymentTerms"
-            label="Payment Terms"
-            options={paymentTermOptions}
-            emptyValue=""
-            disabled={!hasSupplier}
-          />
-        </div>
-      </section>
+              <PurchaseRequestDeliverySection
+                arrangeTransport={arrangeTransport}
+                pickupDropoffCdPurchases={pickupDropoffCdPurchases}
+                deliveryTermOptions={deliveryTermOptions}
+                deliveryAddressOptions={deliveryAddressOptions}
+                supplierAddressOptions={supplierAddressOptions}
+                handleDeliveryDateChange={handleDeliveryDateChange}
+              />
+            </div>
 
-      {/* ── Delivery ──────────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">Delivery</h2>
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormSelectField
-            control={control}
-            id="deliveryTerms"
-            name="deliveryTerms"
-            label="Delivery Terms"
-            options={deliveryTermOptions}
-            emptyValue=""
-          />
-
-          {/* Defaults to our own yard (`Bolderweg 10, 1332AT, Almere`). */}
-          <FormSelectField
-            control={control}
-            id="deliveryAddressUuid"
-            name="deliveryAddressUuid"
-            label="Delivery Address"
-            options={deliveryAddressOptions}
-            emptyValue=""
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-6">
-          <Controller
-            control={control}
-            name="arrangeTransport"
-            render={({ field }) => (
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={field.value}
-                  onChange={(e) => field.onChange(e.target.checked)}
-                />
-                Arrange transport
-              </label>
-            )}
-          />
-          {/* Greyed until we arrange the transport ourselves. */}
-          <Controller
-            control={control}
-            name="pickupDropoffCdPurchases"
-            render={({ field }) => (
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={field.value}
-                  disabled={!arrangeTransport}
-                  onChange={(e) => field.onChange(e.target.checked)}
-                />
-                Pick up / Drop-off CD-purchases
-              </label>
-            )}
-          />
-        </div>
-
-        {/* A separate, greyed field in the reference: only a pick-up at the
-            supplier needs their address. */}
-        <div className="max-w-md">
-          <FormSelectField
-            control={control}
-            id="supplierAddressUuid"
-            name="supplierAddressUuid"
-            label="Supplier Address"
-            options={supplierAddressOptions}
-            emptyValue=""
-            disabled={
-              !arrangeTransport ||
-              !pickupDropoffCdPurchases ||
-              supplierAddressOptions.length <= 1
-            }
-          />
-        </div>
-
-        <div className="space-y-3">
-          <FormLabel>Delivery Planned</FormLabel>
-          <div className="flex gap-6">
-            <Controller
-              control={control}
-              name="deliveryType"
-              render={({ field }) => (
-                <>
-                  <label className="flex cursor-pointer items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      value="date"
-                      checked={field.value === "date"}
-                      onChange={() => field.onChange("date")}
-                    />
-                    Date
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      value="week"
-                      checked={field.value === "week"}
-                      onChange={() => field.onChange("week")}
-                    />
-                    Week
-                  </label>
-                </>
-              )}
+            <PurchaseRequestTypeSection
+              purchaseOrderTypeOptions={purchaseOrderTypeOptions}
+              weightTypeOptions={weightTypeOptions}
             />
           </div>
-
-          {/* Both rows always show, as in the reference; the one not chosen
-              is greyed (a blank request: no Date, Week = this week). */}
-          <div className="flex items-end gap-3">
-            <div>
-              <FormLabel htmlFor="deliveryDate">Date</FormLabel>
-              <Controller
-                control={control}
-                name="deliveryDate"
-                render={({ field }) => (
-                  <DatePicker
-                    id="deliveryDate"
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
-                    disabled={deliveryType !== "date"}
-                    className="w-48"
-                  />
-                )}
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="deliveryRemark">Rem</FormLabel>
-              <Input
-                id="deliveryRemark"
-                className="w-40"
-                {...register("deliveryRemark")}
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div>
-              <FormLabel htmlFor="deliveryWeek">Week</FormLabel>
-              <Input
-                id="deliveryWeek"
-                type="number"
-                min={1}
-                max={53}
-                readOnly={deliveryType !== "week"}
-                className={cn("w-20", deliveryType !== "week" && "bg-muted")}
-                {...register("deliveryWeek")}
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="deliveryYear">Year</FormLabel>
-              <Input
-                id="deliveryYear"
-                type="number"
-                readOnly={deliveryType !== "week"}
-                className={cn("w-28", deliveryType !== "week" && "bg-muted")}
-                {...register("deliveryYear")}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Follow-up ─────────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">Follow-up</h2>
-        <div className="max-w-xs">
-          <FormLabel htmlFor="deadline">Deadline</FormLabel>
-          <Controller
-            control={control}
-            name="deadline"
-            render={({ field }) => (
-              <DatePicker value={field.value ?? ""} onChange={field.onChange} />
-            )}
-          />
-        </div>
-      </section>
-
-      {canEditLines ? (
-        <RequestItemsSection
-          control={control}
-          register={register}
-          setValue={setValue}
-          itemFields={itemFields}
-          appendItem={appendItem}
-          removeItem={removeItem}
-        />
-      ) : (
-        <section className="space-y-4">
-          <h2 className="text-base font-semibold">Lines</h2>
-          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            This request has already gone out to suppliers. Its lines are the
-            question their quotes are answering, so they can no longer be
-            changed here.
-          </p>
         </section>
-      )}
 
-      <FormActions
-        submitLabel={
-          isEditing ? "Save Purchase Request" : "Create Purchase Request"
-        }
-        pendingLabel={isEditing ? "Saving..." : "Creating..."}
-        isPending={isPending}
-        onCancel={handleCancel}
-      />
-    </form>
+        <div className="space-y-2">
+          <PurchaseRequestLines
+            itemFields={itemFields}
+            appendItem={appendItem}
+            removeItem={removeItem}
+            readOnly={!canEditLines}
+            isPending={isPending}
+            requestUuid={existing?.uuid ?? null}
+          />
+
+          <PurchaseOrderNewPanels
+            panels={[
+              ...panelsNamed(["Texts"]),
+              REQUEST_DOCUMENTS_PANEL,
+              ...panelsNamed(["PDF Files"]),
+            ]}
+          />
+        </div>
+
+        <FormActions
+          submitLabel={
+            isEditing ? "Save Purchase Request" : "Create Purchase Request"
+          }
+          pendingLabel={isEditing ? "Saving..." : "Creating..."}
+          isPending={isPending}
+          onCancel={handleCancel}
+        />
+      </form>
+    </FormProvider>
   );
 };

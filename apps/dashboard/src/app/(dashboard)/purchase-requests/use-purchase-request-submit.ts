@@ -10,6 +10,10 @@ import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
+import {
+  getPurchaseSupplierDefaults,
+  PurchaseSupplierDefaults,
+} from "@/app/(dashboard)/purchase-orders/actions";
 import { SelectOption } from "@/components/shadcn/select";
 import {
   DeliveryTerm,
@@ -22,6 +26,7 @@ import {
   purchaseOrderTypes,
 } from "@/lib/enums";
 import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_WEIGHT_TYPE_LABELS, PURCHASE_ORDER_TYPE_LABELS } from "@/lib/labels";
+import { isoWeekOf } from "@/lib/helpers";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -79,6 +84,9 @@ export const usePurchaseRequestSubmit = ({
     [],
   );
   const [isLoadingSupplierData, setIsLoadingSupplierData] = useState(false);
+  // The supplier's record, for the banner's `Tel: …, Fax:` and its terms.
+  const [supplierDefaults, setSupplierDefaults] =
+    useState<PurchaseSupplierDefaults | null>(null);
   const [ownAddresses, setOwnAddresses] = useState<AddressOption[]>([]);
 
   const form = useForm<PurchaseRequestFormValues>({
@@ -103,11 +111,14 @@ export const usePurchaseRequestSubmit = ({
   );
   const agentCompanies = companies.filter((c) => c.roles?.includes("agent"));
 
+  // `11692 — Holland Stainless Int`: the code beside the name, as the
+  // reference prints it next to the field.
   const supplierOptions: SelectOption[] = [
     emptyOpt,
     ...supplierCompanies.map((c) => ({
       value: c.uuid,
-      label: c.companyName ?? c.searchCode1 ?? c.uuid,
+      label:
+        [c.searchCode1, c.companyName].filter(Boolean).join(" — ") || c.uuid,
     })),
   ];
 
@@ -115,7 +126,8 @@ export const usePurchaseRequestSubmit = ({
     emptyOpt,
     ...agentCompanies.map((c) => ({
       value: c.uuid,
-      label: c.companyName ?? c.searchCode1 ?? c.uuid,
+      label:
+        [c.searchCode1, c.companyName].filter(Boolean).join(" — ") || c.uuid,
     })),
   ];
 
@@ -166,20 +178,28 @@ export const usePurchaseRequestSubmit = ({
 
   const purchaserOptions: SelectOption[] = [emptyOpt, ...clerkUsers];
 
-  const loadSupplierData = useCallback((uuid: string) => {
-    setContacts([]);
-    setSupplierAddresses([]);
-    if (!uuid) return;
-    setIsLoadingSupplierData(true);
-    Promise.all([
-      getContactsForCompany(uuid),
-      getAddressesForCompany(uuid),
-    ]).then(([newContacts, newAddresses]) => {
-      setContacts(newContacts);
-      setSupplierAddresses(newAddresses);
-      setIsLoadingSupplierData(false);
-    });
-  }, []);
+  // Sequential rather than concurrent: this database caps connections.
+  const loadSupplierData = useCallback(
+    async (uuid: string): Promise<PurchaseSupplierDefaults | null> => {
+      setContacts([]);
+      setSupplierAddresses([]);
+      setSupplierDefaults(null);
+      if (!uuid) {
+        return null;
+      }
+      setIsLoadingSupplierData(true);
+      try {
+        setContacts(await getContactsForCompany(uuid));
+        setSupplierAddresses(await getAddressesForCompany(uuid));
+        const defaults = await getPurchaseSupplierDefaults(uuid);
+        setSupplierDefaults(defaults);
+        return defaults;
+      } finally {
+        setIsLoadingSupplierData(false);
+      }
+    },
+    [],
+  );
 
   // An existing request already names a company, so its contacts and addresses
   // have to be fetched before the form can show which ones are selected.
@@ -189,7 +209,7 @@ export const usePurchaseRequestSubmit = ({
     if (!editingCompanyUuid) {
       return;
     }
-    loadSupplierData(editingCompanyUuid);
+    void loadSupplierData(editingCompanyUuid);
   }, [editingCompanyUuid, loadSupplierData]);
 
   useEffect(() => {
@@ -208,7 +228,39 @@ export const usePurchaseRequestSubmit = ({
     form.setValue("supplierUuid", uuid);
     form.setValue("contactUuid", "");
     form.setValue("supplierAddressUuid", "");
-    loadSupplierData(uuid);
+    // The supplier brings its terms with it, as on a purchase order: its only
+    // contact, its payment and delivery terms and its weight type.
+    void loadSupplierData(uuid).then((defaults) => {
+      if (!defaults || form.getValues("supplierUuid") !== uuid) {
+        return;
+      }
+      if (defaults.contactUuid) {
+        form.setValue("contactUuid", defaults.contactUuid);
+      }
+      if (defaults.paymentTerms) {
+        form.setValue("paymentTerms", defaults.paymentTerms);
+      }
+      if (defaults.deliveryTerms) {
+        form.setValue("deliveryTerms", defaults.deliveryTerms);
+      }
+      if (defaults.weightType) {
+        form.setValue("weightType", defaults.weightType);
+      }
+    });
+  };
+
+  const handleAgentChange = (uuid: string) => {
+    form.setValue("agentUuid", uuid);
+  };
+
+  // The week and year follow a chosen date, as on a purchase order.
+  const handleDeliveryDateChange = (date: string) => {
+    form.setValue("deliveryDate", date);
+    const week = isoWeekOf(date);
+    if (week !== null) {
+      form.setValue("deliveryWeek", String(week));
+      form.setValue("deliveryYear", date.slice(0, 4));
+    }
   };
 
   const handleCancel = () =>
@@ -224,24 +276,33 @@ export const usePurchaseRequestSubmit = ({
     // description.
     const items: PurchaseRequestItemInput[] = values.items
       .filter((item) => item.productUuid || item.description)
-      .map((item, index) => ({
-        productUuid: item.productUuid || null,
-        // Which sales order line this material is being bought for. Dropping it
-        // would leave the request unable to say what it is for, which is the
-        // whole reason the column exists.
-        forOrderItemUuid: item.forOrderItemUuid || null,
-        description: item.description || null,
-        lineNumber: index + 1,
-        stockCategory: item.stockCategory || null,
-        qualityCode: item.qualityCode || null,
-        quantity: item.quantity || "0.000",
-        unit: item.unit ?? "st",
-        kg: item.kg || "0.00",
-        lengthMm: optionalNumber(item.lengthMm),
-        thicknessMm: item.thicknessMm || null,
-        requiredDate: item.requiredDate || null,
-        remark: item.remark || null,
-      }));
+      .map((item, index) => {
+        // Kg(p) as the grid showed it: the article's piece weight times the
+        // quantity, or the weight already on a saved line.
+        const pieceWeightKg = Number(item.pieceWeightKg ?? 0);
+        const quantity = Number(item.quantity ?? 0);
+        return {
+          productUuid: item.productUuid || null,
+          // Which sales order line this material is being bought for. Dropping
+          // it would leave the request unable to say what it is for, which is
+          // the whole reason the column exists.
+          forOrderItemUuid: item.forOrderItemUuid || null,
+          description: item.description || null,
+          lineNumber: index + 1,
+          stockCategory: item.stockCategory || null,
+          qualityCode: item.qualityCode || null,
+          quantity: item.quantity || "0.000",
+          unit: item.unit ?? "st",
+          kg:
+            pieceWeightKg > 0
+              ? (pieceWeightKg * quantity).toFixed(2)
+              : item.kg || "0.00",
+          lengthMm: optionalNumber(item.lengthMm),
+          thicknessMm: item.thicknessMm || null,
+          requiredDate: item.requiredDate || null,
+          remark: item.remark || null,
+        };
+      });
 
     startTransition(async () => {
       const fields = {
@@ -318,7 +379,10 @@ export const usePurchaseRequestSubmit = ({
     paymentTermOptions,
     purchaserOptions,
     isLoadingSupplierData,
+    supplierDefaults,
     handleSupplierChange,
+    handleAgentChange,
+    handleDeliveryDateChange,
     handleCancel,
     itemFields,
     appendItem: () => appendItem(DEFAULT_PURCHASE_REQUEST_ITEM),

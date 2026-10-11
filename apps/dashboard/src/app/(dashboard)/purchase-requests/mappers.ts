@@ -1,9 +1,6 @@
 import { toDateInput } from "@/lib/helpers";
 import { PurchaseRequestDetail } from "./actions";
-import {
-  DEFAULT_PURCHASE_REQUEST_ITEM,
-  PurchaseRequestFormValues,
-} from "./validation";
+import { PurchaseRequestFormValues } from "./validation";
 
 /**
  * A stored request in the shape its form edits.
@@ -47,23 +44,25 @@ export const purchaseRequestToFormValues = (
 
   deadline: toDateInput(request.deadline),
 
-  // A request with no lines still needs one blank row for the field array to
-  // have something to render.
-  items:
-    request.items.length > 0
-      ? request.items.map((item) => ({
-          productUuid: item.productUuid ?? "",
-          forOrderItemUuid: item.forOrderItemUuid ?? "",
-          description: item.description ?? "",
-          stockCategory: item.stockCategory ?? "",
-          qualityCode: item.qualityCode ?? "",
-          quantity: item.quantity ?? "",
-          unit: item.unit ?? "st",
-          lengthMm: item.lengthMm === null ? "" : String(item.lengthMm),
-          thicknessMm: item.thicknessMm ?? "",
-          kg: item.kg ?? "",
-          requiredDate: toDateInput(item.requiredDate),
-          remark: item.remark ?? "",
-        }))
-      : [DEFAULT_PURCHASE_REQUEST_ITEM],
+  // The grid shows `0 lines` for a request with none; `New` adds the first.
+  // A saved line keeps its weight, so its piece weight is read back from it.
+  items: request.items.map((item) => ({
+    productUuid: item.productUuid ?? "",
+    productCode: item.productCode ?? "",
+    pieceWeightKg:
+      Number(item.quantity ?? 0) > 0 && Number(item.kg ?? 0) > 0
+        ? String(Number(item.kg) / Number(item.quantity))
+        : "",
+    forOrderItemUuid: item.forOrderItemUuid ?? "",
+    description: item.description ?? "",
+    stockCategory: item.stockCategory ?? "",
+    qualityCode: item.qualityCode ?? "",
+    quantity: item.quantity ?? "",
+    unit: item.unit ?? "st",
+    lengthMm: item.lengthMm === null ? "" : String(item.lengthMm),
+    thicknessMm: item.thicknessMm ?? "",
+    kg: item.kg ?? "",
+    requiredDate: toDateInput(item.requiredDate),
+    remark: item.remark ?? "",
+  })),
 });
