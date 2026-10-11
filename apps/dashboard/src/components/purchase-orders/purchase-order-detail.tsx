@@ -7,8 +7,11 @@ import {
   Building2,
   CalendarClock,
   CheckCircle2,
+  CopyIcon,
   Mail,
   Printer,
+  RotateCcw,
+  SlidersHorizontal,
   Undo2,
   Warehouse,
 } from "lucide-react";
@@ -78,6 +81,8 @@ import {
   WAREHOUSE_WORK_ORDER_TYPE_LABELS,
 } from "@/lib/labels";
 import { BooleanFlag } from "@/components/ui/boolean-flag";
+
+const NOT_BUILT = "Not built yet";
 
 type Props = {
   purchaseOrder: PurchaseOrderDetail;
@@ -236,6 +241,10 @@ export const PurchaseOrderDetailView = ({
             <Mail className="me-1.5 size-4" />
             Send…
           </Button>
+          <Button type="button" variant="outline" disabled title={NOT_BUILT}>
+            <RotateCcw className="me-1.5 size-4" />
+            Return
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -275,6 +284,10 @@ export const PurchaseOrderDetailView = ({
               Show company
             </Button>
           )}
+          <Button type="button" variant="outline" disabled title={NOT_BUILT}>
+            <CopyIcon className="me-1.5 size-4" />
+            Copy
+          </Button>
           {isExWorksProcessor ? (
             <Button
               type="button"
@@ -294,6 +307,10 @@ export const PurchaseOrderDetailView = ({
               {isPending ? "Raising…" : "Workorder"}
             </Button>
           )}
+          <Button type="button" variant="outline" disabled title={NOT_BUILT}>
+            <SlidersHorizontal className="me-1.5 size-4" />
+            Options…
+          </Button>
           <Button
             type="button"
             variant="destructive"
@@ -457,8 +474,11 @@ export const PurchaseOrderDetailView = ({
                           {formatNumber(Number(line.kgPlanned ?? 0))}
                         </TableCell>
                         <TableCell>
+                          {/* Ticked by whoever checks the goods, not by the
+                              report: unticked on 327402 after Gereedmelden
+                              (11-10-2026). Nothing records that check yet. */}
                           <BooleanFlag
-                            on={line.qtyActual !== null}
+                            on={false}
                             label="Qty checked"
                           />
                         </TableCell>
@@ -472,7 +492,7 @@ export const PurchaseOrderDetailView = ({
                         </TableCell>
                         <TableCell>
                           <BooleanFlag
-                            on={line.kgActual !== null}
+                            on={false}
                             label="Kg checked"
                           />
                         </TableCell>
@@ -604,7 +624,7 @@ export const PurchaseOrderDetailView = ({
                       {orDash(item.thicknessMm)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {item.orderedQuantity}
+                      {formatNumber(Number(item.orderedQuantity ?? 0))}
                     </TableCell>
                     {/* What arrived. A line closed short reads its closing
                         figure here and `Received` beside it. */}
@@ -643,7 +663,9 @@ export const PurchaseOrderDetailView = ({
                       {formatMoney(Number(item.amount ?? 0))}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {item.stockQuantity ?? "—"}
+                      {item.stockQuantity === null
+                        ? "—"
+                        : formatNumber(Number(item.stockQuantity))}
                     </TableCell>
                     <TableCell>
                       <StatusBadge
@@ -788,7 +810,11 @@ export const PurchaseOrderDetailView = ({
                           reference reads `1-1-0001` for an actual that has
                           not happened, which prints here as a dash. */}
                       <TableCell>
-                        {formatDateColumn(receipt.deliveryDatePlanned ?? receipt.receiptDate)}
+                        {formatDateColumn(
+                          receipt.deliveryDateActual ??
+                            receipt.deliveryDatePlanned ??
+                            receipt.receiptDate,
+                        )}
                       </TableCell>
                       {/* Red ✗ `Do not c…` until the supplier calls the delivery
                           ahead, green ✓ `Pre-notified` after (404355, 9-10-2026);

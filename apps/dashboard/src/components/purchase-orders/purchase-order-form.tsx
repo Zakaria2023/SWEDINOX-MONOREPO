@@ -162,7 +162,9 @@ export const PurchaseOrderForm = ({
     existing ? `Purchase order ${existing.id}` : "Purchase order (new)",
     supplierDefaults?.companyName,
     supplierDefaults
-      ? `Tel: ${supplierDefaults.telephone ?? "-"}, Fax: ${supplierDefaults.fax ?? "-"}`
+      ? // No fax prints as nothing — `Fax: - Received`, the dash being the
+        // separator before the status (404355, 11-10-2026).
+        `Tel: ${supplierDefaults.telephone ?? "-"}, Fax:${supplierDefaults.fax ? ` ${supplierDefaults.fax}` : ""}`
       : null,
   ]
     .filter(Boolean)
