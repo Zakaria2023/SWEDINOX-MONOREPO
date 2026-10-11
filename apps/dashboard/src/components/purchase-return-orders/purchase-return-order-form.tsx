@@ -90,6 +90,7 @@ type Props = {
   /** Set when editing an existing return order; omitted when creating one. */
   purchaseReturnOrderUuid?: string;
   defaultValues?: PurchaseReturnOrderFormValues;
+  currentUserId?: string;
 };
 
 export const PurchaseReturnOrderForm = ({
@@ -98,6 +99,7 @@ export const PurchaseReturnOrderForm = ({
   textCategories,
   purchaseReturnOrderUuid,
   defaultValues,
+  currentUserId,
 }: Props) => {
   const {
     form,
@@ -125,6 +127,7 @@ export const PurchaseReturnOrderForm = ({
     clerkUsers,
     purchaseReturnOrderUuid,
     defaultValues,
+    currentUserId,
   });
 
   const {

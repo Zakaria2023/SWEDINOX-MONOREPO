@@ -12,6 +12,8 @@ import {
 } from "@/app/(dashboard)/contacts/actions";
 import {
   getPurchaseOrdersForCompany,
+  getPurchaseSupplierDefaults,
+  getYardDeliveryAddress,
   PurchaseOrderOption,
 } from "@/app/(dashboard)/purchase-orders/actions";
 import { SelectOption } from "@/components/shadcn/select";
@@ -52,6 +54,8 @@ type UsePurchaseReturnOrderSubmitParams = {
   /** Set when editing an existing return order; omitted when creating one. */
   purchaseReturnOrderUuid?: string;
   defaultValues?: PurchaseReturnOrderFormValues;
+  /** Who is signed in — a new return's purchaser, as the reference fills it. */
+  currentUserId?: string;
 };
 
 const emptyOpt = { value: "", label: "Empty" };
@@ -73,6 +77,7 @@ export const usePurchaseReturnOrderSubmit = ({
   clerkUsers,
   purchaseReturnOrderUuid,
   defaultValues,
+  currentUserId,
 }: UsePurchaseReturnOrderSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -87,7 +92,10 @@ export const usePurchaseReturnOrderSubmit = ({
 
   const form = useForm<PurchaseReturnOrderFormValues>({
     resolver: zodResolver(purchaseReturnOrderSchema),
-    defaultValues: defaultValues ?? DEFAULT_PURCHASE_RETURN_ORDER,
+    defaultValues: defaultValues ?? {
+      ...DEFAULT_PURCHASE_RETURN_ORDER,
+      purchaser: currentUserId ?? "",
+    },
   });
 
   const isDropOff = form.watch("isDropOff");
@@ -100,7 +108,10 @@ export const usePurchaseReturnOrderSubmit = ({
     emptyOpt,
     ...supplierCompanies.map((c) => ({
       value: c.uuid,
-      label: c.companyName ?? c.searchCode1 ?? c.uuid,
+      // `11692 — Holland Stainless Int`: the code beside the name, as the
+      // reference prints it next to the field.
+      label:
+        [c.searchCode1, c.companyName].filter(Boolean).join(" — ") || c.uuid,
     })),
   ];
 
@@ -197,8 +208,13 @@ export const usePurchaseReturnOrderSubmit = ({
       setPurchaseOrders(newPurchaseOrders);
       setAddresses(newAddresses);
       setIsLoadingSupplierData(false);
+      // The greyed `Delivery address` is the supplier's own — `Brigadier Aad
+      // de Jonghof 2, 3069 RR, ROTTERDAM` for 11692 (11-10-2026).
+      if (!form.getValues("deliveryAddressUuid") && newAddresses[0]) {
+        form.setValue("deliveryAddressUuid", newAddresses[0].uuid);
+      }
     });
-  }, []);
+  }, [form]);
 
   // An existing return order already names a supplier, so its contacts, orders
   // and addresses have to be fetched before the form can show which ones are
@@ -213,15 +229,24 @@ export const usePurchaseReturnOrderSubmit = ({
 
   useEffect(() => {
     const subscription = { cancelled: false };
-    void getInternalAddressesForSelect().then((rows) => {
-      if (!subscription.cancelled) {
-        setOwnAddresses(rows);
+    void getInternalAddressesForSelect().then(async (rows) => {
+      if (subscription.cancelled) {
+        return;
+      }
+      setOwnAddresses(rows);
+      // A new return is collected from our yard — `Bolderweg 10, 1332AT,
+      // Almere` in the reference's Pick-up before anything is typed.
+      if (!purchaseReturnOrderUuid && !form.getValues("pickupAddress")) {
+        const yard = await getYardDeliveryAddress();
+        if (yard && !subscription.cancelled) {
+          form.setValue("pickupAddress", yard.label);
+        }
       }
     });
     return () => {
       subscription.cancelled = true;
     };
-  }, []);
+  }, [form, purchaseReturnOrderUuid]);
 
   const handleSupplierChange = (uuid: string) => {
     form.setValue("supplierUuid", uuid);
@@ -229,6 +254,22 @@ export const usePurchaseReturnOrderSubmit = ({
     form.setValue("purchaseOrderUuid", "");
     form.setValue("deliveryAddressUuid", "");
     loadSupplierData(uuid);
+    if (!uuid) {
+      return;
+    }
+    // The supplier's payment terms and, when it has only one, its contact —
+    // `Prepayment` and `Ron Bongers` for 11692 (11-10-2026).
+    void getPurchaseSupplierDefaults(uuid).then((defaults) => {
+      if (!defaults || form.getValues("supplierUuid") !== uuid) {
+        return;
+      }
+      if (defaults.paymentTerms) {
+        form.setValue("paymentTerms", defaults.paymentTerms);
+      }
+      if (defaults.contactUuid) {
+        form.setValue("contactUuid", defaults.contactUuid);
+      }
+    });
   };
 
   const handleCancel = () =>
