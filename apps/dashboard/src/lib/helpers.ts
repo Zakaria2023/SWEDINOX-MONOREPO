@@ -644,6 +644,10 @@ export const isEmptySelection = (value: string | null | undefined): boolean =>
  */
 const ABSENT_CHARGE_SENTINELS = ["nvt", "ntv", "n.v.t.", "-", "--", "n/a"];
 
+// How the import wrote an address nobody knew — `Onbekend 1, 0000AA,
+// Onbekend` heads supplier 11692's list.
+const PLACEHOLDER_ADDRESS_WORDS = ["onbekend", "unknown"];
+
 // The last internal charge and bundle easy2trade gave out — lot `26AQWF` /
 // `404766`, received on purchase order 404355 on 11-10-2026. Our series carry
 // on from there, so a label printed here never repeats one printed there.
@@ -670,6 +674,17 @@ export const normaliseCharge = (
  * this one is ours, and it is the key every delivered sheet traces back by —
  * 1 662 of 1 662 shipped charges to the same heat, purchase order and receipt.
  */
+/** Whether an address is the import's stand-in for one nobody knew. */
+export const isPlaceholderAddress = (address: {
+  streetAndNo: string | null;
+  city: string | null;
+}): boolean =>
+  [address.streetAndNo, address.city].some((part) =>
+    PLACEHOLDER_ADDRESS_WORDS.some((word) =>
+      (part ?? "").toLowerCase().startsWith(word),
+    ),
+  );
+
 export const nextInternalCharge = (
   year: number,
   lastCharge: string | null,

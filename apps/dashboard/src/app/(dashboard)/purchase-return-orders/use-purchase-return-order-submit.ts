@@ -46,7 +46,11 @@ import {
   PurchaseReturnOrderFormValues,
   purchaseReturnOrderSchema,
 } from "./validation";
-import { formatAddressLine, toDecimal } from "@/lib/helpers";
+import {
+  formatAddressLine,
+  isPlaceholderAddress,
+  toDecimal,
+} from "@/lib/helpers";
 
 type UsePurchaseReturnOrderSubmitParams = {
   companies: CompanyOption[];
@@ -210,8 +214,11 @@ export const usePurchaseReturnOrderSubmit = ({
       setIsLoadingSupplierData(false);
       // The greyed `Delivery address` is the supplier's own — `Brigadier Aad
       // de Jonghof 2, 3069 RR, ROTTERDAM` for 11692 (11-10-2026).
-      if (!form.getValues("deliveryAddressUuid") && newAddresses[0]) {
-        form.setValue("deliveryAddressUuid", newAddresses[0].uuid);
+      const supplierAddress =
+        newAddresses.find((address) => !isPlaceholderAddress(address)) ??
+        newAddresses[0];
+      if (!form.getValues("deliveryAddressUuid") && supplierAddress) {
+        form.setValue("deliveryAddressUuid", supplierAddress.uuid);
       }
     });
   }, [form]);
