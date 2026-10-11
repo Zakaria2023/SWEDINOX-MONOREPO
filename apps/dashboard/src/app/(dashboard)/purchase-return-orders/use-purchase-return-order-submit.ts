@@ -288,12 +288,8 @@ export const usePurchaseReturnOrderSubmit = ({
     });
   };
 
-  const handleCancel = () =>
-    router.push(
-      purchaseReturnOrderUuid
-        ? `/purchase-return-orders/${purchaseReturnOrderUuid}`
-        : "/purchase-return-orders",
-    );
+  // A saved return is edited on its own page, so leaving goes to the list.
+  const handleCancel = () => router.push("/purchase-return-orders");
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {

@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import { usePurchaseReturnOrderSubmit } from "@/app/(dashboard)/purchase-return-orders/use-purchase-return-order-submit";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
-import { PurchaseReturnOrderFormValues } from "@/app/(dashboard)/purchase-return-orders/validation";
+import { PurchaseReturnOrderDetail } from "@/app/(dashboard)/purchase-return-orders/actions";
+import { purchaseReturnOrderToFormValues } from "@/app/(dashboard)/purchase-return-orders/mappers";
+import { PurchaseSupplierDefaults } from "@/app/(dashboard)/purchase-orders/actions";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { DatePicker } from "@/components/shadcn/date-picker";
@@ -42,10 +44,12 @@ import {
   formatDateColumn,
   formatMoney,
   formatNumber,
+  isPurchaseReturnOrderEditable,
   onWorkingDay,
   orDash,
   VAT_CODE_RATE,
 } from "@/lib/helpers";
+import { PURCHASE_ORDER_STATUS_LABELS } from "@/lib/labels";
 import { useState } from "react";
 import { getReturnablePurchaseLines } from "@/app/(dashboard)/purchase-return-orders/actions";
 import { PickedReturnLine } from "@/app/(dashboard)/purchase-return-orders/use-purchase-return-order-submit";
@@ -61,41 +65,24 @@ import { FormSelectField } from "@/components/ui/form-select-field";
 import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { SurchargesSection } from "./sections/surcharges-section";
 import { TextsSection } from "./sections/texts-section";
+import { ComplaintsSection } from "./sections/complaints-section";
+import { InvoiceLinesSection } from "./sections/invoice-lines-section";
+import {
+  PurchaseReturnOrderLines,
+  RETURN_LINE_COLUMNS,
+} from "./purchase-return-order-lines";
+import { PurchaseReturnOrderToolbar } from "./purchase-return-order-toolbar";
 
 const SAVE_FIRST = "Save the return order first";
-
-// The return's `Lines` grid, column for column (blank return, 11-10-2026).
-const RETURN_LINE_COLUMNS = [
-  "Code",
-  "Order line",
-  "Product",
-  "Description",
-  "Qty(p)",
-  "Qty(a)",
-  "U",
-  "Length",
-  "Width",
-  "Delivery date",
-  "Kg(p)",
-  "Kg(a)",
-  "Gross Price",
-  "U",
-  "Line Discount",
-  "U",
-  "Group Discount",
-  "U",
-  "Amount",
-  "Status",
-];
-
 
 type Props = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
   textCategories: TextCategoryOption[];
-  /** Set when editing an existing return order; omitted when creating one. */
-  purchaseReturnOrderUuid?: string;
-  defaultValues?: PurchaseReturnOrderFormValues;
+  /** The saved return: its own page is this same screen, prefilled. */
+  existing?: PurchaseReturnOrderDetail | null;
+  /** The saved return's supplier, for the banner's telephone and fax. */
+  supplierDefaults?: PurchaseSupplierDefaults | null;
   currentUserId?: string;
 };
 
@@ -103,8 +90,8 @@ export const PurchaseReturnOrderForm = ({
   companies,
   clerkUsers,
   textCategories,
-  purchaseReturnOrderUuid,
-  defaultValues,
+  existing = null,
+  supplierDefaults = null,
   currentUserId,
 }: Props) => {
   const {
@@ -133,8 +120,10 @@ export const PurchaseReturnOrderForm = ({
   } = usePurchaseReturnOrderSubmit({
     companies,
     clerkUsers,
-    purchaseReturnOrderUuid,
-    defaultValues,
+    purchaseReturnOrderUuid: existing?.uuid,
+    defaultValues: existing
+      ? purchaseReturnOrderToFormValues(existing)
+      : undefined,
     currentUserId,
   });
 
@@ -163,18 +152,52 @@ export const PurchaseReturnOrderForm = ({
     const amount = 0;
     return { quantity, weightKg, amount };
   });
-  const materials = lineFigures.reduce((sum, line) => sum + line.amount, 0);
-  const totalKg = lineFigures.reduce((sum, line) => sum + line.weightKg, 0);
-  const vat = (materials * VAT_CODE_RATE.vat_high_21) / 100;
+  // A saved return sums its saved lines and surcharges; a new one what is
+  // typed. Either way VAT is struck at the standard rate on the total excl.
+  // VAT, and the total incl. VAT is the two added up.
+  const materials = existing
+    ? existing.items.reduce((sum, item) => sum + Number(item.amount ?? 0), 0)
+    : lineFigures.reduce((sum, line) => sum + line.amount, 0);
+  const options = existing ? Number(existing.optionsRevenue ?? 0) : 0;
+  const surcharges = existing
+    ? existing.surcharges.reduce(
+        (sum, surcharge) => sum + Number(surcharge.amount ?? 0),
+        0,
+      )
+    : 0;
+  const totalKg = existing
+    ? existing.items.reduce((sum, item) => sum + Number(item.weightKg ?? 0), 0)
+    : lineFigures.reduce((sum, line) => sum + line.weightKg, 0);
+  const totalExclVat = materials + options + surcharges;
+  const vat = (totalExclVat * VAT_CODE_RATE.vat_high_21) / 100;
   const summaryRows: Array<[string, string, boolean?]> = [
     ["Materials", formatMoney(materials)],
-    ["Options", formatMoney(0)],
-    ["Surcharges", formatMoney(0), true],
-    ["Tot. excl. VAT", formatMoney(materials)],
+    ["Options", formatMoney(options)],
+    ["Surcharges", formatMoney(surcharges), true],
+    ["Tot. excl. VAT", formatMoney(totalExclVat)],
     ["VAT", formatMoney(vat), true],
-    ["Tot. incl. VAT", formatMoney(materials + vat)],
+    ["Tot. incl. VAT", formatMoney(totalExclVat + vat)],
     ["Total weight", `${formatNumber(totalKg)} Kg`],
   ];
+
+  // Goods that have gone, or a cancelled return, are not edited any more.
+  const isReadOnly =
+    existing !== null && !isPurchaseReturnOrderEditable(existing.status);
+  // A line was picked from what this supplier delivered, so once there is
+  // one the supplier is no longer the header's to change.
+  const isSupplierLocked = existing !== null && existing.items.length > 0;
+
+  // The reference's banner: `Purchase return order 950034, {supplier}, Tel:
+  // …, Fax: - Provisional` — no fax prints as nothing before the dash.
+  const banner = existing
+    ? `${[
+        `Purchase return order ${existing.id}`,
+        supplierDefaults?.companyName ?? existing.supplierName,
+        `Tel: ${supplierDefaults?.telephone ?? "-"}, Fax:${supplierDefaults?.fax ? ` ${supplierDefaults.fax}` : ""}`,
+      ]
+        .filter(Boolean)
+        .join(", ")} - ${PURCHASE_ORDER_STATUS_LABELS[existing.status ?? "provisional"]}${existing.isPrinted ? ", Printed" : ""}${existing.isMailed ? ", Mailed" : ""}`
+    : "Purchase return order";
 
   // The reference's `…` on a return line opens `Voorraad`, the stock window
   // every document line picks from (950034, 11-10-2026). The lot chosen
@@ -241,7 +264,10 @@ export const PurchaseReturnOrderForm = ({
         {/* The reference's toolbar on a return: `Make final · Print… · Send… ·
             Show company · Show purchase order · Show complaint · Order lines ·
             Stock on location` (blank return, 11-10-2026). The document ones
-            wait for the return to exist. */}
+            wait for the return to exist; a saved one has them live. */}
+        {existing ? (
+          <PurchaseReturnOrderToolbar returnOrder={existing} />
+        ) : (
         <div className="flex flex-wrap gap-2 border-b pb-4">
           <Button type="button" disabled title={SAVE_FIRST}>
             <BadgeCheck className="me-1.5 size-4" />
@@ -284,11 +310,12 @@ export const PurchaseReturnOrderForm = ({
             Stock on location
           </Button>
         </div>
+        )}
 
         {/* The reference's header: the document on the left, its type, the
             sent flags and the summary on the right. */}
         <section className="space-y-4 rounded-lg border p-4">
-          <h1 className="text-lg font-semibold">Purchase return order</h1>
+          <h1 className="text-lg font-semibold">{banner}</h1>
 
           <div className="grid gap-x-10 gap-y-6 lg:grid-cols-[3fr_2fr]">
             <div className="space-y-6">
@@ -312,6 +339,7 @@ export const PurchaseReturnOrderForm = ({
                         options={supplierOptions}
                         onValueChange={handleSupplierChange}
                         invalid={!!errors.supplierUuid}
+                        disabled={isSupplierLocked}
                       />
                     )}
                   />
@@ -516,6 +544,18 @@ export const PurchaseReturnOrderForm = ({
             </div>
           </CollapsibleSection>
 
+          {existing ? (
+            <CollapsibleSection
+              title="Lines"
+              summary={`${existing.items.length} ${existing.items.length === 1 ? "line" : "lines"}`}
+              defaultOpen
+            >
+              <PurchaseReturnOrderLines
+                returnOrder={existing}
+                returnDate={watch("returnDate") ?? ""}
+              />
+            </CollapsibleSection>
+          ) : (
           <CollapsibleSection
             title="Lines"
             summary={`${pendingLines.length} ${pendingLines.length === 1 ? "line" : "lines"}`}
@@ -692,6 +732,7 @@ export const PurchaseReturnOrderForm = ({
               <FormError>{lineError}</FormError>
             </div>
           </CollapsibleSection>
+          )}
 
           <CollapsibleSection title="Surcharges">
             <div className="p-3">
@@ -699,9 +740,16 @@ export const PurchaseReturnOrderForm = ({
             </div>
           </CollapsibleSection>
 
-          <PurchaseOrderNewPanels
-            panels={panelsNamed(["Invoice lines", "Complaints"])}
-          />
+          {existing ? (
+            <>
+              <InvoiceLinesSection credits={existing.credits} />
+              <ComplaintsSection returnOrder={existing} />
+            </>
+          ) : (
+            <PurchaseOrderNewPanels
+              panels={panelsNamed(["Invoice lines", "Complaints"])}
+            />
+          )}
 
           <CollapsibleSection title="Logistics">
             <div className="space-y-4 p-3">
@@ -896,16 +944,22 @@ export const PurchaseReturnOrderForm = ({
           <PurchaseOrderNewPanels panels={panelsNamed(["PDF Files"])} />
         </div>
 
-        <FormActions
-          submitLabel={
-            isEditing
-              ? "Save Purchase Return Order"
-              : "Create Purchase Return Order"
-          }
-          pendingLabel={isEditing ? "Saving..." : "Creating..."}
-          isPending={isPending}
-          onCancel={handleCancel}
-        />
+        {isReadOnly ? (
+          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            {existing?.status === "cancelled"
+              ? "This return order is cancelled."
+              : "These goods have already gone back to the supplier, and the stock and valuation moved with them. The return can no longer be changed."}
+          </p>
+        ) : (
+          <FormActions
+            submitLabel={
+              isEditing ? "Save changes" : "Create Purchase Return Order"
+            }
+            pendingLabel={isEditing ? "Saving..." : "Creating..."}
+            isPending={isPending}
+            onCancel={handleCancel}
+          />
+        )}
       </form>
     </FormProvider>
   );

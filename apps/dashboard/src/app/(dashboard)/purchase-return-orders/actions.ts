@@ -65,7 +65,16 @@ import {
   LEDGER_ACCOUNTS,
 } from "@/lib/server/ledger";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, asc, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  ne,
+  sql,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -155,6 +164,7 @@ export type PurchaseReturnOrderLineDetail = SelectPurchaseReturnOrderItems & {
   lineDiscountPercent: SelectPurchaseOrderItems["lineDiscountPercent"] | null;
   groupDiscountPercent: SelectPurchaseOrderItems["groupDiscountPercent"] | null;
   lotLengthMm: SelectStock["lengthMm"] | null;
+  lotWidthMm: SelectStock["widthMm"] | null;
 };
 
 export type PurchaseReturnOrderDetail = SelectPurchaseReturnOrders & {
@@ -174,6 +184,17 @@ export type PurchaseReturnOrderDetail = SelectPurchaseReturnOrders & {
   texts: SelectTexts[];
   // The supplier credit notes raised against this return.
   credits: SelectPurchaseInvoices[];
+};
+
+export type AddPurchaseReturnLinesOptions = {
+  /**
+   * A line picked in the Stock window under `Lines → New`. The reference
+   * leaves it at `Gross price € 0,00` and `Amount € 0,00` until somebody
+   * prices it, and it is not one of the order's lines, so its `Order line`
+   * reads 0 (950034, 11-10-2026). `Par. return`'s parcel picker leaves this
+   * off and keeps the price the goods were bought at.
+   */
+  unpriced?: boolean;
 };
 
 export const getPurchaseReturnOrders = async (): Promise<
@@ -346,6 +367,8 @@ type ReturnLinesToInsert = {
   returnDate: Date | string | null;
   /** The number the first new line takes; lines are numbered after it. */
   firstLineNumber: number;
+  /** Lines from the Stock window: unpriced, and no order line of their own. */
+  unpriced?: boolean;
 };
 
 /**
@@ -354,10 +377,16 @@ type ReturnLinesToInsert = {
  */
 const insertPurchaseReturnLines = async (
   tx: ReturnLineWriter,
-  { purchaseReturnOrderUuid, lines, returnDate, firstLineNumber }: ReturnLinesToInsert,
+  {
+    purchaseReturnOrderUuid,
+    lines,
+    returnDate,
+    firstLineNumber,
+    unpriced = false,
+  }: ReturnLinesToInsert,
 ): Promise<void> => {
   for (const [index, { line, returnQty, returnReason }] of lines.entries()) {
-    const netPrice = Number(line.netPrice ?? 0);
+    const netPrice = unpriced ? 0 : Number(line.netPrice ?? 0);
 
     // Only part of a line usually goes back, so the weight returned is the
     // line's weight scaled to the quantity going with it. Money follows
@@ -373,12 +402,15 @@ const insertPurchaseReturnLines = async (
       purchaseReturnOrderUuid,
       productUuid: line.productUuid,
       originalPurchaseOrderUuid: line.purchaseOrderUuid,
-      originalPurchaseOrderLine: line.lineNumber,
+      originalPurchaseOrderLine: unpriced ? null : line.lineNumber,
       originalPurchaseOrderItemUuid: line.purchaseOrderItemUuid,
       stockUuid: line.stockUuid,
       lineNumber: firstLineNumber + index,
+      ...(unpriced ? { lineStatus: "provisional" as const } : {}),
       reference:
-        line.purchaseOrderId != null ? String(line.purchaseOrderId) : null,
+        !unpriced && line.purchaseOrderId != null
+          ? String(line.purchaseOrderId)
+          : null,
       unit: line.unit,
       quantity: line.receivedQuantity,
       returnQty: returnQty.toFixed(3),
@@ -386,11 +418,13 @@ const insertPurchaseReturnLines = async (
       netPrice: netPrice.toFixed(4),
       priceUnit: line.priceUnit,
       weightKg: returnedWeightKg.toFixed(2),
-      amount: moneyString(
-        amountForWeight(netPrice, line.priceUnit, returnedWeightKg, {
-          quantity: returnQty,
-        }),
-      ),
+      amount: unpriced
+        ? moneyString(0)
+        : moneyString(
+            amountForWeight(netPrice, line.priceUnit, returnedWeightKg, {
+              quantity: returnQty,
+            }),
+          ),
       returnDate: returnDate
         ? toDateString(new Date(returnDate))
         : todayDateString(),
@@ -439,9 +473,11 @@ const buildPurchaseReturnSummary = async (
   // Positive here — this panel states what is going back, not the reversal.
   // The credit note negates the same figures.
   const summary = summarisePurchaseInvoice({
+    // A line not invoiced yet has no booked band; goods go at the standard
+    // rate, as the new return's summary strikes it.
     lines: lines.map((line) => ({
       amount: Number(line.amount ?? 0),
-      vatCode: line.vatCode,
+      vatCode: line.vatCode ?? "vat_high_21",
     })),
     surcharges: surcharges.map((row) => Number(row.amount ?? 0)),
     creditRestriction: 0,
@@ -511,6 +547,7 @@ export const getPurchaseReturnOrderDetail = async (
         lineDiscountPercent: PurchaseOrderItems.lineDiscountPercent,
         groupDiscountPercent: PurchaseOrderItems.groupDiscountPercent,
         lotLengthMm: Stock.lengthMm,
+        lotWidthMm: Stock.widthMm,
       })
       .from(PurchaseReturnOrderItems)
       .leftJoin(
@@ -1062,6 +1099,8 @@ export const createPurchaseReturnOrder = async (
         }),
         returnDate: fields.returnDate ?? null,
         firstLineNumber: 1,
+        // The new return's lines are picked in the Stock window, unpriced.
+        unpriced: true,
       });
 
       if (extras.surcharges.length > 0) {
@@ -1311,6 +1350,7 @@ export const getReturnableLotsForReturn = async (
 export const addPurchaseReturnLines = async (
   purchaseReturnOrderUuid: string,
   items: Array<{ stockUuid: string; returnQty: string }>,
+  { unpriced = false }: AddPurchaseReturnLinesOptions = {},
 ): Promise<PurchaseReturnOrderActionResult> => {
   try {
     if (items.length === 0) {
@@ -1376,6 +1416,7 @@ export const addPurchaseReturnLines = async (
         lines,
         returnDate: returnOrder.returnDate,
         firstLineNumber: Number(last) + 1,
+        unpriced,
       });
 
       await tx
@@ -1441,6 +1482,202 @@ export const deletePurchaseReturnLine = async (
   } catch (error) {
     return {
       error: describeError(error, "Failed to delete the return line"),
+    };
+  }
+};
+
+/**
+ * `Make final` on a provisional return: it is released, and its lines with
+ * it, as `Make final` releases a purchase order. The return stays editable
+ * until the goods have gone.
+ */
+export const makePurchaseReturnOrderFinal = async (
+  uuid: string,
+): Promise<PurchaseReturnOrderActionResult> => {
+  try {
+    const [returnOrder] = await db
+      .select({ status: PurchaseReturnOrders.status })
+      .from(PurchaseReturnOrders)
+      .where(eq(PurchaseReturnOrders.uuid, uuid))
+      .limit(1);
+
+    if (!returnOrder) {
+      return { error: "Purchase return order not found." };
+    }
+    if (returnOrder.status !== "provisional") {
+      return {
+        error: "Only a provisional purchase return order can be made final.",
+      };
+    }
+
+    await db.transaction(async (tx) => {
+      const [claimed] = await tx
+        .update(PurchaseReturnOrders)
+        .set({ status: "released" })
+        .where(
+          and(
+            eq(PurchaseReturnOrders.uuid, uuid),
+            eq(PurchaseReturnOrders.status, "provisional"),
+          ),
+        );
+
+      if (claimed.affectedRows === 0) {
+        throw new Error(
+          "This return was already made final — please refresh and try again.",
+        );
+      }
+
+      await tx
+        .update(PurchaseReturnOrderItems)
+        .set({ lineStatus: "released" })
+        .where(eq(PurchaseReturnOrderItems.purchaseReturnOrderUuid, uuid));
+    });
+
+    revalidatePath("/purchase-return-orders");
+    revalidatePath(`/purchase-return-orders/${uuid}`);
+    return { success: true, purchaseReturnOrderUuid: uuid };
+  } catch (error) {
+    return {
+      error: describeError(error, "Failed to make the return order final"),
+    };
+  }
+};
+
+/**
+ * `Qty(p)` typed on a line of a return whose goods have not gone: the weight
+ * follows the quantity, and the amount follows the weight at the line's own
+ * price — still € 0,00 on a line nobody has priced.
+ */
+export const updatePurchaseReturnLineQuantity = async (
+  purchaseReturnOrderUuid: string,
+  itemUuid: string,
+  returnQty: string,
+): Promise<PurchaseReturnOrderActionResult> => {
+  try {
+    const quantity = Number(returnQty);
+    if (!(quantity > 0)) {
+      return { error: "Qty(p) has to be more than 0." };
+    }
+
+    const [returnOrder] = await db
+      .select({ status: PurchaseReturnOrders.status })
+      .from(PurchaseReturnOrders)
+      .where(eq(PurchaseReturnOrders.uuid, purchaseReturnOrderUuid))
+      .limit(1);
+
+    if (!returnOrder) {
+      return { error: "Purchase return order not found." };
+    }
+    if (!isPurchaseReturnOrderEditable(returnOrder.status)) {
+      return { error: "Lines can only be changed before the goods have gone." };
+    }
+
+    const [item] = await db
+      .select({
+        stockUuid: PurchaseReturnOrderItems.stockUuid,
+        netPrice: PurchaseReturnOrderItems.netPrice,
+        priceUnit: PurchaseReturnOrderItems.priceUnit,
+        plannedQuantity: PurchaseOrderItems.qtyPlanned,
+        kgPurchased: PurchaseOrderItems.kgPurchased,
+      })
+      .from(PurchaseReturnOrderItems)
+      .leftJoin(
+        PurchaseOrderItems,
+        eq(
+          PurchaseReturnOrderItems.originalPurchaseOrderItemUuid,
+          PurchaseOrderItems.uuid,
+        ),
+      )
+      .where(
+        and(
+          eq(PurchaseReturnOrderItems.uuid, itemUuid),
+          eq(
+            PurchaseReturnOrderItems.purchaseReturnOrderUuid,
+            purchaseReturnOrderUuid,
+          ),
+        ),
+      )
+      .limit(1);
+
+    if (!item) {
+      return { error: "Return line not found." };
+    }
+
+    // What may go is what is on the shelf and unreserved, less what other
+    // returns not gone yet already take from the same lot.
+    if (item.stockUuid) {
+      const [lot] = await db
+        .select({
+          quantity: Stock.quantity,
+          reservedQuantity: Stock.reservedQuantity,
+        })
+        .from(Stock)
+        .where(eq(Stock.uuid, item.stockUuid))
+        .limit(1);
+
+      const [others] = await db
+        .select({
+          quantity: sql<string>`COALESCE(SUM(${PurchaseReturnOrderItems.returnQty}), 0)`,
+        })
+        .from(PurchaseReturnOrderItems)
+        .innerJoin(
+          PurchaseReturnOrders,
+          eq(
+            PurchaseReturnOrderItems.purchaseReturnOrderUuid,
+            PurchaseReturnOrders.uuid,
+          ),
+        )
+        .where(
+          and(
+            eq(PurchaseReturnOrderItems.stockUuid, item.stockUuid),
+            ne(PurchaseReturnOrderItems.uuid, itemUuid),
+            inArray(PurchaseReturnOrders.status, ["provisional", "released"]),
+          ),
+        );
+
+      const available = lot
+        ? Number(lot.quantity ?? 0) -
+          Number(lot.reservedQuantity ?? 0) -
+          Number(others?.quantity ?? 0)
+        : 0;
+
+      if (quantity > available) {
+        return {
+          error: `Cannot return more than is still available (${Math.max(available, 0).toFixed(3)}).`,
+        };
+      }
+    }
+
+    const plannedQty = Number(item.plannedQuantity ?? 0);
+    const weightKg =
+      plannedQty > 0
+        ? (Number(item.kgPurchased ?? 0) * quantity) / plannedQty
+        : 0;
+    const netPrice = Number(item.netPrice ?? 0);
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(PurchaseReturnOrderItems)
+        .set({
+          returnQty: quantity.toFixed(3),
+          weightKg: weightKg.toFixed(2),
+          amount: moneyString(
+            amountForWeight(netPrice, item.priceUnit, weightKg, { quantity }),
+          ),
+        })
+        .where(eq(PurchaseReturnOrderItems.uuid, itemUuid));
+
+      await tx
+        .update(PurchaseReturnOrders)
+        .set(await buildPurchaseReturnSummary(tx, purchaseReturnOrderUuid))
+        .where(eq(PurchaseReturnOrders.uuid, purchaseReturnOrderUuid));
+    });
+
+    revalidatePath(`/purchase-return-orders/${purchaseReturnOrderUuid}`);
+    return { success: true, purchaseReturnOrderUuid };
+  } catch (error) {
+    return {
+      error: describeError(error, "Failed to change the return line"),
     };
   }
 };

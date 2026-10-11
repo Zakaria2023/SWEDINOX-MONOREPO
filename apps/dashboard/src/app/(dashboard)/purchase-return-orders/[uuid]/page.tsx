@@ -1,27 +1,39 @@
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
+import { getPurchaseSupplierDefaults } from "@/app/(dashboard)/purchase-orders/actions";
 import { getPurchaseReturnOrderDetail } from "@/app/(dashboard)/purchase-return-orders/actions";
-import { PageHeading } from "@/components/layout/page-heading";
-import { PurchaseReturnOrderDetailView } from "@/components/purchase-return-orders/purchase-return-order-detail";
-import { getClerkUserNames } from "@/lib/server/clerk";
+import { getTextCategoriesForSelect } from "@/app/(dashboard)/text-categories/actions";
+import { PurchaseReturnOrderForm } from "@/components/purchase-return-orders/purchase-return-order-form";
+import { requireAuth } from "@/lib/auth";
+import { getClerkUsersForSelect } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
 };
 
+/**
+ * One screen, as the reference has it: a saved return is the form it was
+ * typed on — the toolbar, the header, then the lines and every panel.
+ */
 const PurchaseReturnOrderDetailPage = async ({ params }: Props) => {
   const { uuid } = await params;
+  const currentUserId = await requireAuth();
 
+  // Sequential rather than concurrent: this database caps connections.
   const returnOrder = await getPurchaseReturnOrderDetail(uuid);
 
   if (!returnOrder) {
     notFound();
   }
 
-  // These columns store a Clerk id; Clerk owns the names.
-
-  const userNames = await getClerkUserNames();
+  const companies = await getCompaniesForSelect();
+  const clerkUsers = await getClerkUsersForSelect();
+  const textCategories = await getTextCategoriesForSelect();
+  const supplierDefaults = await getPurchaseSupplierDefaults(
+    returnOrder.supplierUuid,
+  );
 
   return (
     <div className="space-y-4">
@@ -34,8 +46,14 @@ const PurchaseReturnOrderDetailPage = async ({ params }: Props) => {
           Purchase return orders
         </Link>
       </div>
-      <PageHeading title={`Purchase return order #${returnOrder.id}`} />
-      <PurchaseReturnOrderDetailView returnOrder={returnOrder}  userNames={userNames} />
+      <PurchaseReturnOrderForm
+        companies={companies}
+        clerkUsers={clerkUsers}
+        textCategories={textCategories}
+        currentUserId={currentUserId}
+        existing={returnOrder}
+        supplierDefaults={supplierDefaults}
+      />
     </div>
   );
 };
