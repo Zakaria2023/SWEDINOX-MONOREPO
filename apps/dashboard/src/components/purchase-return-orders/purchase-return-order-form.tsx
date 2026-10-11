@@ -37,7 +37,20 @@ import {
   PurchaseOrderNewPanels,
   WORK_ORDER_PANELS,
 } from "@/components/purchase-orders/purchase-order-new-panels";
-import { formatMoney } from "@/lib/helpers";
+import {
+  amountForWeight,
+  cn,
+  formatDateColumn,
+  formatMoney,
+  formatNumber,
+  orDash,
+  VAT_CODE_RATE,
+} from "@/lib/helpers";
+import { useState } from "react";
+import {
+  PickedReturnLine,
+  ReturnLinesPickerDialog,
+} from "./return-lines-picker-dialog";
 import { DocumentUploader } from "@/components/document-uploader";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
@@ -72,16 +85,6 @@ const RETURN_LINE_COLUMNS = [
   "Status",
 ];
 
-// `Summary` on a return with no lines: every figure nought.
-const EMPTY_SUMMARY: Array<[string, string, boolean?]> = [
-  ["Materials", formatMoney(0)],
-  ["Options", formatMoney(0)],
-  ["Surcharges", formatMoney(0), true],
-  ["Tot. excl. VAT", formatMoney(0)],
-  ["VAT", formatMoney(0), true],
-  ["Tot. incl. VAT", formatMoney(0)],
-  ["Total weight", "0 Kg"],
-];
 
 type Props = {
   companies: CompanyOption[];
@@ -106,7 +109,8 @@ export const PurchaseReturnOrderForm = ({
     isPending,
     isEditing,
     onSubmit,
-    onSubmitAndAddLine,
+    pendingLines,
+    setPendingLines,
     state,
     isDropOff,
     supplierOptions,
@@ -138,6 +142,59 @@ export const PurchaseReturnOrderForm = ({
     setValue,
     formState: { errors },
   } = form;
+
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [selectedLine, setSelectedLine] = useState<number | null>(null);
+  const supplierUuid = watch("supplierUuid");
+
+  // What each picked parcel is worth going back: its share of the line's
+  // weight, at the price it was bought for.
+  const lineFigures = pendingLines.map(({ lot, returnQty }) => {
+    const quantity = Number(returnQty || 0);
+    const planned = Number(lot.plannedQuantity ?? lot.receivedQuantity ?? 0);
+    const weightKg =
+      planned > 0 ? (Number(lot.kgPurchased ?? 0) * quantity) / planned : 0;
+    const amount = amountForWeight(
+      Number(lot.netPrice ?? 0),
+      lot.priceUnit ?? null,
+      weightKg,
+      { quantity },
+    );
+    return { quantity, weightKg, amount };
+  });
+  const materials = lineFigures.reduce((sum, line) => sum + line.amount, 0);
+  const totalKg = lineFigures.reduce((sum, line) => sum + line.weightKg, 0);
+  const vat = (materials * VAT_CODE_RATE.vat_high_21) / 100;
+  const summaryRows: Array<[string, string, boolean?]> = [
+    ["Materials", formatMoney(materials)],
+    ["Options", formatMoney(0)],
+    ["Surcharges", formatMoney(0), true],
+    ["Tot. excl. VAT", formatMoney(materials)],
+    ["VAT", formatMoney(vat), true],
+    ["Tot. incl. VAT", formatMoney(materials + vat)],
+    ["Total weight", `${formatNumber(totalKg)} Kg`],
+  ];
+
+  const addPicked = (lines: PickedReturnLine[]) =>
+    setPendingLines((current) => [
+      ...current,
+      ...lines.filter(
+        (line) =>
+          !current.some(
+            (existing) => existing.lot.stockUuid === line.lot.stockUuid,
+          ),
+      ),
+    ]);
+
+  const deleteSelectedLine = () => {
+    if (selectedLine === null) {
+      return;
+    }
+    setPendingLines((current) =>
+      current.filter((_, index) => index !== selectedLine),
+    );
+    setSelectedLine(null);
+  };
 
   return (
     <FormProvider {...form}>
@@ -397,7 +454,7 @@ export const PurchaseReturnOrderForm = ({
                   <dd className="text-right text-xs text-muted-foreground">
                     Revenue
                   </dd>
-                  {EMPTY_SUMMARY.map(([label, value, rule]) => (
+                  {summaryRows.map(([label, value, rule]) => (
                     <div
                       key={label}
                       className={rule ? "contents *:border-b *:pb-1" : "contents"}
@@ -422,34 +479,51 @@ export const PurchaseReturnOrderForm = ({
             </div>
           </CollapsibleSection>
 
-          <CollapsibleSection title="Lines" summary="0 lines" defaultOpen>
+          <CollapsibleSection
+            title="Lines"
+            summary={`${pendingLines.length} ${pendingLines.length === 1 ? "line" : "lines"}`}
+            defaultOpen
+          >
             <div className="space-y-2 p-3">
               {/* `New` wakes once there is a supplier, as the reference's
-                  does: it saves the return and opens the parcel picker on
-                  it. A return being edited takes its lines on its own page. */}
+                  does, and offers the parcels that supplier delivered. Nothing
+                  is saved until Create; a return being edited takes its lines
+                  on its own page. */}
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => void onSubmitAndAddLine()}
-                  disabled={isPending || isEditing || !watch("supplierUuid")}
+                  onClick={() => setIsPickerOpen(true)}
+                  disabled={isPending || isEditing || !supplierUuid}
                 >
                   New
                 </Button>
-                {["Delete", "Sawing specifications"].map((action) => (
-                  <Button
-                    key={action}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    title={SAVE_FIRST}
-                  >
-                    {action}
-                  </Button>
-                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={deleteSelectedLine}
+                  disabled={isPending || selectedLine === null}
+                >
+                  Delete
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled
+                  title="Not built yet"
+                >
+                  Sawing specifications
+                </Button>
               </div>
+              <ReturnLinesPickerDialog
+                supplierUuid={supplierUuid || undefined}
+                onPick={addPicked}
+                open={isPickerOpen}
+                onOpenChange={setIsPickerOpen}
+              />
               <div className="overflow-x-auto rounded-lg border">
                 <Table>
                   <TableHeader>
@@ -460,14 +534,77 @@ export const PurchaseReturnOrderForm = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow>
-                      <TableCell
-                        colSpan={RETURN_LINE_COLUMNS.length}
-                        className="text-muted-foreground"
-                      >
-                        No lines.
-                      </TableCell>
-                    </TableRow>
+                    {pendingLines.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={RETURN_LINE_COLUMNS.length}
+                          className="text-muted-foreground"
+                        >
+                          No lines.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      pendingLines.map(({ lot, returnQty }, index) => (
+                        <TableRow
+                          key={lot.stockUuid ?? index}
+                          onClick={() => setSelectedLine(index)}
+                          className={cn(
+                            "cursor-pointer",
+                            index === selectedLine && "bg-accent",
+                          )}
+                        >
+                          <TableCell className="text-right tabular-nums">
+                            {(index + 1) * 10}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {lot.purchaseOrderId === null
+                              ? "—"
+                              : `${lot.purchaseOrderId}/${(lot.lineNumber ?? 0) * 10}`}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {orDash(lot.productCode)}
+                          </TableCell>
+                          <TableCell>{orDash(lot.productName)}</TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatNumber(Number(returnQty || 0))}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            0
+                          </TableCell>
+                          <TableCell>
+                            {orDash(lot.unit ? lot.unit.toUpperCase() : null)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {lot.lengthMm ? `${lot.lengthMm} mm` : "—"}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {formatDateColumn(watch("returnDate") ?? null)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatNumber(lineFigures[index]?.weightKg ?? 0)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            0
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatMoney(Number(lot.netPrice ?? 0))}
+                          </TableCell>
+                          <TableCell>{orDash(lot.priceUnit)}</TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            0
+                          </TableCell>
+                          <TableCell />
+                          <TableCell className="text-right tabular-nums">
+                            0
+                          </TableCell>
+                          <TableCell />
+                          <TableCell className="text-right tabular-nums">
+                            {formatMoney(lineFigures[index]?.amount ?? 0)}
+                          </TableCell>
+                          <TableCell>Provisional</TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>

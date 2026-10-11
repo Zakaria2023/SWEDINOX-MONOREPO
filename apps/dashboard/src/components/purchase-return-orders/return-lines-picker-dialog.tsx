@@ -3,6 +3,7 @@
 import {
   addPurchaseReturnLines,
   getReturnableLotsForReturn,
+  getReturnablePurchaseLines,
   ReturnablePurchaseLine,
 } from "@/app/(dashboard)/purchase-return-orders/actions";
 import { Button } from "@/components/shadcn/button";
@@ -29,8 +30,18 @@ import { FormError } from "@/components/ui/form-error";
 import { formatDateColumn, formatNumber, orDash } from "@/lib/helpers";
 import { useEffect, useState, useTransition } from "react";
 
+/** A parcel ticked on a return that has not been saved yet. */
+export type PickedReturnLine = {
+  lot: ReturnablePurchaseLine;
+  returnQty: string;
+};
+
 type Props = {
-  purchaseReturnOrderUuid: string;
+  /** A saved return: the parcels are added to it straight away. */
+  purchaseReturnOrderUuid?: string;
+  /** An unsaved one: the supplier's parcels, handed back to the form. */
+  supplierUuid?: string;
+  onPick?: (lines: PickedReturnLine[]) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -49,6 +60,8 @@ type Props = {
  */
 export const ReturnLinesPickerDialog = ({
   purchaseReturnOrderUuid,
+  supplierUuid,
+  onPick,
   open,
   onOpenChange,
 }: Props) => {
@@ -63,7 +76,12 @@ export const ReturnLinesPickerDialog = ({
       return;
     }
     const subscription = { cancelled: false };
-    void getReturnableLotsForReturn(purchaseReturnOrderUuid).then((rows) => {
+    const load = purchaseReturnOrderUuid
+      ? getReturnableLotsForReturn(purchaseReturnOrderUuid)
+      : supplierUuid
+        ? getReturnablePurchaseLines(supplierUuid)
+        : Promise.resolve([]);
+    void load.then((rows) => {
       if (!subscription.cancelled) {
         setLots(rows);
         setPicked({});
@@ -74,7 +92,7 @@ export const ReturnLinesPickerDialog = ({
     return () => {
       subscription.cancelled = true;
     };
-  }, [open, purchaseReturnOrderUuid]);
+  }, [open, purchaseReturnOrderUuid, supplierUuid]);
 
   const latest = lots.reduce<string | null>(
     (max, lot) =>
@@ -102,6 +120,17 @@ export const ReturnLinesPickerDialog = ({
   };
 
   const onConfirm = () => {
+    if (onPick || !purchaseReturnOrderUuid) {
+      onPick?.(
+        lots.flatMap((lot) =>
+          lot.stockUuid && lot.stockUuid in picked
+            ? [{ lot, returnQty: picked[lot.stockUuid] }]
+            : [],
+        ),
+      );
+      onOpenChange(false);
+      return;
+    }
     startTransition(async () => {
       const result = await addPurchaseReturnLines(
         purchaseReturnOrderUuid,
@@ -120,7 +149,7 @@ export const ReturnLinesPickerDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-6xl">
         <DialogHeader>
           <DialogTitle>Create purchase return order lines</DialogTitle>
           <DialogDescription>

@@ -17,6 +17,7 @@ import {
   PurchaseOrderOption,
 } from "@/app/(dashboard)/purchase-orders/actions";
 import { SelectOption } from "@/components/shadcn/select";
+import { PickedReturnLine } from "@/components/purchase-return-orders/return-lines-picker-dialog";
 import {
   InvoicePaymentTerm,
   invoicePaymentTerms,
@@ -86,6 +87,8 @@ export const usePurchaseReturnOrderSubmit = ({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<PurchaseReturnOrderActionResult>({});
+  // Lines picked on a return not saved yet; written with it on Create.
+  const [pendingLines, setPendingLines] = useState<PickedReturnLine[]>([]);
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [addresses, setAddresses] = useState<AddressOption[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderOption[]>(
@@ -286,11 +289,7 @@ export const usePurchaseReturnOrderSubmit = ({
         : "/purchase-return-orders",
     );
 
-  // `openLinePicker`: the Lines panel's `New` on an unsaved return saves it
-  // first, as the reference numbers a return the moment it has a supplier
-  // (950034, 11-10-2026), then opens the parcel picker on it.
-  const submitWith = (openLinePicker: boolean) =>
-    form.handleSubmit((values) => {
+  const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
       const extras: PurchaseReturnOrderExtras = {
         surcharges: values.surcharges.map((surcharge) => ({
@@ -365,27 +364,35 @@ export const usePurchaseReturnOrderSubmit = ({
         return;
       }
 
-      const result = await createPurchaseReturnOrder(fields, extras);
+      // The parcels picked under `Lines → New` go back with the return.
+      const result = await createPurchaseReturnOrder(
+        fields,
+        extras,
+        pendingLines.map(({ lot, returnQty }) => ({
+          purchaseOrderItemUuid: lot.purchaseOrderItemUuid,
+          stockUuid: lot.stockUuid ?? undefined,
+          returnQty,
+          returnReason: values.returnReason || null,
+        })),
+      );
       setState(result);
       if (result.success) {
         router.push(
-          openLinePicker && result.purchaseReturnOrderUuid
-            ? `/purchase-return-orders/${result.purchaseReturnOrderUuid}?newLine=1`
+          result.purchaseReturnOrderUuid
+            ? `/purchase-return-orders/${result.purchaseReturnOrderUuid}`
             : "/purchase-return-orders",
         );
       }
     });
   });
 
-  const onSubmit = submitWith(false);
-  const onSubmitAndAddLine = submitWith(true);
-
   return {
     form,
     isPending,
     isEditing: Boolean(purchaseReturnOrderUuid),
     onSubmit,
-    onSubmitAndAddLine,
+    pendingLines,
+    setPendingLines,
     state,
     isDropOff,
     supplierOptions,

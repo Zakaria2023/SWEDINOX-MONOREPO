@@ -8,15 +8,10 @@ import { getClerkUserNames } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
-  searchParams: Promise<{ newLine?: string }>;
 };
 
-const PurchaseReturnOrderDetailPage = async ({
-  params,
-  searchParams,
-}: Props) => {
+const PurchaseReturnOrderDetailPage = async ({ params }: Props) => {
   const { uuid } = await params;
-  const { newLine } = await searchParams;
 
   const returnOrder = await getPurchaseReturnOrderDetail(uuid);
 
@@ -40,11 +35,7 @@ const PurchaseReturnOrderDetailPage = async ({
         </Link>
       </div>
       <PageHeading title={`Purchase return order #${returnOrder.id}`} />
-      <PurchaseReturnOrderDetailView
-        returnOrder={returnOrder}
-        userNames={userNames}
-        openLinePicker={newLine === "1"}
-      />
+      <PurchaseReturnOrderDetailView returnOrder={returnOrder}  userNames={userNames} />
     </div>
   );
 };
