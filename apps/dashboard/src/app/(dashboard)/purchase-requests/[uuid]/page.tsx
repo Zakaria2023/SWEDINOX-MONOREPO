@@ -1,30 +1,41 @@
-import { notFound } from "next/navigation";
-import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getPurchaseRequestDetail } from "@/app/(dashboard)/purchase-requests/actions";
-import { PurchaseRequestDetailView } from "@/components/purchase-requests/purchase-request-detail";
-import { PageHeading } from "@/components/layout/page-heading";
+import { purchaseRequestToFormValues } from "@/app/(dashboard)/purchase-requests/mappers";
+import { PurchaseRequestForm } from "@/components/purchase-requests/purchase-request-form";
+import { getClerkUsersForSelect } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
 };
 
+/**
+ * One screen, as the reference has it: a saved request is the form it was
+ * typed on — the toolbar, the header, then the lines, its quotes and every
+ * panel.
+ */
 const PurchaseRequestDetailPage = async ({ params }: Props) => {
   const { uuid } = await params;
 
-  const [request, companies] = await Promise.all([
-    getPurchaseRequestDetail(uuid),
-    getCompaniesForSelect(),
-  ]);
+  // Sequential rather than concurrent: this database caps connections.
+  const request = await getPurchaseRequestDetail(uuid);
 
   if (!request) {
     notFound();
   }
 
-  const supplierOptions = companies.filter((company) =>
-    company.roles?.includes("supplier"),
-  );
+  const companies = await getCompaniesForSelect();
+  const clerkUsers = await getClerkUsersForSelect();
+
+  // Saving, making final or asking suppliers changes what the form was opened
+  // with, so it is opened afresh rather than holding the old values.
+  const version = [
+    request.status,
+    request.updatedAt.getTime(),
+    ...request.items.map((item) => item.uuid),
+  ].join("|");
 
   return (
     <div className="space-y-4">
@@ -37,10 +48,12 @@ const PurchaseRequestDetailPage = async ({ params }: Props) => {
           Purchase requests
         </Link>
       </div>
-      <PageHeading title={`Purchase request #${request.id}`} />
-      <PurchaseRequestDetailView
-        request={request}
-        supplierOptions={supplierOptions}
+      <PurchaseRequestForm
+        key={version}
+        companies={companies}
+        clerkUsers={clerkUsers}
+        existing={request}
+        defaultValues={purchaseRequestToFormValues(request)}
       />
     </div>
   );

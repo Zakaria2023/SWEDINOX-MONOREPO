@@ -12,7 +12,10 @@ import {
   SelectPurchaseRequestItems,
 } from "@/db/schema/purchase-request-items";
 import { PurchaseQuoteItems } from "@/db/schema/purchase-quote-items";
-import { PurchaseQuotes } from "@/db/schema/purchase-quotes";
+import {
+  PurchaseQuotes,
+  SelectPurchaseQuotes,
+} from "@/db/schema/purchase-quotes";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
@@ -28,6 +31,7 @@ import { SelectTexts, Texts } from "@/db/schema/texts";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
+import { convertPurchaseQuoteToOrder } from "@/app/(dashboard)/purchase-quotes/actions";
 import { syncPurchaseLineReceiptDates } from "@/lib/server/purchase-lines";
 import {
   PurchaseRequestOrderFormValues,
@@ -95,6 +99,8 @@ export type PurchaseRequestItemDetail = SelectPurchaseRequestItems & {
 export type PurchaseRequestQuoteSummary = {
   uuid: string;
   id: number;
+  // Who was asked, so the same supplier is not asked twice.
+  supplierUuid: SelectPurchaseQuotes["companyUuid"];
   supplierName: SelectCompanies["companyName"] | null;
   status: string;
   quoteDate: Date | string | null;
@@ -288,6 +294,7 @@ export const getPurchaseRequestDetail = async (
     .select({
       uuid: PurchaseQuotes.uuid,
       id: PurchaseQuotes.id,
+      supplierUuid: PurchaseQuotes.companyUuid,
       supplierName: Companies.companyName,
       status: PurchaseQuotes.status,
       quoteDate: PurchaseQuotes.quoteDate,
@@ -696,5 +703,100 @@ export const convertPurchaseRequestToQuotes = async (
           ? error.message
           : "Failed to create quotes from this request",
     };
+  }
+};
+
+/**
+ * `Make final` on a saved request. The request leaves draft, which is what
+ * freezes its lines and header — the same point at which asking a supplier
+ * freezes them — so it can go out as the question it is. A request's status
+ * has no `final` value, so it moves on to `sent`, the first status past draft.
+ */
+export const makePurchaseRequestFinal = async (
+  uuid: string,
+): Promise<PurchaseRequestActionResult> => {
+  try {
+    const [request] = await db
+      .select({ status: PurchaseRequests.status })
+      .from(PurchaseRequests)
+      .where(eq(PurchaseRequests.uuid, uuid))
+      .limit(1);
+
+    if (!request) {
+      return { error: "Purchase request not found." };
+    }
+    if (request.status !== "draft") {
+      return { error: "This request is already final." };
+    }
+
+    const [line] = await db
+      .select({ uuid: PurchaseRequestItems.uuid })
+      .from(PurchaseRequestItems)
+      .where(eq(PurchaseRequestItems.purchaseRequestUuid, uuid))
+      .limit(1);
+
+    if (!line) {
+      return {
+        error: "Add at least one line before making this request final.",
+      };
+    }
+
+    await db
+      .update(PurchaseRequests)
+      .set({ status: "sent" })
+      .where(
+        and(
+          eq(PurchaseRequests.uuid, uuid),
+          eq(PurchaseRequests.status, "draft"),
+        ),
+      );
+  } catch (error) {
+    return { error: describeError(error, "Failed to make this request final") };
+  }
+
+  revalidatePath("/purchase-requests");
+  revalidatePath(`/purchase-requests/${uuid}`);
+  return { success: true, purchaseRequestUuid: uuid };
+};
+
+/**
+ * Awards one of the quotes this request was answered with. The quote's own
+ * award raises the purchase order, marks its siblings lost and the request
+ * awarded; this only checks the quote answers this request, then opens the
+ * order it raised.
+ */
+export const awardPurchaseRequestQuote = async (
+  requestUuid: string,
+  quoteUuid: string,
+): Promise<PurchaseRequestActionResult> => {
+  const checked = await checkQuoteAnswersRequest(requestUuid, quoteUuid);
+  if (checked.error) {
+    return checked;
+  }
+
+  revalidatePath("/purchase-requests");
+  revalidatePath(`/purchase-requests/${requestUuid}`);
+  // Converts and redirects to the order it raised — outside any try, since
+  // the redirect is thrown.
+  return convertPurchaseQuoteToOrder(quoteUuid);
+};
+
+const checkQuoteAnswersRequest = async (
+  requestUuid: string,
+  quoteUuid: string,
+): Promise<PurchaseRequestActionResult> => {
+  try {
+    const [quote] = await db
+      .select({ purchaseRequestUuid: PurchaseQuotes.purchaseRequestUuid })
+      .from(PurchaseQuotes)
+      .where(eq(PurchaseQuotes.uuid, quoteUuid))
+      .limit(1);
+
+    if (!quote || quote.purchaseRequestUuid !== requestUuid) {
+      return { error: "That quote does not answer this request." };
+    }
+    return { success: true };
+  } catch (error) {
+    return { error: describeError(error, "Failed to award this quote") };
   }
 };

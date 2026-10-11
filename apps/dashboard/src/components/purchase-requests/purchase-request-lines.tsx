@@ -9,6 +9,7 @@ import {
   type UseFieldArrayRemove,
 } from "react-hook-form";
 import { FileQuestion, Plus, Scissors, ShoppingCart, X } from "lucide-react";
+import { PurchaseRequestItemDetail } from "@/app/(dashboard)/purchase-requests/actions";
 import { PurchaseRequestFormValues } from "@/app/(dashboard)/purchase-requests/validation";
 import {
   StockSearchChoice,
@@ -30,6 +31,7 @@ import { cn, formatDateValue, formatNumber, runningMeters } from "@/lib/helpers"
 import { STOCK_UNIT_LABELS } from "@/lib/labels";
 
 const SAVE_FIRST = "Save the purchase request first";
+const CLOSED = "This request has been awarded or cancelled";
 
 // The reference's Lines grid on a request (11-10-2026).
 const REQUEST_LINE_COLUMNS = [
@@ -58,6 +60,15 @@ const NUMERIC_COLUMNS = new Set([
   "M1(p)",
 ]);
 
+/** The sales line a saved request line is bought for, keyed by that line. */
+export type PurchaseRequestForLines = Record<
+  string,
+  {
+    orderUuid: NonNullable<PurchaseRequestItemDetail["forOrderUuid"]>;
+    label: string;
+  }
+>;
+
 type Props = {
   itemFields: FieldArrayWithId<PurchaseRequestFormValues, "items", "id">[];
   appendItem: () => void;
@@ -65,14 +76,19 @@ type Props = {
   /** Once the request has gone out its lines are the question asked. */
   readOnly: boolean;
   isPending: boolean;
-  /** The saved request, whose quote and order its own page raises. */
-  requestUuid: string | null;
+  /** `For line` of the saved lines, resolved to the sales order. */
+  forLines: PurchaseRequestForLines;
+  /** Opens the `Purchase order` window; null until it can be ordered. */
+  onPurchaseOrder: (() => void) | null;
+  /** Opens the `Purchase quote` window; null until suppliers can be asked. */
+  onPurchaseQuote: (() => void) | null;
 };
 
 type LineProps = {
   index: number;
   selected: boolean;
   readOnly: boolean;
+  forLines: PurchaseRequestForLines;
   onSelect: () => void;
   onPick: () => void;
 };
@@ -86,6 +102,7 @@ const PurchaseRequestLineRow = ({
   index,
   selected,
   readOnly,
+  forLines,
   onSelect,
   onPick,
 }: LineProps) => {
@@ -105,6 +122,11 @@ const PurchaseRequestLineRow = ({
     unit: line?.unit ?? "st",
     lengthMm: lengthMm > 0 ? lengthMm : null,
   });
+  // Why this material is being bought: a customer waiting, or nothing, which
+  // means it is going to stock.
+  const forLine = line?.forOrderItemUuid
+    ? forLines[line.forOrderItemUuid]
+    : undefined;
 
   return (
     <TableRow
@@ -112,7 +134,17 @@ const PurchaseRequestLineRow = ({
       className={cn("cursor-pointer", selected && "bg-accent")}
     >
       <TableCell className="text-right tabular-nums">{(index + 1) * 10}</TableCell>
-      <TableCell />
+      <TableCell className="whitespace-nowrap">
+        {forLine && (
+          <Link
+            href={`/orders/${forLine.orderUuid}`}
+            className="text-primary hover:underline"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {forLine.label}
+          </Link>
+        )}
+      </TableCell>
       <TableCell className="whitespace-nowrap">
         {formatDateValue(line?.requiredDate || headerDeliveryDate || null, "")}
       </TableCell>
@@ -187,7 +219,9 @@ export const PurchaseRequestLines = ({
   removeItem,
   readOnly,
   isPending,
-  requestUuid,
+  forLines,
+  onPurchaseOrder,
+  onPurchaseQuote,
 }: Props) => {
   const { control, setValue } = useFormContext<PurchaseRequestFormValues>();
   const items = useWatch({ control, name: "items" });
@@ -247,8 +281,6 @@ export const PurchaseRequestLines = ({
     setValue(`items.${index}.kg`, "");
   };
 
-  const requestHref = requestUuid ? `/purchase-requests/${requestUuid}` : null;
-
   return (
     <CollapsibleSection
       title="Lines"
@@ -284,47 +316,26 @@ export const PurchaseRequestLines = ({
           >
             <Scissors className="size-3.5" /> Sawing specifications
           </Button>
-          {requestHref ? (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                nativeButton={false}
-                render={<Link href={`${requestHref}#order-outright`} />}
-              >
-                <ShoppingCart className="size-3.5" /> Purchase order
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                nativeButton={false}
-                render={<Link href={`${requestHref}#ask-suppliers`} />}
-              >
-                <FileQuestion className="size-3.5" /> Purchase quote
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled
-                title={SAVE_FIRST}
-              >
-                <ShoppingCart className="size-3.5" /> Purchase order
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled
-                title={SAVE_FIRST}
-              >
-                <FileQuestion className="size-3.5" /> Purchase quote
-              </Button>
-            </>
-          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onPurchaseOrder ?? undefined}
+            disabled={onPurchaseOrder === null || isPending}
+            title={onPurchaseOrder ? undefined : readOnly ? CLOSED : SAVE_FIRST}
+          >
+            <ShoppingCart className="size-3.5" /> Purchase order
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onPurchaseQuote ?? undefined}
+            disabled={onPurchaseQuote === null || isPending}
+            title={onPurchaseQuote ? undefined : readOnly ? CLOSED : SAVE_FIRST}
+          >
+            <FileQuestion className="size-3.5" /> Purchase quote
+          </Button>
         </div>
 
         <StockSearchDialog
@@ -370,6 +381,7 @@ export const PurchaseRequestLines = ({
                   index={index}
                   selected={selectedLine === index}
                   readOnly={readOnly}
+                  forLines={forLines}
                   onSelect={() => setSelectedLine(index)}
                   onPick={() => setPickingLine(index)}
                 />
