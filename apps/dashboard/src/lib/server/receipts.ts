@@ -499,6 +499,9 @@ export const applyReceipt = async (
     .update(PurchaseOrderItems)
     .set({
       qtyReceived: sql`${PurchaseOrderItems.qtyReceived} + ${quantity.toFixed(3)}`,
+      // The line's delivery date becomes the day the goods came in: 14-10 →
+      // 11-10-2026 on 404355 when it was unloaded early.
+      receiptDate: todayDateString(),
     })
     .where(eq(PurchaseOrderItems.uuid, purchaseLine.uuid));
 
