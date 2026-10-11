@@ -28,6 +28,7 @@ import {
 } from "@/db/schema/product-details";
 import { InsertProducts, Products, SelectProducts } from "@/db/schema/products";
 import { ProductGroups, SelectProductGroups } from "@/db/schema/product-groups";
+import { ProductGroupSuppliers } from "@/db/schema/product-group-suppliers";
 import {
   PurchaseOrderItems,
   SelectPurchaseOrderItems,
@@ -89,8 +90,18 @@ import {
 } from "@/lib/table-query";
 import { exportRows } from "@/lib/server/excel";
 import { PRODUCT_COLUMNS } from "@/app/(dashboard)/products/columns";
-import { asc, count, desc, eq, getTableColumns, isNull } from "drizzle-orm";
-import { alias } from "drizzle-orm/mysql-core";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  isNull,
+  ne,
+  sql,
+} from "drizzle-orm";
+import { alias, AnyMySqlColumn } from "drizzle-orm/mysql-core";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -99,6 +110,52 @@ import { redirect } from "next/navigation";
 // location — so each needs an alias to be distinguishable in SQL.
 const AlternativeProduct = alias(Products, "alternative_product");
 const RestockLocation = alias(Warehouses, "restock_location");
+
+// The overview climbs the group tree three hops to name the main group — the
+// root of the chain, as order-advice/actions.ts does — and names two more
+// warehouses and one more product per row.
+const GroupParent = alias(ProductGroups, "group_parent");
+const GroupGrandparent = alias(ProductGroups, "group_grandparent");
+const GroupRoot = alias(ProductGroups, "group_root");
+const CdLocation = alias(Warehouses, "cd_location");
+const SourceProduct = alias(Products, "source_product");
+const PreferredLocation = alias(Warehouses, "preferred_location");
+const SupplierCompanies = alias(Companies, "supplier_companies");
+
+// What is on the shelf per product, summed from its lots rather than read from
+// the stored `technicalStock`, which nothing keeps up to date. A lot drawn to
+// nothing is `received` and has left the shelf — the same rule Stock on
+// location applies. One grouped derived table, so the page stays one query.
+const StockTotals = db
+  .select({
+    productUuid: Stock.productUuid,
+    quantity: sql<string>`SUM(COALESCE(${Stock.quantity}, 0))`.as(
+      "stock_quantity",
+    ),
+    reserved: sql<string>`SUM(COALESCE(${Stock.reservedQuantity}, 0))`.as(
+      "stock_reserved",
+    ),
+    available:
+      sql<string>`SUM(GREATEST(0, COALESCE(${Stock.quantity}, 0) - COALESCE(${Stock.reservedQuantity}, 0)))`.as(
+        "stock_available",
+      ),
+  })
+  .from(Stock)
+  .where(ne(Stock.status, "received"))
+  .groupBy(Stock.productUuid)
+  .as("stock_totals");
+
+/** The first of the product's preferred locations, by preference. */
+const preferredLocationName = sql<string | null>`(${db
+  .select({ name: PreferredLocation.name })
+  .from(ProductPreferredLocations)
+  .innerJoin(
+    PreferredLocation,
+    eq(PreferredLocation.uuid, ProductPreferredLocations.locationUuid),
+  )
+  .where(eq(ProductPreferredLocations.productUuid, Products.uuid))
+  .orderBy(asc(ProductPreferredLocations.preference))
+  .limit(1)})`;
 
 export type ProductFields = Omit<
   InsertProducts,
@@ -144,6 +201,18 @@ export type ProductActionResult = {
 
 export type ProductListItem = SelectProducts & {
   productGroupName: SelectProductGroups["name"] | null;
+  mainGroupName: SelectProductGroups["name"] | null;
+  groupShape: SelectProductGroups["productShape"] | null;
+  preferredLocationName: SelectWarehouses["name"] | null;
+  preferredSupplierCode: SelectCompanies["searchCode1"] | null;
+  preferredSupplierName: SelectCompanies["companyName"] | null;
+  sourceProductCode: SelectProducts["productCode"] | null;
+  cdLocationName: SelectWarehouses["name"] | null;
+  revenueGroupName: SelectRevenueGroups["name"] | null;
+  // Summed from the product's lots — no single column backs them.
+  stockQuantity: number;
+  stockReserved: number;
+  stockAvailable: number;
 };
 
 export type ProductOption = Pick<
@@ -222,6 +291,43 @@ const PRODUCT_FILTERS = {
 };
 
 /**
+ * One field of the product's preferred supplier: its own preferred supplier
+ * first, then its group's — the one the order advice falls back on. Scalar
+ * subqueries, so a product with several suppliers cannot multiply the rows.
+ */
+const preferredSupplierField = (column: AnyMySqlColumn) => {
+  const own = db
+    .select({ value: column })
+    .from(ProductSuppliers)
+    .innerJoin(
+      SupplierCompanies,
+      eq(SupplierCompanies.uuid, ProductSuppliers.supplierUuid),
+    )
+    .where(
+      and(
+        eq(ProductSuppliers.productUuid, Products.uuid),
+        eq(ProductSuppliers.preferred, true),
+      ),
+    )
+    .limit(1);
+  const group = db
+    .select({ value: column })
+    .from(ProductGroupSuppliers)
+    .innerJoin(
+      SupplierCompanies,
+      eq(SupplierCompanies.uuid, ProductGroupSuppliers.supplierCompanyUuid),
+    )
+    .where(
+      and(
+        eq(ProductGroupSuppliers.productGroupUuid, Products.productGroupUuid),
+        eq(ProductGroupSuppliers.preferred, true),
+      ),
+    )
+    .limit(1);
+  return sql<string | null>`COALESCE((${own}), (${group}))`;
+};
+
+/**
  * The rows one view of the products overview selects, as a window onto them.
  * Shared by the page and the export.
  */
@@ -232,12 +338,48 @@ const productRows =
       .select({
         ...getTableColumns(Products),
         productGroupName: ProductGroups.name,
+        // The root of the chain, not the product's own group.
+        mainGroupName: sql<
+          string | null
+        >`COALESCE(${GroupRoot.name}, ${GroupGrandparent.name}, ${GroupParent.name}, ${ProductGroups.name})`,
+        groupShape: ProductGroups.productShape,
+        preferredLocationName,
+        preferredSupplierCode: preferredSupplierField(
+          SupplierCompanies.searchCode1,
+        ),
+        preferredSupplierName: preferredSupplierField(
+          SupplierCompanies.companyName,
+        ),
+        sourceProductCode: SourceProduct.productCode,
+        cdLocationName: CdLocation.name,
+        revenueGroupName: RevenueGroups.name,
+        stockQuantity: sql<number>`COALESCE(${StockTotals.quantity}, 0)`.mapWith(
+          Number,
+        ),
+        stockReserved: sql<number>`COALESCE(${StockTotals.reserved}, 0)`.mapWith(
+          Number,
+        ),
+        stockAvailable:
+          sql<number>`COALESCE(${StockTotals.available}, 0)`.mapWith(Number),
       })
       .from(Products)
       .leftJoin(
         ProductGroups,
         eq(Products.productGroupUuid, ProductGroups.uuid),
       )
+      .leftJoin(GroupParent, eq(ProductGroups.parentUuid, GroupParent.uuid))
+      .leftJoin(
+        GroupGrandparent,
+        eq(GroupParent.parentUuid, GroupGrandparent.uuid),
+      )
+      .leftJoin(GroupRoot, eq(GroupGrandparent.parentUuid, GroupRoot.uuid))
+      .leftJoin(
+        RevenueGroups,
+        eq(Products.revenueGroupUuid, RevenueGroups.uuid),
+      )
+      .leftJoin(SourceProduct, eq(Products.sourceProductUuid, SourceProduct.uuid))
+      .leftJoin(CdLocation, eq(Products.cdLocationUuid, CdLocation.uuid))
+      .leftJoin(StockTotals, eq(StockTotals.productUuid, Products.uuid))
       .where(
         tableWhere({ query, search: PRODUCT_SEARCH, filters: PRODUCT_FILTERS }),
       )
