@@ -218,7 +218,9 @@ const searchCondition = (
   query: TableQuery,
   columns: readonly SQL[],
 ): SQL | undefined => {
-  const term = (query.q ?? "").trim();
+  // `IO404355` is how the number is printed and read out; the stored number is
+  // `404355`, so the prefix is dropped before searching.
+  const term = (query.q ?? "").trim().replace(/^I[OR](?=\d)/i, "");
   if (term === "") {
     return undefined;
   }

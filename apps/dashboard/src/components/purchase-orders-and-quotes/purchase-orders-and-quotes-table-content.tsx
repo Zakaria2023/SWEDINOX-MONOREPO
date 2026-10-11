@@ -90,7 +90,11 @@ const SHOW_DOCUMENT_LABELS: Record<PurchaseOrderQuoteRow["kind"], string> = {
 };
 
 const documentNumber = (row: PurchaseOrderQuoteRow) =>
-  row.kind === "Return" ? `IR${row.number}` : String(row.number);
+  row.kind === "Return"
+    ? `IR${row.number}`
+    : row.kind === "Order"
+      ? `IO${row.number}`
+      : String(row.number);
 
 export const PurchaseOrdersAndQuotesTable = ({ page, filters }: Props) => {
   const [columnVisibility, setColumnVisibility] = useState<

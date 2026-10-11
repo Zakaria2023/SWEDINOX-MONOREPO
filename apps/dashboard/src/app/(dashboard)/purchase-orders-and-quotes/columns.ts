@@ -87,7 +87,11 @@ export const PURCHASE_ORDER_QUOTE_COLUMNS: Array<
     label: "Purchase order",
     defaultVisible: true,
     value: (row) =>
-      row.kind === "Return" ? `IR${row.number}` : numberCell(row.number),
+      row.kind === "Return"
+        ? `IR${row.number}`
+        : row.kind === "Order"
+          ? `IO${row.number}`
+          : numberCell(row.number),
   },
   {
     key: "purchaserInitials",
