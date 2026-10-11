@@ -146,7 +146,8 @@ export const PurchaseReturnOrderForm = ({
     formState: { errors },
   } = form;
 
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  // The line whose `…` opened the stock window, or null when it is shut.
+  const [pickingLine, setPickingLine] = useState<number | null>(null);
   const [selectedLine, setSelectedLine] = useState<number | null>(null);
   const [lineError, setLineError] = useState<string | undefined>();
   const supplierUuid = watch("supplierUuid");
@@ -154,9 +155,9 @@ export const PurchaseReturnOrderForm = ({
   // Each picked parcel's share of the line's weight, and what it is worth.
   const lineFigures = pendingLines.map(({ lot, returnQty }) => {
     const quantity = Number(returnQty || 0);
-    const planned = Number(lot.plannedQuantity ?? lot.receivedQuantity ?? 0);
+    const planned = Number(lot?.plannedQuantity ?? lot?.receivedQuantity ?? 0);
     const weightKg =
-      planned > 0 ? (Number(lot.kgPurchased ?? 0) * quantity) / planned : 0;
+      planned > 0 ? (Number(lot?.kgPurchased ?? 0) * quantity) / planned : 0;
     // The reference leaves a picked return line at `Gross price € 0,00`, so
     // it is worth nothing until somebody prices it (950034, 11-10-2026).
     const amount = 0;
@@ -179,7 +180,7 @@ export const PurchaseReturnOrderForm = ({
   // every document line picks from (950034, 11-10-2026). The lot chosen
   // there has to be one this supplier delivered, or there is nothing to send
   // back to it.
-  const chooseLot = (choice: StockSearchChoice) => {
+  const chooseLot = (index: number, choice: StockSearchChoice) => {
     const lot = choice.lot;
     setLineError(undefined);
     if (!lot || !supplierUuid) {
@@ -195,12 +196,26 @@ export const PurchaseReturnOrderForm = ({
         return;
       }
       setPendingLines((current: PickedReturnLine[]) =>
-        current.some((line) => line.lot.stockUuid === match.stockUuid)
+        current.some(
+          (line, at) => at !== index && line.lot?.stockUuid === match.stockUuid,
+        )
           ? current
-          : // Qty(p) opens at 0 and is typed, as the reference's does.
-            [...current, { lot: match, returnQty: "0" }],
+          : current.map((line, at) =>
+              at === index ? { ...line, lot: match } : line,
+            ),
       );
     });
+  };
+
+  // `New` adds a blank line — Code 10, Qty(p) 0, `Provisional` — and greys
+  // until that line has a product (950034, 11-10-2026).
+  const addBlankLine = () => {
+    setLineError(undefined);
+    setSelectedLine(pendingLines.length);
+    setPendingLines((current: PickedReturnLine[]) => [
+      ...current,
+      { lot: null, returnQty: "0" },
+    ]);
   };
 
   const setReturnQty = (index: number, returnQty: string) =>
@@ -516,8 +531,13 @@ export const PurchaseReturnOrderForm = ({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsPickerOpen(true)}
-                  disabled={isPending || isEditing || !supplierUuid}
+                  onClick={addBlankLine}
+                  disabled={
+                    isPending ||
+                    isEditing ||
+                    !supplierUuid ||
+                    pendingLines.some((line) => !line.lot)
+                  }
                 >
                   New
                 </Button>
@@ -541,11 +561,17 @@ export const PurchaseReturnOrderForm = ({
                 </Button>
               </div>
               <StockSearchDialog
-                open={isPickerOpen}
-                onOpenChange={setIsPickerOpen}
+                open={pickingLine !== null}
+                onOpenChange={(open) => {
+                  if (!open) {
+                    setPickingLine(null);
+                  }
+                }}
                 onChoose={(choice) => {
-                  setIsPickerOpen(false);
-                  chooseLot(choice);
+                  if (pickingLine !== null) {
+                    chooseLot(pickingLine, choice);
+                  }
+                  setPickingLine(null);
                 }}
               />
               <div className="overflow-x-auto rounded-lg border">
@@ -570,7 +596,7 @@ export const PurchaseReturnOrderForm = ({
                     ) : (
                       pendingLines.map(({ lot, returnQty }, index) => (
                         <TableRow
-                          key={lot.stockUuid ?? index}
+                          key={index}
                           onClick={() => setSelectedLine(index)}
                           className={cn(
                             "cursor-pointer",
@@ -586,9 +612,24 @@ export const PurchaseReturnOrderForm = ({
                             0
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
-                            {orDash(lot.productCode)}
+                            <div className="flex items-center gap-1">
+                              <span>{lot?.productCode ?? ""}</span>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                aria-label="Choose the product from stock"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setPickingLine(index);
+                                }}
+                                disabled={isPending}
+                              >
+                                …
+                              </Button>
+                            </div>
                           </TableCell>
-                          <TableCell>{orDash(lot.productName)}</TableCell>
+                          <TableCell>{lot?.productName ?? ""}</TableCell>
                           <TableCell className="text-right">
                             <Input
                               type="text"
@@ -605,13 +646,13 @@ export const PurchaseReturnOrderForm = ({
                             0
                           </TableCell>
                           <TableCell>
-                            {orDash(lot.unit ? lot.unit.toUpperCase() : null)}
+                            {orDash(lot?.unit ? lot.unit.toUpperCase() : null)}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
-                            {lot.lengthMm ? `${lot.lengthMm} mm` : "—"}
+                            {lot?.lengthMm ? `${lot.lengthMm} mm` : "0 mm"}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
-                            {lot.widthMm ? `${lot.widthMm} mm` : "—"}
+                            {lot?.widthMm ? `${lot.widthMm} mm` : "0 mm"}
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             {formatDateColumn(
@@ -629,7 +670,7 @@ export const PurchaseReturnOrderForm = ({
                           <TableCell className="text-right tabular-nums">
                             {formatMoney(0)}
                           </TableCell>
-                          <TableCell>{orDash(lot.priceUnit)}</TableCell>
+                          <TableCell>{orDash(lot?.priceUnit ?? null)}</TableCell>
                           <TableCell className="text-right tabular-nums">
                             0
                           </TableCell>

@@ -63,9 +63,9 @@ type UsePurchaseReturnOrderSubmitParams = {
   currentUserId?: string;
 };
 
-/** A lot picked for a return that has not been saved yet. */
+/** A line on a return not saved yet — blank until its `…` picks a lot. */
 export type PickedReturnLine = {
-  lot: ReturnablePurchaseLine;
+  lot: ReturnablePurchaseLine | null;
   returnQty: string;
 };
 
@@ -370,16 +370,30 @@ export const usePurchaseReturnOrderSubmit = ({
         return;
       }
 
-      // The parcels picked under `Lines → New` go back with the return.
+      if (pendingLines.some((line) => !line.lot)) {
+        setState({
+          error:
+            "A line has no product yet — pick one with its … button, or delete the line.",
+        });
+        return;
+      }
+
+      // The lines added under `Lines → New` go back with the return.
       const result = await createPurchaseReturnOrder(
         fields,
         extras,
-        pendingLines.map(({ lot, returnQty }) => ({
-          purchaseOrderItemUuid: lot.purchaseOrderItemUuid,
-          stockUuid: lot.stockUuid ?? undefined,
-          returnQty,
-          returnReason: values.returnReason || null,
-        })),
+        pendingLines.flatMap(({ lot, returnQty }) =>
+          lot
+            ? [
+                {
+                  purchaseOrderItemUuid: lot.purchaseOrderItemUuid,
+                  stockUuid: lot.stockUuid ?? undefined,
+                  returnQty,
+                  returnReason: values.returnReason || null,
+                },
+              ]
+            : [],
+        ),
       );
       setState(result);
       if (result.success) {
