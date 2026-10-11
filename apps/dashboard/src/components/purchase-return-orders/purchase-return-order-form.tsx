@@ -672,11 +672,11 @@ export const PurchaseReturnOrderForm = ({
                           </TableCell>
                           <TableCell>{orDash(lot?.priceUnit ?? null)}</TableCell>
                           <TableCell className="text-right tabular-nums">
-                            0
+                            0.00
                           </TableCell>
                           <TableCell />
                           <TableCell className="text-right tabular-nums">
-                            0
+                            0.00
                           </TableCell>
                           <TableCell />
                           <TableCell className="text-right tabular-nums">
