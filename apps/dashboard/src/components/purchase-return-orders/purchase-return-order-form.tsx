@@ -1,6 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { Controller, FormProvider } from "react-hook-form";
+import {
+  BadgeCheck,
+  Building2,
+  ClipboardList,
+  Mail,
+  MessageSquareWarning,
+  Printer,
+  ShoppingCart,
+  Warehouse,
+} from "lucide-react";
 import { usePurchaseReturnOrderSubmit } from "@/app/(dashboard)/purchase-return-orders/use-purchase-return-order-submit";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { PurchaseReturnOrderFormValues } from "@/app/(dashboard)/purchase-return-orders/validation";
@@ -11,6 +22,22 @@ import { Input } from "@/components/shadcn/input";
 import { TimePicker } from "@/components/shadcn/time-picker";
 import { Textarea } from "@/components/shadcn/textarea";
 import { Select } from "@/components/shadcn/select";
+import { Button } from "@/components/shadcn/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/shadcn/table";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
+import {
+  panelsNamed,
+  PurchaseOrderNewPanels,
+  WORK_ORDER_PANELS,
+} from "@/components/purchase-orders/purchase-order-new-panels";
+import { formatMoney } from "@/lib/helpers";
 import { DocumentUploader } from "@/components/document-uploader";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
@@ -19,6 +46,42 @@ import { FormSelectField } from "@/components/ui/form-select-field";
 import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { SurchargesSection } from "./sections/surcharges-section";
 import { TextsSection } from "./sections/texts-section";
+
+const SAVE_FIRST = "Save the return order first";
+
+// The return's `Lines` grid, column for column (blank return, 11-10-2026).
+const RETURN_LINE_COLUMNS = [
+  "Code",
+  "Order line",
+  "Product",
+  "Description",
+  "Qty(p)",
+  "Qty(a)",
+  "U",
+  "Length",
+  "Delivery date",
+  "Kg(p)",
+  "Kg(a)",
+  "Gross Price",
+  "U",
+  "Line Discount",
+  "U",
+  "Group Discount",
+  "U",
+  "Amount",
+  "Status",
+];
+
+// `Summary` on a return with no lines: every figure nought.
+const EMPTY_SUMMARY: Array<[string, string, boolean?]> = [
+  ["Materials", formatMoney(0)],
+  ["Options", formatMoney(0)],
+  ["Surcharges", formatMoney(0), true],
+  ["Tot. excl. VAT", formatMoney(0)],
+  ["VAT", formatMoney(0), true],
+  ["Tot. incl. VAT", formatMoney(0)],
+  ["Total weight", "0 Kg"],
+];
 
 type Props = {
   companies: CompanyOption[];
@@ -74,389 +137,531 @@ export const PurchaseReturnOrderForm = ({
 
   return (
     <FormProvider {...form}>
-      <form onSubmit={onSubmit} className="space-y-8">
+      <form onSubmit={onSubmit} className="space-y-6">
         <FormError>{state.error}</FormError>
 
-        {/* ── Purchase Return Order ─────────────────────────────────────── */}
-        <section className="space-y-4">
-          <h2 className="border-b pb-2 text-base font-semibold">
-            Purchase Return Order
-          </h2>
+        {/* The reference's toolbar on a return: `Make final · Print… · Send… ·
+            Show company · Show purchase order · Show complaint · Order lines ·
+            Stock on location` (blank return, 11-10-2026). The document ones
+            wait for the return to exist. */}
+        <div className="flex flex-wrap gap-2 border-b pb-4">
+          <Button type="button" disabled title={SAVE_FIRST}>
+            <BadgeCheck className="me-1.5 size-4" />
+            Make final
+          </Button>
+          <Button type="button" variant="outline" disabled title={SAVE_FIRST}>
+            <Printer className="me-1.5 size-4" />
+            Print…
+          </Button>
+          <Button type="button" variant="outline" disabled title={SAVE_FIRST}>
+            <Mail className="me-1.5 size-4" />
+            Send…
+          </Button>
+          <Button type="button" variant="outline" disabled title={SAVE_FIRST}>
+            <Building2 className="me-1.5 size-4" />
+            Show company
+          </Button>
+          <Button type="button" variant="outline" disabled title={SAVE_FIRST}>
+            <ShoppingCart className="me-1.5 size-4" />
+            Show purchase order
+          </Button>
+          <Button type="button" variant="outline" disabled title={SAVE_FIRST}>
+            <MessageSquareWarning className="me-1.5 size-4" />
+            Show complaint
+          </Button>
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/purchase-lines" />}
+          >
+            <ClipboardList className="me-1.5 size-4" />
+            Order lines
+          </Button>
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/stock-on-location" />}
+          >
+            <Warehouse className="me-1.5 size-4" />
+            Stock on location
+          </Button>
+        </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <FormLabel htmlFor="supplierUuid" required>
-                Supplier
-                {isLoadingSupplierData && (
-                  <span className="ml-2 text-xs font-normal text-muted-foreground">
-                    Loading...
-                  </span>
-                )}
-              </FormLabel>
-              <Controller
-                control={control}
-                name="supplierUuid"
-                render={({ field }) => (
-                  <Select
-                    id="supplierUuid"
-                    value={field.value || ""}
-                    options={supplierOptions}
-                    onValueChange={handleSupplierChange}
-                    invalid={!!errors.supplierUuid}
+        {/* The reference's header: the document on the left, its type, the
+            sent flags and the summary on the right. */}
+        <section className="space-y-4 rounded-lg border p-4">
+          <h1 className="text-lg font-semibold">Purchase return order</h1>
+
+          <div className="grid gap-x-10 gap-y-6 lg:grid-cols-[3fr_2fr]">
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <FormLabel htmlFor="supplierUuid" required>
+                    Supplier
+                    {isLoadingSupplierData && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        Loading...
+                      </span>
+                    )}
+                  </FormLabel>
+                  <Controller
+                    control={control}
+                    name="supplierUuid"
+                    render={({ field }) => (
+                      <Select
+                        id="supplierUuid"
+                        value={field.value || ""}
+                        options={supplierOptions}
+                        onValueChange={handleSupplierChange}
+                        invalid={!!errors.supplierUuid}
+                      />
+                    )}
                   />
-                )}
-              />
-              <FormFieldError message={errors.supplierUuid?.message} />
-            </div>
+                  <FormFieldError message={errors.supplierUuid?.message} />
+                </div>
 
-            {/* Greyed and fixed in the reference: a return is `Materials`. */}
-            <FormSelectField
-              control={control}
-              id="purchaseOrderType"
-              name="purchaseOrderType"
-              label="Purchase order type"
-              options={purchaseOrderTypeOptions}
-              emptyValue=""
-              disabled
-            />
-
-            <div>
-              <FormLabel htmlFor="purchaseOrderLabel">Purchase order</FormLabel>
-              {/* Greyed in the reference: set by `Par. return` on the order. */}
-              <Input
-                id="purchaseOrderLabel"
-                value={purchaseOrderLabel}
-                readOnly
-                disabled
-              />
-            </div>
-
-            <div>
-              <FormLabel htmlFor="complaintRef">Complaint</FormLabel>
-              {/* Greyed in the reference: `Par. return` raises the complaint. */}
-              <Input
-                id="complaintRef"
-                value={watch("complaintRef") ?? ""}
-                readOnly
-                disabled
-              />
-            </div>
-
-            <FormSelectField
-              control={control}
-              id="contactUuid"
-              name="contactUuid"
-              label="Contact"
-              options={contactOptions}
-              emptyValue=""
-              disabled={contactOptions.length <= 1}
-            />
-
-            <FormSelectField
-              control={control}
-              id="purchaser"
-              name="purchaser"
-              label="Purchaser"
-              options={purchaserOptions}
-              emptyValue=""
-            />
-          </div>
-
-          <div className="flex gap-6">
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <input type="checkbox" {...register("isPrinted")} />
-              Printed
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <input type="checkbox" {...register("isMailed")} />
-              Mailed
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <input type="checkbox" {...register("isFaxed")} />
-              Faxed
-            </label>
-          </div>
-        </section>
-
-        {/* ── Invoicing ─────────────────────────────────────────────────── */}
-        <section className="space-y-4">
-          <h2 className="border-b pb-2 text-base font-semibold">Invoicing</h2>
-          <div className="max-w-sm">
-            <FormSelectField
-              control={control}
-              id="paymentTerms"
-              name="paymentTerms"
-              label="Payment terms"
-              options={paymentTermOptions}
-              emptyValue=""
-            />
-          </div>
-        </section>
-
-        {/* ── Delivery ──────────────────────────────────────────────────── */}
-        <section className="space-y-4">
-          <h2 className="border-b pb-2 text-base font-semibold">Delivery</h2>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <FormLabel htmlFor="returnDate">Return date</FormLabel>
-              <Controller
-                name="returnDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    id="returnDate"
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
+                <div>
+                  <FormLabel htmlFor="purchaseOrderLabel">
+                    Purchase order
+                  </FormLabel>
+                  {/* Greyed in the reference: set by `Par. return` on the
+                      order. */}
+                  <Input
+                    id="purchaseOrderLabel"
+                    value={purchaseOrderLabel}
+                    readOnly
+                    disabled
                   />
-                )}
-              />
+                </div>
+
+                <div>
+                  <FormLabel htmlFor="complaintRef">Complaint</FormLabel>
+                  {/* Greyed in the reference: `Par. return` raises the
+                      complaint. */}
+                  <Input
+                    id="complaintRef"
+                    value={watch("complaintRef") ?? ""}
+                    readOnly
+                    disabled
+                  />
+                </div>
+
+                <FormSelectField
+                  control={control}
+                  id="contactUuid"
+                  name="contactUuid"
+                  label="Contact"
+                  options={contactOptions}
+                  emptyValue=""
+                  disabled={contactOptions.length <= 1}
+                />
+
+                <FormSelectField
+                  control={control}
+                  id="purchaser"
+                  name="purchaser"
+                  label="Purchaser"
+                  options={purchaserOptions}
+                  emptyValue=""
+                />
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-sm font-semibold">Invoicing</h2>
+                <FormSelectField
+                  control={control}
+                  id="paymentTerms"
+                  name="paymentTerms"
+                  label="Payment terms"
+                  options={paymentTermOptions}
+                  emptyValue=""
+                />
+              </div>
+
+              <div className="space-y-4">
+                <h2 className="text-sm font-semibold">Delivery</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <FormLabel htmlFor="returnDate">Return date</FormLabel>
+                    <Controller
+                      name="returnDate"
+                      control={control}
+                      render={({ field }) => (
+                        <DatePicker
+                          id="returnDate"
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <FormSelectField
+                      control={control}
+                      id="returnReason"
+                      name="returnReason"
+                      label="Return reason"
+                      options={returnReasonOptions}
+                      emptyValue=""
+                    />
+                    <FormFieldError message={errors.returnReason?.message} />
+                  </div>
+                </div>
+
+                <Controller
+                  control={control}
+                  name="isDropOff"
+                  render={({ field }) => (
+                    <label className="flex cursor-pointer items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                      />
+                      Drop-off
+                    </label>
+                  )}
+                />
+
+                {/* Both always show, as in the reference: the supplier's
+                    address is greyed unless we drop the goods off ourselves,
+                    and Pick-up picks one of our own addresses. */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormSelectField
+                    control={control}
+                    id="deliveryAddressUuid"
+                    name="deliveryAddressUuid"
+                    label="Delivery address"
+                    options={addressOptions}
+                    emptyValue=""
+                    disabled={!isDropOff || addressOptions.length <= 1}
+                  />
+
+                  <FormSelectField
+                    control={control}
+                    id="pickupAddress"
+                    name="pickupAddress"
+                    label="Pick-up"
+                    options={pickupOptions}
+                    emptyValue=""
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
+            <div className="space-y-6">
+              {/* Greyed and fixed in the reference: a return is `Materials`. */}
               <FormSelectField
                 control={control}
-                id="returnReason"
-                name="returnReason"
-                label="Return reason"
-                options={returnReasonOptions}
+                id="purchaseOrderType"
+                name="purchaseOrderType"
+                label="Purchase order type"
+                options={purchaseOrderTypeOptions}
                 emptyValue=""
+                disabled
               />
-              <FormFieldError message={errors.returnReason?.message} />
-            </div>
 
-            <div className="flex items-end pb-1">
-              <Controller
-                control={control}
-                name="isDropOff"
-                render={({ field }) => (
-                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+              {/* Greyed in the reference: Print… and Send… set them. */}
+              <div className="space-y-1">
+                {(
+                  [
+                    ["isPrinted", "Printed"],
+                    ["isMailed", "Mailed"],
+                    ["isFaxed", "Faxed"],
+                  ] as const
+                ).map(([name, label]) => (
+                  <label
+                    key={name}
+                    className="flex items-center gap-2 text-sm text-muted-foreground"
+                  >
                     <input
                       type="checkbox"
+                      checked={watch(name) ?? false}
+                      disabled
+                      readOnly
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+
+              <section className="space-y-2">
+                <h2 className="text-sm font-semibold">Summary</h2>
+                <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-sm">
+                  <dt />
+                  <dd className="text-right text-xs text-muted-foreground">
+                    Revenue
+                  </dd>
+                  {EMPTY_SUMMARY.map(([label, value, rule]) => (
+                    <div
+                      key={label}
+                      className={rule ? "contents *:border-b *:pb-1" : "contents"}
+                    >
+                      <dt className="text-muted-foreground">{label}</dt>
+                      <dd className="text-right tabular-nums">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        {/* Every panel the reference stacks under the header, in its order:
+            Workorders · Lines · Surcharges · Invoice lines · Complaints ·
+            Logistics · Texts · Documents · PDF Files. Only Lines is open. */}
+        <div className="space-y-2">
+          <CollapsibleSection title="Workorders">
+            <div className="space-y-2 p-3">
+              <PurchaseOrderNewPanels panels={WORK_ORDER_PANELS} />
+            </div>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Lines" summary="0 lines" defaultOpen>
+            <div className="space-y-2 p-3">
+              {/* `New` is greyed until there is a supplier and a saved
+                  return to put the line on. */}
+              <div className="flex flex-wrap gap-2">
+                {["New", "Delete", "Sawing specifications"].map((action) => (
+                  <Button
+                    key={action}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled
+                    title={SAVE_FIRST}
+                  >
+                    {action}
+                  </Button>
+                ))}
+              </div>
+              <div className="overflow-x-auto rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {RETURN_LINE_COLUMNS.map((column, index) => (
+                        <TableHead key={`${column}-${index}`}>{column}</TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell
+                        colSpan={RETURN_LINE_COLUMNS.length}
+                        className="text-muted-foreground"
+                      >
+                        No lines.
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Surcharges">
+            <div className="p-3">
+              <SurchargesSection companyOptions={supplierOptions} />
+            </div>
+          </CollapsibleSection>
+
+          <PurchaseOrderNewPanels
+            panels={panelsNamed(["Invoice lines", "Complaints"])}
+          />
+
+          <CollapsibleSection title="Logistics">
+            <div className="space-y-4 p-3">
+              <div className="grid grid-cols-3 gap-3">
+                <Controller
+                  control={control}
+                  name="completeDelivery"
+                  render={({ field }) => (
+                    <FormCheckboxCard
+                      label="Complete delivery"
                       checked={field.value}
+                      active={field.value}
                       onChange={(e) => field.onChange(e.target.checked)}
                     />
-                    Drop-off
-                  </label>
-                )}
-              />
-            </div>
-
-            {/* Both always show, as in the reference: the supplier's address
-                is greyed unless we drop the goods off ourselves, and Pick-up
-                picks one of our own addresses. */}
-            <FormSelectField
-              control={control}
-              id="deliveryAddressUuid"
-              name="deliveryAddressUuid"
-              label="Delivery address"
-              options={addressOptions}
-              emptyValue=""
-              disabled={!isDropOff || addressOptions.length <= 1}
-            />
-
-            <FormSelectField
-              control={control}
-              id="pickupAddress"
-              name="pickupAddress"
-              label="Pick-up"
-              options={pickupOptions}
-              emptyValue=""
-            />
-          </div>
-        </section>
-
-        {/* ── Surcharges ────────────────────────────────────────────────── */}
-        <SurchargesSection companyOptions={supplierOptions} />
-
-        {/* ── Logistics ─────────────────────────────────────────────────── */}
-        <section className="space-y-4">
-          <h2 className="border-b pb-2 text-base font-semibold">Logistics</h2>
-
-          <div className="grid grid-cols-3 gap-3">
-            <Controller
-              control={control}
-              name="completeDelivery"
-              render={({ field }) => (
-                <FormCheckboxCard
-                  label="Complete delivery"
-                  checked={field.value}
-                  active={field.value}
-                  onChange={(e) => field.onChange(e.target.checked)}
+                  )}
                 />
-              )}
-            />
-            <Controller
-              control={control}
-              name="vehicleWithCrane"
-              render={({ field }) => (
-                <FormCheckboxCard
-                  label="Vehicle with crane required"
-                  checked={field.value}
-                  active={field.value}
-                  onChange={(e) => field.onChange(e.target.checked)}
+                <Controller
+                  control={control}
+                  name="vehicleWithCrane"
+                  render={({ field }) => (
+                    <FormCheckboxCard
+                      label="Vehicle with crane required"
+                      checked={field.value}
+                      active={field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                    />
+                  )}
                 />
-              )}
-            />
-            <Controller
-              control={control}
-              name="vehicleWithCanopy"
-              render={({ field }) => (
-                <FormCheckboxCard
-                  label="Vehicle with canopy required"
-                  checked={field.value}
-                  active={field.value}
-                  onChange={(e) => field.onChange(e.target.checked)}
+                <Controller
+                  control={control}
+                  name="vehicleWithCanopy"
+                  render={({ field }) => (
+                    <FormCheckboxCard
+                      label="Vehicle with canopy required"
+                      checked={field.value}
+                      active={field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                    />
+                  )}
                 />
-              )}
-            />
-            <Controller
-              control={control}
-              name="bundlingSeparate"
-              render={({ field }) => (
-                <FormCheckboxCard
-                  label="Bundling separate"
-                  checked={field.value}
-                  active={field.value}
-                  onChange={(e) => field.onChange(e.target.checked)}
+                <Controller
+                  control={control}
+                  name="bundlingSeparate"
+                  render={({ field }) => (
+                    <FormCheckboxCard
+                      label="Bundling separate"
+                      checked={field.value}
+                      active={field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                    />
+                  )}
                 />
-              )}
-            />
-            <Controller
-              control={control}
-              name="unloadingWarehousePerLine"
-              render={({ field }) => (
-                <FormCheckboxCard
-                  label="Unloading warehouse per line"
-                  checked={field.value}
-                  active={field.value}
-                  onChange={(e) => field.onChange(e.target.checked)}
+                <Controller
+                  control={control}
+                  name="unloadingWarehousePerLine"
+                  render={({ field }) => (
+                    <FormCheckboxCard
+                      label="Unloading warehouse per line"
+                      checked={field.value}
+                      active={field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                    />
+                  )}
                 />
-              )}
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <FormSelectField
-              control={control}
-              id="transportRegion"
-              name="transportRegion"
-              label="Transport"
-              options={transportRegionOptions}
-              emptyValue=""
-            />
-            <FormSelectField
-              control={control}
-              id="transportMode"
-              name="transportMode"
-              label="Transport mode"
-              options={transportModeOptions}
-              emptyValue=""
-            />
-            <div>
-              <FormLabel htmlFor="pickupAfterTime">Pick up after</FormLabel>
-              <Controller
-                name="pickupAfterTime"
-                control={control}
-                render={({ field }) => (
-                  <TimePicker
-                    id="pickupAfterTime"
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="pickupForTime">Pick up for</FormLabel>
-              <Controller
-                name="pickupForTime"
-                control={control}
-                render={({ field }) => (
-                  <TimePicker
-                    id="pickupForTime"
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="maxLengthMm">Max. Length (mm)</FormLabel>
-              <Input
-                id="maxLengthMm"
-                type="number"
-                {...register("maxLengthMm")}
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="maxBundleWeightKg">
-                Max. Bundle weight (kg)
-              </FormLabel>
-              <Input
-                id="maxBundleWeightKg"
-                type="number"
-                step="0.01"
-                {...register("maxBundleWeightKg")}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* ── Remarks ───────────────────────────────────────────────────── */}
-        <section className="space-y-4">
-          <h2 className="border-b pb-2 text-base font-semibold">Remarks</h2>
-          <Textarea
-            id="remarks"
-            rows={4}
-            placeholder="Additional remarks..."
-            {...register("remarks")}
-          />
-        </section>
-
-        {/* ── Documents ─────────────────────────────────────────────────── */}
-        <section className="space-y-4">
-          <h2 className="border-b pb-2 text-base font-semibold">Documents</h2>
-          <div className="space-y-2">
-            {watch("documents")?.map((doc, index) => (
-              <div key={doc.id} className="flex items-center gap-3 text-sm">
-                <span className="flex-1">{doc.fileName}</span>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await fetch(`/api/documents/${doc.id}/delete`, {
-                      method: "DELETE",
-                    });
-                    const current = watch("documents") ?? [];
-                    setValue(
-                      "documents",
-                      current.filter((_, i) => i !== index),
-                    );
-                  }}
-                  className="text-muted-foreground hover:text-destructive"
-                  aria-label="Remove"
-                >
-                  ✕
-                </button>
               </div>
-            ))}
-          </div>
-          <DocumentUploader
-            onSuccess={(uploads) => {
-              const current = watch("documents") ?? [];
-              setValue("documents", [
-                ...current,
-                ...uploads.map((u) => ({
-                  id: u.documentId,
-                  fileName: u.fileName,
-                })),
-              ]);
-            }}
-          />
-        </section>
 
-        {/* ── Texts ─────────────────────────────────────────────────────── */}
-        <TextsSection textCategories={textCategories} />
+              <div className="grid grid-cols-3 gap-4">
+                <FormSelectField
+                  control={control}
+                  id="transportRegion"
+                  name="transportRegion"
+                  label="Transport"
+                  options={transportRegionOptions}
+                  emptyValue=""
+                />
+                <FormSelectField
+                  control={control}
+                  id="transportMode"
+                  name="transportMode"
+                  label="Transport mode"
+                  options={transportModeOptions}
+                  emptyValue=""
+                />
+                <div>
+                  <FormLabel htmlFor="pickupAfterTime">Pick up after</FormLabel>
+                  <Controller
+                    name="pickupAfterTime"
+                    control={control}
+                    render={({ field }) => (
+                      <TimePicker
+                        id="pickupAfterTime"
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                </div>
+                <div>
+                  <FormLabel htmlFor="pickupForTime">Pick up for</FormLabel>
+                  <Controller
+                    name="pickupForTime"
+                    control={control}
+                    render={({ field }) => (
+                      <TimePicker
+                        id="pickupForTime"
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                </div>
+                <div>
+                  <FormLabel htmlFor="maxLengthMm">Max. Length (mm)</FormLabel>
+                  <Input
+                    id="maxLengthMm"
+                    type="number"
+                    {...register("maxLengthMm")}
+                  />
+                </div>
+                <div>
+                  <FormLabel htmlFor="maxBundleWeightKg">
+                    Max. Bundle weight (kg)
+                  </FormLabel>
+                  <Input
+                    id="maxBundleWeightKg"
+                    type="number"
+                    step="0.01"
+                    {...register("maxBundleWeightKg")}
+                  />
+                </div>
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Texts">
+            <div className="space-y-4 p-3">
+              <TextsSection textCategories={textCategories} />
+              <div>
+                <FormLabel htmlFor="remarks">Remarks</FormLabel>
+                <Textarea
+                  id="remarks"
+                  rows={4}
+                  placeholder="Additional remarks..."
+                  {...register("remarks")}
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Documents"
+            summary={`${watch("documents")?.length ?? 0} Documents`}
+          >
+            <div className="space-y-2 p-3">
+              {watch("documents")?.map((doc, index) => (
+                <div key={doc.id} className="flex items-center gap-3 text-sm">
+                  <span className="flex-1">{doc.fileName}</span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await fetch(`/api/documents/${doc.id}/delete`, {
+                        method: "DELETE",
+                      });
+                      const current = watch("documents") ?? [];
+                      setValue(
+                        "documents",
+                        current.filter((_, i) => i !== index),
+                      );
+                    }}
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label="Remove"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <DocumentUploader
+                onSuccess={(uploads) => {
+                  const current = watch("documents") ?? [];
+                  setValue("documents", [
+                    ...current,
+                    ...uploads.map((u) => ({
+                      id: u.documentId,
+                      fileName: u.fileName,
+                    })),
+                  ]);
+                }}
+              />
+            </div>
+          </CollapsibleSection>
+
+          <PurchaseOrderNewPanels panels={panelsNamed(["PDF Files"])} />
+        </div>
 
         <FormActions
           submitLabel={
