@@ -52,6 +52,10 @@ import {
 import { recordFreightMovement } from "@/lib/server/freight";
 import { applyReceipt } from "@/lib/server/receipts";
 import { markSupplyDelivered } from "@/lib/server/external-processing";
+import {
+  issuePurchaseReturnPick,
+  recordPurchaseReturnLinePicked,
+} from "@/lib/server/purchase-returns";
 import { applyMove } from "@/lib/server/stock-movements";
 import { breachedTolerance, ToleranceKind } from "@/lib/server/tolerances";
 import { getWorkOrderLineDetail, LineDetail } from "@/lib/server/work-order-line-detail";
@@ -1562,6 +1566,18 @@ export const reportWarehouseWorkOrderLineCompletion = async (
                     : Number(pick.kgActual),
                 value: valueSent,
               });
+            } else if (line.purchaseReturnOrderItemUuid) {
+              // 🔑 A purchase return's picking (950034 → 327403, 11-10-2026):
+              // no destination — the lot leaves for the supplier on the
+              // report, through the return's own movement, and stays where
+              // it was for what is left (26AQWF, 10 → 8 ST on `Ontvangst`).
+              await issuePurchaseReturnPick(tx, {
+                purchaseReturnOrderItemUuid: line.purchaseReturnOrderItemUuid,
+                source,
+                quantity,
+                userId,
+                warehouseWorkOrderLineUuid: input.lineUuid,
+              });
             } else if (meta.stockEffect === "move") {
               const toLocationUuid = pick.toLocationUuid ?? line.toLocationUuid;
               if (!toLocationUuid) {
@@ -1655,10 +1671,13 @@ export const reportWarehouseWorkOrderLineCompletion = async (
         0,
       );
       // An unloading reported without a scale keeps the calculated weight, as
-      // its lot does: `Gewogen gewicht` left at 0 on 327402 (11-10-2026).
+      // its lot does: `Gewogen gewicht` left at 0 on 327402 (11-10-2026). So
+      // does a purchase return's picking: 327403 read Kg(a) 62,8 = Kg(p).
       const plannedQty = Number(line.qtyPlanned ?? 0);
       const kgActual =
-        weighedKg === 0 && meta.stockEffect === "in" && plannedQty > 0
+        weighedKg === 0 &&
+        (meta.stockEffect === "in" || line.purchaseReturnOrderItemUuid !== null) &&
+        plannedQty > 0
           ? (Number(line.kgPlanned ?? 0) * qtyActual) / plannedQty
           : weighedKg;
 
@@ -1682,6 +1701,15 @@ export const reportWarehouseWorkOrderLineCompletion = async (
             reportedIdentities[0]?.internalBatch ?? line.internalBatch,
         })
         .where(eq(WarehouseWorkOrderLines.uuid, input.lineUuid));
+
+      // The goods have gone back to the supplier: the return line reads what
+      // went, and the return is `Delivered` once all of it has.
+      if (line.purchaseReturnOrderItemUuid) {
+        await recordPurchaseReturnLinePicked(
+          tx,
+          line.purchaseReturnOrderItemUuid,
+        );
+      }
 
       // The goods have physically gone to the customer, so the order line has
       // been delivered by that much. Short-picking closes the job, not the
@@ -1732,6 +1760,9 @@ export const reportWarehouseWorkOrderLineCompletion = async (
 
     revalidatePath("/warehouse-work-orders");
     revalidatePath(`/warehouse-work-orders/${workOrder.uuid}`);
+    if (line.purchaseReturnOrderItemUuid) {
+      revalidatePath("/purchase-return-orders", "layout");
+    }
     return { success: true };
   } catch (error) {
     return { error: describeError(error, "Failed to report the line") };

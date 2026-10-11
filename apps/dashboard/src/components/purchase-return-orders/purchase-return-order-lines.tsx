@@ -37,7 +37,7 @@ import {
   onWorkingDay,
   orDash,
 } from "@/lib/helpers";
-import { ORDER_LINE_STATUS_LABELS } from "@/lib/labels";
+import { PURCHASE_RETURN_LINE_STATUS_LABELS } from "@/lib/labels";
 
 // The return's `Lines` grid, column for column (blank return, 11-10-2026).
 export const RETURN_LINE_COLUMNS = [
@@ -360,8 +360,16 @@ export const PurchaseReturnOrderLines = ({ returnOrder, returnDate }: Props) => 
                       </span>
                     )}
                   </TableCell>
+                  {/* What the picking reported as gone; a return sent back
+                      from its own screen reads its planned quantity. */}
                   <TableCell className="text-right tabular-nums">
-                    {formatNumber(hasLeft ? Number(item.returnQty ?? 0) : 0)}
+                    {formatNumber(
+                      item.qtyActual !== null
+                        ? Number(item.qtyActual)
+                        : hasLeft
+                          ? Number(item.returnQty ?? 0)
+                          : 0,
+                    )}
                   </TableCell>
                   <TableCell>{orDash(item.unit ? item.unit.toUpperCase() : null)}</TableCell>
                   <TableCell className="text-right tabular-nums">
@@ -379,7 +387,13 @@ export const PurchaseReturnOrderLines = ({ returnOrder, returnDate }: Props) => 
                     {formatNumber(Number(item.weightKg ?? 0))}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatNumber(hasLeft ? Number(item.weightKg ?? 0) : 0)}
+                    {formatNumber(
+                      item.kgActual !== null
+                        ? Number(item.kgActual)
+                        : hasLeft
+                          ? Number(item.weightKg ?? 0)
+                          : 0,
+                    )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatMoney(
@@ -408,7 +422,7 @@ export const PurchaseReturnOrderLines = ({ returnOrder, returnDate }: Props) => 
                   </TableCell>
                   <TableCell>
                     {item.lineStatus
-                      ? ORDER_LINE_STATUS_LABELS[item.lineStatus]
+                      ? PURCHASE_RETURN_LINE_STATUS_LABELS[item.lineStatus]
                       : "Provisional"}
                   </TableCell>
                 </TableRow>

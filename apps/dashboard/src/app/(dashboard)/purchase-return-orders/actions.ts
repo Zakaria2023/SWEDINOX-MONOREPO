@@ -40,7 +40,14 @@ import {
 import { JournalEntries } from "@/db/schema/journal-entries";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { StockMovements } from "@/db/schema/stock-movements";
+import {
+  SelectWarehouseWorkOrderLines,
+  SelectWarehouseWorkOrders,
+  WarehouseWorkOrderLines,
+  WarehouseWorkOrderPicks,
+  WarehouseWorkOrders,
+} from "@/db/schema/warehouse-work-orders";
+import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { SelectTexts } from "@/db/schema/texts";
 import { InsertTexts, Texts } from "@/db/schema/texts";
 import { PurchaseReturnOrderReason } from "@/lib/enums";
@@ -52,18 +59,17 @@ import {
   getPaymentTermDueDate,
   isPurchaseReturnOrderEditable,
   moneyString,
-  restateLotValue,
+  onWorkingDay,
   summarisePurchaseInvoice,
   toDateString,
   todayDateString,
-  STOCK_QUANTITY_SCALE,
 } from "@/lib/helpers";
-import { recordFreightMovement } from "@/lib/server/freight";
 import {
-  buildInventoryMovementEntry,
   buildPurchaseJournalEntry,
   LEDGER_ACCOUNTS,
 } from "@/lib/server/ledger";
+import { applyPurchaseReturnIssue } from "@/lib/server/purchase-returns";
+import { nextWorkOrderNumber } from "@/lib/server/work-order-numbers";
 import { currentUser } from "@clerk/nextjs/server";
 import {
   and,
@@ -73,8 +79,10 @@ import {
   getTableColumns,
   inArray,
   ne,
+  notInArray,
   sql,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/mysql-core";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -165,16 +173,26 @@ export type PurchaseReturnOrderLineDetail = SelectPurchaseReturnOrderItems & {
   groupDiscountPercent: SelectPurchaseOrderItems["groupDiscountPercent"] | null;
   lotLengthMm: SelectStock["lengthMm"] | null;
   lotWidthMm: SelectStock["widthMm"] | null;
+  lotThicknessMm: SelectStock["thicknessMm"] | null;
+  // Qty(a) and Kg(a): what the picking raised for the line reported as gone —
+  // SUM over its reported work-order lines, null while none has been.
+  qtyActual: string | null;
+  kgActual: string | null;
 };
 
 export type PurchaseReturnOrderDetail = SelectPurchaseReturnOrders & {
   supplierName: SelectCompanies["companyName"] | null;
   contactFirstName: SelectContacts["firstName"] | null;
   contactLastName: SelectContacts["lastName"] | null;
+  /** Where `Send…` would go — named on the dialog, greyed when blank. */
+  contactEmail: SelectContacts["email"] | null;
+  contactFax: SelectContacts["fax"] | null;
   originalPurchaseOrderId: SelectPurchaseOrders["id"] | null;
   deliveryStreetAndNo: SelectCompanyAddresses["streetAndNo"] | null;
   deliveryPostalCode: SelectCompanyAddresses["postalCode"] | null;
   deliveryCity: SelectCompanyAddresses["city"] | null;
+  deliveryCountry: SelectCompanyAddresses["country"] | null;
+  warehouseWorkOrders: PurchaseReturnWorkOrderLine[];
   complaintId: SelectComplaints["id"] | null;
   complaintStatus: SelectComplaints["status"] | null;
   complaintReportDate: SelectComplaints["reportDate"] | null;
@@ -195,6 +213,45 @@ export type AddPurchaseReturnLinesOptions = {
    * off and keeps the price the goods were bought at.
    */
   unpriced?: boolean;
+};
+
+// One line of the picking that carries a return's goods out — the return's
+// `Workorders → Warehouse workorders` panel (950034 → 327403, 11-10-2026).
+export type PurchaseReturnWorkOrderLine = {
+  uuid: SelectWarehouseWorkOrderLines["uuid"];
+  workOrderUuid: SelectWarehouseWorkOrders["uuid"];
+  number: SelectWarehouseWorkOrders["number"];
+  type: SelectWarehouseWorkOrders["type"];
+  plannedDate: SelectWarehouseWorkOrders["plannedDate"];
+  workOrderStatus: SelectWarehouseWorkOrders["status"];
+  lineNumber: SelectWarehouseWorkOrderLines["lineNumber"];
+  lineStatus: SelectWarehouseWorkOrderLines["status"];
+  productUuid: SelectWarehouseWorkOrderLines["productUuid"];
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  length: SelectWarehouseWorkOrderLines["length"];
+  width: SelectWarehouseWorkOrderLines["width"];
+  qtyPlanned: SelectWarehouseWorkOrderLines["qtyPlanned"];
+  qtyActual: SelectWarehouseWorkOrderLines["qtyActual"];
+  kgPlanned: SelectWarehouseWorkOrderLines["kgPlanned"];
+  kgActual: SelectWarehouseWorkOrderLines["kgActual"];
+  charge: SelectWarehouseWorkOrderLines["charge"];
+  unit: SelectPurchaseReturnOrderItems["unit"];
+  fromLocation: SelectWarehouses["name"] | null;
+  toLocation: SelectWarehouses["name"] | null;
+  // The latest moment the floor reported a parcel of the line — MAX(...).
+  finishedAt: Date | null;
+  purchaseOrderId: SelectPurchaseOrders["id"] | null;
+  receiptDate: SelectStock["receiptDate"] | null;
+};
+
+type ReturnTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+type ReturnPickingInput = {
+  returnOrder: Pick<SelectPurchaseReturnOrders, "uuid" | "id" | "supplierUuid">;
+  /** The return date, on a working day — the day the floor is to pick it. */
+  plannedDate: string;
+  userId: string | null;
 };
 
 export const getPurchaseReturnOrders = async (): Promise<
@@ -509,10 +566,13 @@ export const getPurchaseReturnOrderDetail = async (
       supplierName: Companies.companyName,
       contactFirstName: Contacts.firstName,
       contactLastName: Contacts.lastName,
+      contactEmail: Contacts.email,
+      contactFax: Contacts.fax,
       originalPurchaseOrderId: PurchaseOrders.id,
       deliveryStreetAndNo: CompanyAddresses.streetAndNo,
       deliveryPostalCode: CompanyAddresses.postalCode,
       deliveryCity: CompanyAddresses.city,
+      deliveryCountry: CompanyAddresses.country,
       complaintId: Complaints.id,
       complaintStatus: Complaints.status,
       complaintReportDate: Complaints.reportDate,
@@ -548,6 +608,19 @@ export const getPurchaseReturnOrderDetail = async (
         groupDiscountPercent: PurchaseOrderItems.groupDiscountPercent,
         lotLengthMm: Stock.lengthMm,
         lotWidthMm: Stock.widthMm,
+        lotThicknessMm: Stock.thicknessMm,
+        qtyActual: sql<string | null>`(
+          SELECT SUM(${WarehouseWorkOrderLines.qtyActual})
+          FROM ${WarehouseWorkOrderLines}
+          WHERE ${WarehouseWorkOrderLines.purchaseReturnOrderItemUuid} = ${PurchaseReturnOrderItems.uuid}
+            AND ${WarehouseWorkOrderLines.status} IN ('ready', 'approved')
+        )`,
+        kgActual: sql<string | null>`(
+          SELECT SUM(${WarehouseWorkOrderLines.kgActual})
+          FROM ${WarehouseWorkOrderLines}
+          WHERE ${WarehouseWorkOrderLines.purchaseReturnOrderItemUuid} = ${PurchaseReturnOrderItems.uuid}
+            AND ${WarehouseWorkOrderLines.status} IN ('ready', 'approved')
+        )`,
       })
       .from(PurchaseReturnOrderItems)
       .leftJoin(
@@ -579,7 +652,78 @@ export const getPurchaseReturnOrderDetail = async (
       .orderBy(desc(PurchaseInvoices.createdAt)),
   ]);
 
-  return { ...returnOrder, items, surcharges, texts, credits };
+  // The picking `Make final` raised, read after the rest — the connection
+  // ceiling.
+  const FromLocation = alias(Warehouses, "wo_from_location");
+  const ToLocation = alias(Warehouses, "wo_to_location");
+  const warehouseWorkOrders = await db
+    .select({
+      uuid: WarehouseWorkOrderLines.uuid,
+      workOrderUuid: WarehouseWorkOrders.uuid,
+      number: WarehouseWorkOrders.number,
+      type: WarehouseWorkOrders.type,
+      plannedDate: WarehouseWorkOrders.plannedDate,
+      workOrderStatus: WarehouseWorkOrders.status,
+      lineNumber: WarehouseWorkOrderLines.lineNumber,
+      lineStatus: WarehouseWorkOrderLines.status,
+      productUuid: WarehouseWorkOrderLines.productUuid,
+      productCode: Products.productCode,
+      productName: Products.name,
+      length: WarehouseWorkOrderLines.length,
+      width: WarehouseWorkOrderLines.width,
+      qtyPlanned: WarehouseWorkOrderLines.qtyPlanned,
+      qtyActual: WarehouseWorkOrderLines.qtyActual,
+      kgPlanned: WarehouseWorkOrderLines.kgPlanned,
+      kgActual: WarehouseWorkOrderLines.kgActual,
+      charge: WarehouseWorkOrderLines.charge,
+      unit: PurchaseReturnOrderItems.unit,
+      fromLocation: FromLocation.name,
+      toLocation: ToLocation.name,
+      finishedAt: sql<Date | null>`(
+        SELECT MAX(${WarehouseWorkOrderPicks.executedAt})
+        FROM ${WarehouseWorkOrderPicks}
+        WHERE ${WarehouseWorkOrderPicks.workOrderLineUuid} = ${WarehouseWorkOrderLines.uuid}
+      )`.mapWith((value) => (value ? new Date(value) : null)),
+      purchaseOrderId: PurchaseOrders.id,
+      receiptDate: Stock.receiptDate,
+    })
+    .from(WarehouseWorkOrderLines)
+    .innerJoin(
+      WarehouseWorkOrders,
+      eq(WarehouseWorkOrderLines.workOrderUuid, WarehouseWorkOrders.uuid),
+    )
+    .innerJoin(
+      PurchaseReturnOrderItems,
+      eq(
+        WarehouseWorkOrderLines.purchaseReturnOrderItemUuid,
+        PurchaseReturnOrderItems.uuid,
+      ),
+    )
+    .leftJoin(Products, eq(WarehouseWorkOrderLines.productUuid, Products.uuid))
+    .leftJoin(Stock, eq(WarehouseWorkOrderLines.stockUuid, Stock.uuid))
+    .leftJoin(PurchaseOrders, eq(Stock.purchaseOrderUuid, PurchaseOrders.uuid))
+    .leftJoin(
+      FromLocation,
+      eq(WarehouseWorkOrderLines.fromLocationUuid, FromLocation.uuid),
+    )
+    .leftJoin(
+      ToLocation,
+      eq(WarehouseWorkOrderLines.toLocationUuid, ToLocation.uuid),
+    )
+    .where(eq(PurchaseReturnOrderItems.purchaseReturnOrderUuid, uuid))
+    .orderBy(
+      asc(WarehouseWorkOrders.number),
+      asc(WarehouseWorkOrderLines.lineNumber),
+    );
+
+  return {
+    ...returnOrder,
+    items,
+    surcharges,
+    texts,
+    credits,
+    warehouseWorkOrders,
+  };
 };
 
 /**
@@ -626,6 +770,32 @@ export const dispatchPurchaseReturnOrder = async (
       return { error: "This return has no lines to send back." };
     }
 
+    // `Make final` raised a picking to carry these goods out; reporting it is
+    // what sends them, and doing both would send the same goods twice.
+    const [openPicking] = await db
+      .select({ number: WarehouseWorkOrders.number })
+      .from(WarehouseWorkOrderLines)
+      .innerJoin(
+        WarehouseWorkOrders,
+        eq(WarehouseWorkOrderLines.workOrderUuid, WarehouseWorkOrders.uuid),
+      )
+      .where(
+        and(
+          inArray(
+            WarehouseWorkOrderLines.purchaseReturnOrderItemUuid,
+            items.map((item) => item.uuid),
+          ),
+          notInArray(WarehouseWorkOrderLines.status, ["ready", "approved"]),
+        ),
+      )
+      .limit(1);
+
+    if (openPicking) {
+      return {
+        error: `Warehouse work order ${openPicking.number} is picking these goods — report it complete there, and the return follows.`,
+      };
+    }
+
     const user = await currentUser();
     const userId = user?.id;
     if (!userId) {
@@ -664,92 +834,15 @@ export const dispatchPurchaseReturnOrder = async (
           continue;
         }
 
-        const returned = Number(item.returnQty ?? 0);
-        const free =
-          Number(stockRow.quantity) - Number(stockRow.reservedQuantity);
-
-        // Reserved goods are promised to a customer; they can't be sent back to
-        // the supplier without breaking that promise.
-        if (returned > free) {
-          throw new Error(
-            `Only ${free.toFixed(3)} of this lot is free to return — the rest is reserved for a customer.`,
-          );
-        }
-
-        const nextQuantity = (Number(stockRow.quantity) - returned).toFixed(
-          STOCK_QUANTITY_SCALE,
-        );
-
-        // Material leaving for the supplier takes its value with it. Reducing
-        // the quantity alone left the rest of the lot carrying the value of
-        // goods that had gone back, so every purchase return overstated stock.
-        const previousValue = Number(stockRow.valuationEuro ?? 0);
-        const nextValue = restateLotValue({
-          previousQuantity: Number(stockRow.quantity),
-          remainingQuantity: Number(nextQuantity),
-          unitCost: Number(stockRow.valuationPrice ?? 0),
-          previousValue,
+        // The same reversal the return's picking runs when it is reported.
+        await applyPurchaseReturnIssue(tx, {
+          source: stockRow,
+          quantity: Number(item.returnQty ?? 0),
+          returnOrder,
+          returnLine: item,
+          userId,
+          warehouseWorkOrderLineUuid: null,
         });
-
-        const [stockUpdate] = await tx
-          .update(Stock)
-          .set({
-            quantity: nextQuantity,
-            valuationEuro: moneyString(nextValue),
-            status: Number(nextQuantity) > 0 ? "pending" : "received",
-          })
-          .where(
-            and(
-              eq(Stock.uuid, item.stockUuid),
-              eq(Stock.quantity, stockRow.quantity),
-            ),
-          );
-
-        if (stockUpdate.affectedRows === 0) {
-          throw new Error(
-            "Stock changed while sending the return — please refresh and try again.",
-          );
-        }
-
-        await tx.insert(StockMovements).values({
-          uuid: generateUuid(),
-          productUuid: stockRow.productUuid,
-          stockUuid: item.stockUuid,
-          type: "out",
-          reason: "purchase_return",
-          quantity: item.returnQty ?? "0.000",
-          purchaseOrderUuid: item.originalPurchaseOrderUuid,
-          createdByUserId: userId,
-        });
-
-        await recordFreightMovement(tx, {
-          productUuid: stockRow.productUuid,
-          quantity: item.returnQty ?? "0.000",
-          type: "out",
-          reason: "purchase_return",
-          purchaseOrderUuid: item.originalPurchaseOrderUuid,
-          operator: userId,
-        });
-
-        // The goods are gone but the supplier has not credited them yet, so
-        // what they owe us for them is held until their credit note arrives.
-        const valueOut = previousValue - nextValue;
-
-        if (Math.abs(valueOut) >= 0.005) {
-          await tx.insert(JournalEntries).values(
-            buildInventoryMovementEntry({
-              bookingDate: todayDateString(),
-              documentNo: String(returnOrder.id),
-              description: "Goods returned to supplier",
-              companyUuid: returnOrder.supplierUuid,
-              debCreditor: null,
-              inventoryValue: -valueOut,
-              counterAccount: LEDGER_ACCOUNTS.goodsReturnedNotCredited,
-              reference: `Purchase return line ${item.uuid}`,
-              userId,
-            }),
-          );
-        }
       }
     });
 
@@ -1457,6 +1550,12 @@ export const deletePurchaseReturnLine = async (
     if (!isPurchaseReturnOrderEditable(returnOrder.status)) {
       return { error: "Lines can only be deleted before the goods have gone." };
     }
+    if (await isLineOnPicking(itemUuid)) {
+      return {
+        error:
+          "A picking is already carrying this line out — cancel that warehouse work order first.",
+      };
+    }
 
     await db.transaction(async (tx) => {
       await tx
@@ -1486,17 +1585,167 @@ export const deletePurchaseReturnLine = async (
   }
 };
 
+/** Whether a picking line already serves this return line. */
+const isLineOnPicking = async (itemUuid: string): Promise<boolean> => {
+  const [line] = await db
+    .select({ uuid: WarehouseWorkOrderLines.uuid })
+    .from(WarehouseWorkOrderLines)
+    .where(eq(WarehouseWorkOrderLines.purchaseReturnOrderItemUuid, itemUuid))
+    .limit(1);
+  return line !== undefined;
+};
+
 /**
- * `Make final` on a provisional return: it is released, and its lines with
- * it, as `Make final` releases a purchase order. The return stays editable
- * until the goods have gone.
+ * The warehouse a location belongs to, found by climbing its parents — a
+ * work order is raised against the building, not the shelf. Bounded, so a
+ * cycle in the tree cannot hang the transaction.
+ */
+const rootWarehouseOfLocation = async (
+  tx: ReturnTransaction,
+  locationUuid: string,
+): Promise<string | null> => {
+  const seen = new Set<string>();
+  const climb = async (current: string): Promise<string | null> => {
+    if (seen.has(current) || seen.size > 16) {
+      return null;
+    }
+    seen.add(current);
+    const [row] = await tx
+      .select({ parentUuid: Warehouses.parentUuid })
+      .from(Warehouses)
+      .where(eq(Warehouses.uuid, current))
+      .limit(1);
+    if (!row) {
+      return null;
+    }
+    return row.parentUuid ? climb(row.parentUuid) : current;
+  };
+  return climb(locationUuid);
+};
+
+/**
+ * The picking that carries a return's goods out (950034 → 327403,
+ * 11-10-2026): type `Picking`, `New`, one line per return line, each with its
+ * lot already allocated, **From** where the lot stands and **To** empty —
+ * the goods leave the company. Shaped and numbered as a sales order's
+ * picking is. Returns the work order's number.
+ */
+const raisePurchaseReturnPicking = async (
+  tx: ReturnTransaction,
+  { returnOrder, plannedDate, userId }: ReturnPickingInput,
+): Promise<number> => {
+  const lines = await tx
+    .select({
+      uuid: PurchaseReturnOrderItems.uuid,
+      lineNumber: PurchaseReturnOrderItems.lineNumber,
+      productUuid: PurchaseReturnOrderItems.productUuid,
+      stockUuid: PurchaseReturnOrderItems.stockUuid,
+      returnQty: PurchaseReturnOrderItems.returnQty,
+      weightKg: PurchaseReturnOrderItems.weightKg,
+      lengthMm: PurchaseReturnOrderItems.lengthMm,
+      widthMm: PurchaseReturnOrderItems.widthMm,
+      thicknessMm: PurchaseReturnOrderItems.thicknessMm,
+      productCode: Products.productCode,
+      locationUuid: Stock.locationUuid,
+      lotLengthMm: Stock.lengthMm,
+      lotWidthMm: Stock.widthMm,
+      lotThicknessMm: Stock.thicknessMm,
+      charge: Stock.charge,
+      internalCharge: Stock.internalCharge,
+      internalBatch: Stock.internalBatch,
+      quality: Stock.quality,
+    })
+    .from(PurchaseReturnOrderItems)
+    .innerJoin(Stock, eq(PurchaseReturnOrderItems.stockUuid, Stock.uuid))
+    .leftJoin(Products, eq(PurchaseReturnOrderItems.productUuid, Products.uuid))
+    .where(
+      eq(PurchaseReturnOrderItems.purchaseReturnOrderUuid, returnOrder.uuid),
+    )
+    .orderBy(asc(PurchaseReturnOrderItems.lineNumber));
+
+  if (lines.length === 0) {
+    throw new Error(
+      "None of this return's lines names a lot, so there is nothing to pick.",
+    );
+  }
+
+  const firstLocation = lines.find((line) => line.locationUuid)?.locationUuid;
+  const warehouseUuid = firstLocation
+    ? await rootWarehouseOfLocation(tx, firstLocation)
+    : null;
+  if (!warehouseUuid) {
+    throw new Error(
+      "The lots on this return do not sit in any warehouse, so no picking can be planned.",
+    );
+  }
+
+  const number = await nextWorkOrderNumber(tx);
+  const workOrderUuid = generateUuid();
+
+  await tx.insert(WarehouseWorkOrders).values({
+    createdByUserId: userId,
+    uuid: workOrderUuid,
+    number,
+    warehouseUuid,
+    type: "picking",
+    plannedDate,
+    status: "new",
+  });
+
+  for (const [index, line] of lines.entries()) {
+    const thickness = line.thicknessMm ?? line.lotThicknessMm;
+    await tx.insert(WarehouseWorkOrderLines).values({
+      modifiedByUserId: userId,
+      uuid: generateUuid(),
+      workOrderUuid,
+      lineNumber: line.lineNumber ?? index + 1,
+      purchaseReturnOrderItemUuid: line.uuid,
+      orderNumber: String(returnOrder.id),
+      companyUuid: returnOrder.supplierUuid,
+      stockUuid: line.stockUuid,
+      productUuid: line.productUuid,
+      productCode: line.productCode,
+      fromLocationUuid: line.locationUuid,
+      // Empty: the goods leave the company for the supplier.
+      toLocationUuid: null,
+      length: line.lengthMm ?? line.lotLengthMm,
+      width: line.widthMm ?? line.lotWidthMm,
+      thickness: thickness ? Number(thickness) : null,
+      qtyPlanned: line.returnQty,
+      kgPlanned: line.weightKg,
+      charge: line.charge,
+      internalCharge: line.internalCharge,
+      internalBatch: line.internalBatch,
+      quality: line.quality,
+      status: "new",
+    });
+  }
+
+  return number;
+};
+
+/**
+ * `Make final` on a provisional return (950034, 11-10-2026), in the
+ * reference's order:
+ *
+ * - the return and its lines are `Released` and `Printed` — the screen opens
+ *   the INKOOPRETOUR in its print preview and then asks whether to send it
+ * - the return date moves onto a working day: Sunday 11-10 became 12-10-2026
+ * - a `Picking` is raised to carry the goods out; reporting it is what takes
+ *   them off the shelf and makes the return `Delivered`
  */
 export const makePurchaseReturnOrderFinal = async (
   uuid: string,
 ): Promise<PurchaseReturnOrderActionResult> => {
   try {
     const [returnOrder] = await db
-      .select({ status: PurchaseReturnOrders.status })
+      .select({
+        uuid: PurchaseReturnOrders.uuid,
+        id: PurchaseReturnOrders.id,
+        supplierUuid: PurchaseReturnOrders.supplierUuid,
+        status: PurchaseReturnOrders.status,
+        returnDate: PurchaseReturnOrders.returnDate,
+      })
       .from(PurchaseReturnOrders)
       .where(eq(PurchaseReturnOrders.uuid, uuid))
       .limit(1);
@@ -1510,10 +1759,23 @@ export const makePurchaseReturnOrderFinal = async (
       };
     }
 
+    const user = await currentUser();
+    const userId = user?.id ?? null;
+
+    const returnDate = onWorkingDay(
+      returnOrder.returnDate
+        ? toDateString(new Date(returnOrder.returnDate))
+        : todayDateString(),
+    );
+
     await db.transaction(async (tx) => {
       const [claimed] = await tx
         .update(PurchaseReturnOrders)
-        .set({ status: "released" })
+        .set({
+          status: "released",
+          isPrinted: true,
+          returnDate: new Date(`${returnDate}T00:00:00`),
+        })
         .where(
           and(
             eq(PurchaseReturnOrders.uuid, uuid),
@@ -1529,16 +1791,60 @@ export const makePurchaseReturnOrderFinal = async (
 
       await tx
         .update(PurchaseReturnOrderItems)
-        .set({ lineStatus: "released" })
+        .set({ lineStatus: "released", returnDate })
         .where(eq(PurchaseReturnOrderItems.purchaseReturnOrderUuid, uuid));
+
+      await raisePurchaseReturnPicking(tx, {
+        returnOrder,
+        plannedDate: returnDate,
+        userId,
+      });
     });
+
+    revalidatePath("/purchase-return-orders");
+    revalidatePath(`/purchase-return-orders/${uuid}`);
+    revalidatePath("/warehouse-work-orders");
+    return { success: true, purchaseReturnOrderUuid: uuid };
+  } catch (error) {
+    return {
+      error: describeError(error, "Failed to make the return order final"),
+    };
+  }
+};
+
+/**
+ * `Send…` — the return goes to the supplier's contact. Nothing is mailed from
+ * here yet; the return is marked `Mailed`, as the reference's header reads
+ * once it has gone.
+ */
+export const sendPurchaseReturnOrder = async (
+  uuid: string,
+): Promise<PurchaseReturnOrderActionResult> => {
+  try {
+    const [returnOrder] = await db
+      .select({ status: PurchaseReturnOrders.status })
+      .from(PurchaseReturnOrders)
+      .where(eq(PurchaseReturnOrders.uuid, uuid))
+      .limit(1);
+
+    if (!returnOrder) {
+      return { error: "Purchase return order not found." };
+    }
+    if (returnOrder.status === "provisional") {
+      return { error: "Make the return final before sending it." };
+    }
+
+    await db
+      .update(PurchaseReturnOrders)
+      .set({ isMailed: true })
+      .where(eq(PurchaseReturnOrders.uuid, uuid));
 
     revalidatePath("/purchase-return-orders");
     revalidatePath(`/purchase-return-orders/${uuid}`);
     return { success: true, purchaseReturnOrderUuid: uuid };
   } catch (error) {
     return {
-      error: describeError(error, "Failed to make the return order final"),
+      error: describeError(error, "Failed to send the purchase return order"),
     };
   }
 };
@@ -1570,6 +1876,12 @@ export const updatePurchaseReturnLineQuantity = async (
     }
     if (!isPurchaseReturnOrderEditable(returnOrder.status)) {
       return { error: "Lines can only be changed before the goods have gone." };
+    }
+    if (await isLineOnPicking(itemUuid)) {
+      return {
+        error:
+          "A picking is already carrying this line out — its Qty(p) is what the floor was asked to pick.",
+      };
     }
 
     const [item] = await db

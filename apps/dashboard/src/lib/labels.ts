@@ -1332,6 +1332,17 @@ export const ORDER_LINE_STATUS_LABELS: Record<OrderLineStatus, string> = {
   cancelled: "Cancelled",
 };
 
+// A purchase return line reads the same ladder, except that a line whose goods
+// have all gone back reads `Delivered` (950034 after picking 327403,
+// 11-10-2026) where a sales line reads `Completed`.
+export const PURCHASE_RETURN_LINE_STATUS_LABELS: Record<
+  OrderLineStatus,
+  string
+> = {
+  ...ORDER_LINE_STATUS_LABELS,
+  completed: "Delivered",
+};
+
 /**
  * What the reference prints instead of the word on the two call-off screens.
  * Numbered in hundreds so states can be inserted between them.

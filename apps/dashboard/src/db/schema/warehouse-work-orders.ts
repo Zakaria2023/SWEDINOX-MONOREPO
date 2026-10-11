@@ -149,6 +149,16 @@ export const WarehouseWorkOrderLines = mysqlTable(
     // reported.
     returnOrderItemUuid: char("return_order_item_uuid", { length: 36 }),
 
+    // 🔑 And goods going back the other way: a lot leaving for the supplier on
+    // a purchase return. Watched on 950034, 11-10-2026: `Make final` raised a
+    // `Picking` with no destination, and reporting it drew the lot down from
+    // 10 ST to 8 ST at the same share of its value. This names the return line
+    // being served, so completion takes the stock out through the return's own
+    // movement rather than as an anonymous issue.
+    purchaseReturnOrderItemUuid: char("purchase_return_order_item_uuid", {
+      length: 36,
+    }),
+
     // 🔑 And the third thing a line can be about: a lot going out to a
     // processor (C8). The picking for a `Processing` order's supply moves the
     // lot to the loading bay; reporting it sends the lot out.

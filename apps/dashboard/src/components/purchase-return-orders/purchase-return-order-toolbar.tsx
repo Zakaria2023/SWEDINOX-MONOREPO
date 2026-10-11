@@ -21,10 +21,9 @@ import {
   PurchaseReturnOrderActionResult,
   PurchaseReturnOrderDetail,
 } from "@/app/(dashboard)/purchase-return-orders/actions";
+import { SendPurchaseReturnOrderDialog } from "@/components/purchase-return-orders/send-purchase-return-order-dialog";
 import { Button } from "@/components/shadcn/button";
 import { FormError } from "@/components/ui/form-error";
-
-const NOT_BUILT = "Not built yet";
 
 type Props = {
   returnOrder: PurchaseReturnOrderDetail;
@@ -39,40 +38,76 @@ type Props = {
 export const PurchaseReturnOrderToolbar = ({ returnOrder }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
+  const [isSendOpen, setIsSendOpen] = useState(false);
 
   const isProvisional = returnOrder.status === "provisional";
   const isDispatched = returnOrder.status === "delivered";
   const isCredited = returnOrder.status === "invoiced";
   const isCancelled = returnOrder.status === "cancelled";
+  // `Print…` and `Send…` wake once the return is final.
+  const isReleased = !isProvisional && !isCancelled;
+  const printHref = `/purchase-return-orders/${returnOrder.uuid}/print`;
 
-  const run = (action: () => Promise<PurchaseReturnOrderActionResult>) => {
+  const run = (
+    action: () => Promise<PurchaseReturnOrderActionResult>,
+    onSuccess?: () => void,
+  ) => {
     setError(undefined);
     startTransition(async () => {
       const result = await action();
       if (result.error) {
         setError(result.error);
+        return;
       }
+      onSuccess?.();
     });
   };
 
   return (
     <div className="space-y-2 border-b pb-4">
       <div className="flex flex-wrap gap-2">
+        {/* Gone from the toolbar once the return is final, as on 950034. */}
+        {isProvisional && (
+          <Button
+            type="button"
+            onClick={() =>
+              run(
+                () => makePurchaseReturnOrderFinal(returnOrder.uuid),
+                () => {
+                  // The reference opens the printed return and then asks
+                  // whether to send it (11-10-2026).
+                  window.open(printHref, "_blank");
+                  setIsSendOpen(true);
+                },
+              )
+            }
+            disabled={isPending}
+          >
+            <BadgeCheck className="me-1.5 size-4" />
+            Make final
+          </Button>
+        )}
+        {isReleased ? (
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href={printHref} target="_blank" />}
+          >
+            <Printer className="me-1.5 size-4" />
+            Print…
+          </Button>
+        ) : (
+          <Button type="button" variant="outline" disabled>
+            <Printer className="me-1.5 size-4" />
+            Print…
+          </Button>
+        )}
         <Button
           type="button"
-          onClick={() =>
-            run(() => makePurchaseReturnOrderFinal(returnOrder.uuid))
-          }
-          disabled={isPending || !isProvisional}
+          variant="outline"
+          onClick={() => setIsSendOpen(true)}
+          disabled={isPending || !isReleased}
         >
-          <BadgeCheck className="me-1.5 size-4" />
-          Make final
-        </Button>
-        <Button type="button" variant="outline" disabled title={NOT_BUILT}>
-          <Printer className="me-1.5 size-4" />
-          Print…
-        </Button>
-        <Button type="button" variant="outline" disabled title={NOT_BUILT}>
           <Mail className="me-1.5 size-4" />
           Send…
         </Button>
@@ -165,6 +200,11 @@ export const PurchaseReturnOrderToolbar = ({ returnOrder }: Props) => {
         )}
       </div>
       <FormError>{error}</FormError>
+      <SendPurchaseReturnOrderDialog
+        returnOrder={returnOrder}
+        open={isSendOpen}
+        onOpenChange={setIsSendOpen}
+      />
     </div>
   );
 };

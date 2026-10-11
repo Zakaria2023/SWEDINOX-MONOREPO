@@ -50,7 +50,7 @@ import {
   VAT_CODE_RATE,
 } from "@/lib/helpers";
 import { PURCHASE_ORDER_STATUS_LABELS } from "@/lib/labels";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getReturnablePurchaseLines } from "@/app/(dashboard)/purchase-return-orders/actions";
 import { PickedReturnLine } from "@/app/(dashboard)/purchase-return-orders/use-purchase-return-order-submit";
 import {
@@ -72,6 +72,7 @@ import {
   RETURN_LINE_COLUMNS,
 } from "./purchase-return-order-lines";
 import { PurchaseReturnOrderToolbar } from "./purchase-return-order-toolbar";
+import { PurchaseReturnWorkOrdersPanel } from "./purchase-return-work-orders-panel";
 
 const SAVE_FIRST = "Save the return order first";
 
@@ -135,6 +136,24 @@ export const PurchaseReturnOrderForm = ({
     formState: { errors },
   } = form;
 
+  // `Make final` moves the return date onto a working day and ticks Printed,
+  // `Send…` ticks Mailed — on the server. The header follows, rather than
+  // holding (and saving back) what it was opened with.
+  const serverValues = existing
+    ? purchaseReturnOrderToFormValues(existing)
+    : null;
+  const serverReturnDate = serverValues?.returnDate;
+  const serverPrinted = serverValues?.isPrinted;
+  const serverMailed = serverValues?.isMailed;
+  useEffect(() => {
+    if (serverPrinted === undefined || serverMailed === undefined) {
+      return;
+    }
+    setValue("returnDate", serverReturnDate);
+    setValue("isPrinted", serverPrinted);
+    setValue("isMailed", serverMailed);
+  }, [serverReturnDate, serverPrinted, serverMailed, setValue]);
+
   // The line whose `…` opened the stock window, or null when it is shut.
   const [pickingLine, setPickingLine] = useState<number | null>(null);
   const [selectedLine, setSelectedLine] = useState<number | null>(null);
@@ -184,8 +203,11 @@ export const PurchaseReturnOrderForm = ({
   const isReadOnly =
     existing !== null && !isPurchaseReturnOrderEditable(existing.status);
   // A line was picked from what this supplier delivered, so once there is
-  // one the supplier is no longer the header's to change.
-  const isSupplierLocked = existing !== null && existing.items.length > 0;
+  // one the supplier is no longer the header's to change — nor once the
+  // return is final (greyed on 950034 after Make final, 11-10-2026).
+  const isSupplierLocked =
+    existing !== null &&
+    (existing.items.length > 0 || existing.status !== "provisional");
 
   // The reference's banner: `Purchase return order 950034, {supplier}, Tel:
   // …, Fax: - Provisional` — no fax prints as nothing before the dash.
@@ -317,7 +339,12 @@ export const PurchaseReturnOrderForm = ({
         <section className="space-y-4 rounded-lg border p-4">
           <h1 className="text-lg font-semibold">{banner}</h1>
 
-          <div className="grid gap-x-10 gap-y-6 lg:grid-cols-[3fr_2fr]">
+          {/* Every header field greys once the goods have gone (950034 after
+              its picking was reported, 11-10-2026). */}
+          <fieldset
+            disabled={isReadOnly}
+            className="grid gap-x-10 gap-y-6 lg:grid-cols-[3fr_2fr]"
+          >
             <div className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
@@ -531,16 +558,32 @@ export const PurchaseReturnOrderForm = ({
                 </dl>
               </section>
             </div>
-          </div>
+          </fieldset>
         </section>
 
         {/* Every panel the reference stacks under the header, in its order:
             Workorders · Lines · Surcharges · Invoice lines · Complaints ·
             Logistics · Texts · Documents · PDF Files. Only Lines is open. */}
         <div className="space-y-2">
-          <CollapsibleSection title="Workorders">
+          <CollapsibleSection
+            title="Workorders"
+            defaultOpen={(existing?.warehouseWorkOrders.length ?? 0) > 0}
+          >
             <div className="space-y-2 p-3">
-              <PurchaseOrderNewPanels panels={WORK_ORDER_PANELS} />
+              {existing ? (
+                <>
+                  <PurchaseReturnWorkOrdersPanel
+                    lines={existing.warehouseWorkOrders}
+                  />
+                  <PurchaseOrderNewPanels
+                    panels={WORK_ORDER_PANELS.filter(
+                      (panel) => panel.title !== "Warehouse workorders",
+                    )}
+                  />
+                </>
+              ) : (
+                <PurchaseOrderNewPanels panels={WORK_ORDER_PANELS} />
+              )}
             </div>
           </CollapsibleSection>
 
