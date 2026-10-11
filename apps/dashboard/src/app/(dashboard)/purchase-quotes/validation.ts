@@ -13,10 +13,18 @@ import { todayDateString, currentYear } from "@/lib/helpers";
 // straight in — when a gross price is given the server derives the net from it.
 export const purchaseQuoteItemSchema = z.object({
   productUuid: z.string().optional(),
+  // The article's code, shown in the grid's Product cell; never saved.
+  productCode: z.string().optional(),
+  // The sales line a request bought for, carried through so saving the quote
+  // does not drop it (the lines are rewritten on every save).
+  forOrderItemUuid: z.string().optional(),
   description: z.string().optional(),
   quantity: z.string().optional(),
   unit: z.enum(stockUnits).optional(),
   kg: z.string().optional(),
+  // One piece's weight, so Kg(p) follows the quantity as it is typed; never
+  // saved — the line's kg is.
+  pieceWeightKg: z.string().optional(),
   lengthMm: z.string().optional(),
   widthMm: z.string().optional(),
   thicknessMm: z.string().optional(),
@@ -34,10 +42,13 @@ export type PurchaseQuoteItemFormValues = z.infer<
 
 export const DEFAULT_PURCHASE_QUOTE_ITEM: PurchaseQuoteItemFormValues = {
   productUuid: "",
+  productCode: "",
+  forOrderItemUuid: "",
   description: "",
   quantity: "",
   unit: "st",
   kg: "",
+  pieceWeightKg: "",
   lengthMm: "",
   widthMm: "",
   thicknessMm: "",
@@ -134,5 +145,6 @@ export const DEFAULT_PURCHASE_QUOTE: PurchaseQuoteFormValues = {
 
   documents: [],
 
-  items: [DEFAULT_PURCHASE_QUOTE_ITEM],
+  // A new quote starts with no lines: `New` adds a blank one.
+  items: [],
 };

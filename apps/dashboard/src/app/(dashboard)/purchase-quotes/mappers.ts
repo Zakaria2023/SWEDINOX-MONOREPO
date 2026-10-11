@@ -1,8 +1,6 @@
-import { SelectPurchaseQuotes } from "@/db";
-import { SelectPurchaseQuoteItems } from "@/db/schema/purchase-quote-items";
 import { toDateInput } from "@/lib/helpers";
+import { PurchaseQuoteDetail, PurchaseQuoteItemDetail } from "./actions";
 import {
-  DEFAULT_PURCHASE_QUOTE_ITEM,
   PurchaseQuoteFormValues,
   PurchaseQuoteItemFormValues,
 } from "./validation";
@@ -10,14 +8,25 @@ import {
 const numberInput = (value: string | number | null): string =>
   value === null || Number(value) === 0 ? "" : String(value);
 
+// A saved line's weight per piece, so Kg(p) keeps following the quantity
+// when the line is edited: 314 kg over 10 pieces is 31,4 kg a piece.
+const savedPieceWeight = (item: PurchaseQuoteItemDetail): string => {
+  const quantity = Number(item.quantity ?? 0);
+  const kg = Number(item.kg ?? 0);
+  return quantity > 0 && kg > 0 ? String(kg / quantity) : "";
+};
+
 const quoteItemToFormValues = (
-  item: SelectPurchaseQuoteItems,
+  item: PurchaseQuoteItemDetail,
 ): PurchaseQuoteItemFormValues => ({
   productUuid: item.productUuid ?? "",
-  description: item.description ?? "",
+  productCode: item.productCode ?? "",
+  forOrderItemUuid: item.forOrderItemUuid ?? "",
+  description: item.description ?? item.productName ?? "",
   quantity: numberInput(item.quantity),
   unit: item.unit ?? "st",
   kg: numberInput(item.kg),
+  pieceWeightKg: savedPieceWeight(item),
   lengthMm: numberInput(item.lengthMm),
   widthMm: numberInput(item.widthMm),
   thicknessMm: numberInput(item.thicknessMm),
@@ -38,8 +47,7 @@ const quoteItemToFormValues = (
  * the same on the way in as on the way out.
  */
 export const purchaseQuoteToFormValues = (
-  quote: SelectPurchaseQuotes,
-  items: SelectPurchaseQuoteItems[],
+  quote: PurchaseQuoteDetail,
 ): PurchaseQuoteFormValues => ({
   supplierUuid:
     quote.companyType === "agent" ? "" : (quote.companyUuid ?? ""),
@@ -74,8 +82,5 @@ export const purchaseQuoteToFormValues = (
 
   documents: quote.documents ?? [],
 
-  items:
-    items.length > 0
-      ? items.map(quoteItemToFormValues)
-      : [DEFAULT_PURCHASE_QUOTE_ITEM],
+  items: quote.items.map(quoteItemToFormValues),
 });

@@ -9,6 +9,10 @@ import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
+import {
+  getPurchaseSupplierDefaults,
+  PurchaseSupplierDefaults,
+} from "@/app/(dashboard)/purchase-orders/actions";
 import { SelectOption } from "@/components/shadcn/select";
 import {
   DeliveryTerm,
@@ -21,23 +25,27 @@ import {
   purchaseOrderTypes,
 } from "@/lib/enums";
 import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_WEIGHT_TYPE_LABELS, PURCHASE_ORDER_TYPE_LABELS } from "@/lib/labels";
+import { isoWeekOf } from "@/lib/helpers";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useTransition } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
 import {
-  createPurchaseQuote,
-  PurchaseQuoteActionResult,
-  PurchaseQuoteItemInput,
-  updatePurchaseQuote,
-} from "./actions";
+  startTransition,
+  useActionState,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import { PurchaseQuoteItemInput, savePurchaseQuote } from "./actions";
 import {
   DEFAULT_PURCHASE_QUOTE,
   DEFAULT_PURCHASE_QUOTE_ITEM,
   PurchaseQuoteFormValues,
   purchaseQuoteSchema,
 } from "./validation";
+
+const emptyOpt = { value: "", label: "Empty" };
 
 type UsePurchaseQuoteSubmitParams = {
   companies: CompanyOption[];
@@ -48,8 +56,6 @@ type UsePurchaseQuoteSubmitParams = {
   purchaseQuoteUuid?: string;
   defaultValues?: PurchaseQuoteFormValues;
 };
-
-const emptyOpt = { value: "", label: "Empty" };
 
 const optionalNumber = (value: string | undefined): number | null =>
   value && Number.isFinite(Number(value)) ? Number(value) : null;
@@ -66,6 +72,11 @@ const addressLabel = (a: AddressOption) =>
   [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
   a.uuid;
 
+// `11692 — Holland Stainless Int`: the code beside the name, as the reference
+// prints it next to the field.
+const companyLabel = (c: CompanyOption) =>
+  [c.searchCode1, c.companyName].filter(Boolean).join(" — ") || c.uuid;
+
 export const usePurchaseQuoteSubmit = ({
   companies,
   clerkUsers,
@@ -74,11 +85,13 @@ export const usePurchaseQuoteSubmit = ({
   defaultValues,
 }: UsePurchaseQuoteSubmitParams) => {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [state, setState] = useState<PurchaseQuoteActionResult>({});
+  const [state, dispatch, isPending] = useActionState(savePurchaseQuote, {});
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [addresses, setAddresses] = useState<AddressOption[]>([]);
-  const [isLoadingCompanyData, setIsLoadingCompanyData] = useState(false);
+  const [isLoadingSupplierData, setIsLoadingSupplierData] = useState(false);
+  // The supplier's record, for the banner's `Tel: …, Fax:` and its terms.
+  const [supplierDefaults, setSupplierDefaults] =
+    useState<PurchaseSupplierDefaults | null>(null);
 
   const form = useForm<PurchaseQuoteFormValues>({
     resolver: zodResolver(purchaseQuoteSchema),
@@ -92,27 +105,24 @@ export const usePurchaseQuoteSubmit = ({
   } = useFieldArray({ control: form.control, name: "items" });
 
   const arrangeTransport = form.watch("arrangeTransport");
-  const deliveryType = form.watch("deliveryType");
-
-  const supplierCompanies = companies.filter((c) =>
-    c.roles?.includes("supplier"),
+  const pickupDropoffCdPurchases = form.watch("pickupDropoffCdPurchases");
+  // Payment terms stay greyed until a company is chosen, as in the reference.
+  const hasSupplier = Boolean(
+    form.watch("supplierUuid") || form.watch("agentUuid"),
   );
-  const agentCompanies = companies.filter((c) => c.roles?.includes("agent"));
 
   const supplierOptions: SelectOption[] = [
     emptyOpt,
-    ...supplierCompanies.map((c) => ({
-      value: c.uuid,
-      label: c.companyName ?? c.searchCode1 ?? c.uuid,
-    })),
+    ...companies
+      .filter((c) => c.roles?.includes("supplier"))
+      .map((c) => ({ value: c.uuid, label: companyLabel(c) })),
   ];
 
   const agentOptions: SelectOption[] = [
     emptyOpt,
-    ...agentCompanies.map((c) => ({
-      value: c.uuid,
-      label: c.companyName ?? c.searchCode1 ?? c.uuid,
-    })),
+    ...companies
+      .filter((c) => c.roles?.includes("agent"))
+      .map((c) => ({ value: c.uuid, label: companyLabel(c) })),
   ];
 
   const contactOptions: SelectOption[] = [
@@ -157,20 +167,28 @@ export const usePurchaseQuoteSubmit = ({
 
   const purchaserOptions: SelectOption[] = [emptyOpt, ...clerkUsers];
 
-  const loadCompanyData = useCallback((uuid: string) => {
-    setContacts([]);
-    setAddresses([]);
-    if (!uuid) return;
-    setIsLoadingCompanyData(true);
-    Promise.all([
-      getContactsForCompany(uuid),
-      getAddressesForCompany(uuid),
-    ]).then(([newContacts, newAddresses]) => {
-      setContacts(newContacts);
-      setAddresses(newAddresses);
-      setIsLoadingCompanyData(false);
-    });
-  }, []);
+  // Sequential rather than concurrent: this database caps connections.
+  const loadCompanyData = useCallback(
+    async (uuid: string): Promise<PurchaseSupplierDefaults | null> => {
+      setContacts([]);
+      setAddresses([]);
+      setSupplierDefaults(null);
+      if (!uuid) {
+        return null;
+      }
+      setIsLoadingSupplierData(true);
+      try {
+        setContacts(await getContactsForCompany(uuid));
+        setAddresses(await getAddressesForCompany(uuid));
+        const defaults = await getPurchaseSupplierDefaults(uuid);
+        setSupplierDefaults(defaults);
+        return defaults;
+      } finally {
+        setIsLoadingSupplierData(false);
+      }
+    },
+    [],
+  );
 
   // An existing quote already names a company, so its contacts and addresses
   // have to be fetched before the form can show which ones are selected.
@@ -180,15 +198,40 @@ export const usePurchaseQuoteSubmit = ({
     if (!editingCompanyUuid) {
       return;
     }
-    loadCompanyData(editingCompanyUuid);
+    void loadCompanyData(editingCompanyUuid);
   }, [editingCompanyUuid, loadCompanyData]);
 
+  // The supplier brings its terms with it, as on a purchase order: its only
+  // contact, its payment and delivery terms and its weight type.
+  const applySupplierDefaults = (uuid: string) => {
+    void loadCompanyData(uuid).then((defaults) => {
+      const current =
+        form.getValues("supplierUuid") || form.getValues("agentUuid");
+      if (!defaults || current !== uuid) {
+        return;
+      }
+      if (defaults.contactUuid) {
+        form.setValue("contactUuid", defaults.contactUuid);
+      }
+      if (defaults.paymentTerms) {
+        form.setValue("paymentTerms", defaults.paymentTerms);
+      }
+      if (defaults.deliveryTerms) {
+        form.setValue("deliveryTerms", defaults.deliveryTerms);
+      }
+      if (defaults.weightType) {
+        form.setValue("weightType", defaults.weightType);
+      }
+    });
+  };
+
+  // A quote comes from a supplier or through an agent, never both.
   const handleSupplierChange = (uuid: string) => {
     form.setValue("supplierUuid", uuid);
     form.setValue("agentUuid", "");
     form.setValue("contactUuid", "");
     form.setValue("supplierAddressUuid", "");
-    loadCompanyData(uuid);
+    applySupplierDefaults(uuid);
   };
 
   const handleAgentChange = (uuid: string) => {
@@ -196,7 +239,17 @@ export const usePurchaseQuoteSubmit = ({
     form.setValue("supplierUuid", "");
     form.setValue("contactUuid", "");
     form.setValue("supplierAddressUuid", "");
-    loadCompanyData(uuid);
+    applySupplierDefaults(uuid);
+  };
+
+  // The week and year follow a chosen date, as on a purchase order.
+  const handleDeliveryDateChange = (date: string) => {
+    form.setValue("deliveryDate", date);
+    const week = isoWeekOf(date);
+    if (week !== null) {
+      form.setValue("deliveryWeek", String(week));
+      form.setValue("deliveryYear", date.slice(0, 4));
+    }
   };
 
   const handleCancel = () =>
@@ -207,82 +260,85 @@ export const usePurchaseQuoteSubmit = ({
     );
 
   const onSubmit = form.handleSubmit((values) => {
-    // A blank row is the field array's starting state, not a line somebody
-    // meant to quote — drop anything with neither a product nor a description.
+    // A blank row is what `New` adds, not a line somebody meant to quote —
+    // drop anything with neither a product nor a description.
     const items: PurchaseQuoteItemInput[] = values.items
       .filter((item) => item.productUuid || item.description)
-      .map((item, index) => ({
-        productUuid: item.productUuid || null,
-        description: item.description || null,
-        lineNumber: (index + 1) * 10,
-        quantity: item.quantity || "0.000",
-        unit: item.unit ?? "st",
-        kg: item.kg || "0.00",
-        lengthMm: optionalNumber(item.lengthMm),
-        widthMm: optionalNumber(item.widthMm),
-        thicknessMm: item.thicknessMm || null,
-        grossPrice: item.grossPrice || "0.0000",
-        groupDiscountPercent: item.groupDiscountPercent || "0.00",
-        lineDiscountPercent: item.lineDiscountPercent || "0.00",
-        netPrice: item.netPrice || "0.00",
-        priceUnit: item.priceUnit || null,
-        internalText: item.internalText || null,
-        purchaser: values.purchaser || null,
-        ourReference: values.ourReference || null,
-        purchaseReference: values.reference || null,
-        isConsignment: values.isConsignment,
-      }));
+      .map((item, index) => {
+        // Kg(p) as the grid showed it: the article's piece weight times the
+        // quantity, or the weight typed for an article that cannot be weighed.
+        const pieceWeightKg = Number(item.pieceWeightKg ?? 0);
+        const quantity = Number(item.quantity ?? 0);
+        return {
+          productUuid: item.productUuid || null,
+          forOrderItemUuid: item.forOrderItemUuid || null,
+          description: item.description || null,
+          lineNumber: (index + 1) * 10,
+          quantity: item.quantity || "0.000",
+          unit: item.unit ?? "st",
+          kg:
+            pieceWeightKg > 0
+              ? (pieceWeightKg * quantity).toFixed(2)
+              : item.kg || "0.00",
+          lengthMm: optionalNumber(item.lengthMm),
+          widthMm: optionalNumber(item.widthMm),
+          thicknessMm: item.thicknessMm || null,
+          grossPrice: item.grossPrice || "0.0000",
+          groupDiscountPercent: item.groupDiscountPercent || "0.00",
+          lineDiscountPercent: item.lineDiscountPercent || "0.00",
+          netPrice: item.netPrice || "0.00",
+          priceUnit: item.priceUnit || null,
+          internalText: item.internalText || null,
+          purchaser: values.purchaser || null,
+          ourReference: values.ourReference || null,
+          purchaseReference: values.reference || null,
+          isConsignment: values.isConsignment,
+        };
+      });
 
-    startTransition(async () => {
-      const fields = {
-        companyUuid: values.supplierUuid || values.agentUuid || null,
-        contactUuid: values.contactUuid || null,
-        purchaser: values.purchaser || null,
-        reference: values.reference || null,
-        ourReference: values.ourReference || null,
-        orderCategory: values.orderCategory || null,
+    const fields = {
+      companyUuid: values.supplierUuid || values.agentUuid || null,
+      contactUuid: values.contactUuid || null,
+      purchaser: values.purchaser || null,
+      reference: values.reference || null,
+      ourReference: values.ourReference || null,
+      orderCategory: values.orderCategory || null,
 
-        quoteNumber: values.quoteNumber || null,
-        quoteDate: values.quoteDate ? new Date(values.quoteDate) : null,
-        validUntil: values.validUntil ? new Date(values.validUntil) : null,
+      quoteNumber: values.quoteNumber || null,
+      quoteDate: values.quoteDate ? new Date(values.quoteDate) : null,
+      validUntil: values.validUntil ? new Date(values.validUntil) : null,
 
-        purchaseOrderType: values.purchaseOrderType || null,
-        weightType: values.weightType || null,
-        isOverlength: values.isOverlength,
-        isConsignment: values.isConsignment,
+      purchaseOrderType: values.purchaseOrderType || null,
+      weightType: values.weightType || null,
+      isOverlength: values.isOverlength,
+      isConsignment: values.isConsignment,
 
-        paymentTerms: values.paymentTerms || null,
+      paymentTerms: values.paymentTerms || null,
 
-        deliveryTerms: values.deliveryTerms || null,
-        deliveryAddressUuid: values.deliveryAddressUuid || null,
-        arrangeTransport: values.arrangeTransport,
-        pickupDropoffCdPurchases: values.arrangeTransport
-          ? values.pickupDropoffCdPurchases
-          : false,
-        supplierAddressUuid: values.supplierAddressUuid || null,
-        deliveryType: values.deliveryType,
-        deliveryDate: values.deliveryDate
-          ? new Date(values.deliveryDate)
-          : null,
-        deliveryWeek: values.deliveryWeek ? Number(values.deliveryWeek) : null,
-        deliveryYear: values.deliveryYear ? Number(values.deliveryYear) : null,
-        deliveryRemark: values.deliveryRemark || null,
+      deliveryTerms: values.deliveryTerms || null,
+      deliveryAddressUuid: values.deliveryAddressUuid || null,
+      arrangeTransport: values.arrangeTransport,
+      pickupDropoffCdPurchases: values.arrangeTransport
+        ? values.pickupDropoffCdPurchases
+        : false,
+      supplierAddressUuid: values.supplierAddressUuid || null,
+      deliveryType: values.deliveryType,
+      deliveryDate: values.deliveryDate ? new Date(values.deliveryDate) : null,
+      deliveryWeek: values.deliveryWeek ? Number(values.deliveryWeek) : null,
+      deliveryYear: values.deliveryYear ? Number(values.deliveryYear) : null,
+      deliveryRemark: values.deliveryRemark || null,
 
-        documents: values.documents?.length ? values.documents : null,
-      };
+      documents: values.documents?.length ? values.documents : null,
+    };
 
-      // Updating redirects from inside the action, so only the create path has
-      // a result worth navigating on.
-      if (purchaseQuoteUuid) {
-        setState(await updatePurchaseQuote(purchaseQuoteUuid, fields, items));
-        return;
-      }
-
-      const result = await createPurchaseQuote(fields, items);
-      setState(result);
-      if (result.success) {
-        router.push("/purchase-quotes");
-      }
+    // Both paths redirect from inside the action: a new quote opens on its
+    // own page, a saved one reloads there.
+    startTransition(() => {
+      dispatch({
+        purchaseQuoteUuid: purchaseQuoteUuid ?? null,
+        fields,
+        items,
+      });
     });
   });
 
@@ -293,7 +349,8 @@ export const usePurchaseQuoteSubmit = ({
     onSubmit,
     state,
     arrangeTransport,
-    deliveryType,
+    pickupDropoffCdPurchases,
+    hasSupplier,
     supplierOptions,
     agentOptions,
     contactOptions,
@@ -304,9 +361,11 @@ export const usePurchaseQuoteSubmit = ({
     deliveryTermOptions,
     paymentTermOptions,
     purchaserOptions,
-    isLoadingCompanyData,
+    isLoadingSupplierData,
+    supplierDefaults,
     handleSupplierChange,
     handleAgentChange,
+    handleDeliveryDateChange,
     handleCancel,
     itemFields,
     appendItem: () => appendItem(DEFAULT_PURCHASE_QUOTE_ITEM),

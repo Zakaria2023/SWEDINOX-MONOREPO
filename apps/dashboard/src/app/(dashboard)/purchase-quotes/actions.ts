@@ -178,6 +178,13 @@ export type PurchaseQuoteForEdit = {
   items: SelectPurchaseQuoteItems[];
 };
 
+/** What the quote screen submits: a new quote has no uuid yet. */
+export type SavePurchaseQuoteInput = {
+  purchaseQuoteUuid: SelectPurchaseQuotes["uuid"] | null;
+  fields: PurchaseQuoteFields;
+  items: PurchaseQuoteItemInput[];
+};
+
 // A quote whose "Valid u/i" date has passed without a decision has lapsed.
 // Nothing runs on a schedule here, so the screens that show quotes close the
 // lapsed ones as they read them; the update is idempotent.
@@ -558,6 +565,29 @@ export const updatePurchaseQuote = async (
           await buildPurchaseQuoteSummary(tx, uuid, fields.companyUuid ?? null),
         )
         .where(eq(PurchaseQuotes.uuid, uuid));
+
+      // The supplier's prices are typed on the quote's own lines now, so a
+      // quote saved with every line priced has been answered — the same step
+      // recording its prices takes, and the request it answers is quoted.
+      const isAnswered =
+        quote.status === "open" &&
+        items.length > 0 &&
+        items.every(
+          (item) =>
+            Number(item.grossPrice ?? 0) > 0 || Number(item.netPrice ?? 0) > 0,
+        );
+      if (isAnswered) {
+        await tx
+          .update(PurchaseQuotes)
+          .set({ status: "received" })
+          .where(eq(PurchaseQuotes.uuid, uuid));
+        if (quote.purchaseRequestUuid) {
+          await tx
+            .update(PurchaseRequests)
+            .set({ status: "quoted" })
+            .where(eq(PurchaseRequests.uuid, quote.purchaseRequestUuid));
+        }
+      }
     });
   } catch (error) {
     return {
@@ -568,6 +598,30 @@ export const updatePurchaseQuote = async (
   revalidatePath("/purchase-quotes");
   revalidatePath(`/purchase-quotes/${uuid}`);
   redirect(`/purchase-quotes/${uuid}`);
+};
+
+/**
+ * The quote screen's one save, for `useActionState`: a new quote is created
+ * and opened on its own page — the same screen, now with its number — and a
+ * saved one is updated in place.
+ */
+export const savePurchaseQuote = async (
+  _prevState: PurchaseQuoteActionResult,
+  input: SavePurchaseQuoteInput,
+): Promise<PurchaseQuoteActionResult> => {
+  if (input.purchaseQuoteUuid) {
+    return updatePurchaseQuote(
+      input.purchaseQuoteUuid,
+      input.fields,
+      input.items,
+    );
+  }
+
+  const result = await createPurchaseQuote(input.fields, input.items);
+  if (!result.success || !result.purchaseQuoteUuid) {
+    return result;
+  }
+  redirect(`/purchase-quotes/${result.purchaseQuoteUuid}`);
 };
 
 export const getPurchaseQuoteDetail = async (
@@ -740,7 +794,7 @@ export const recordPurchaseQuotePrices = async (
 // line's cost and, in turn, the margin every finance report shows. Before this
 // existed, that price was typed onto the purchase order by hand with nothing
 // behind it.
-export const convertPurchaseQuoteToOrder = async (
+const raisePurchaseOrderFromQuote = async (
   quoteUuid: string,
 ): Promise<PurchaseQuoteActionResult> => {
   try {
@@ -947,4 +1001,19 @@ export const convertPurchaseQuoteToOrder = async (
           : "Failed to turn this quote into a purchase order",
     };
   }
+};
+
+/**
+ * The quote toolbar's `Purchase order`: converts the whole quote and opens
+ * the order it raised, as the reference opens `401154` — Provisional, with
+ * `Converted from quote 900000` under its delivery block.
+ */
+export const convertPurchaseQuoteToOrder = async (
+  quoteUuid: string,
+): Promise<PurchaseQuoteActionResult> => {
+  const result = await raisePurchaseOrderFromQuote(quoteUuid);
+  if (!result.success || !result.purchaseOrderUuid) {
+    return result;
+  }
+  redirect(`/purchase-orders/${result.purchaseOrderUuid}`);
 };
