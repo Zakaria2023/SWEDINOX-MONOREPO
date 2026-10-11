@@ -10,6 +10,7 @@ import {
 import { ReturnOrderItems, SelectReturnOrderItems } from "@/db/schema/return-order-items";
 import { Products } from "@/db/schema/products";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
+import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import { JournalEntries } from "@/db/schema/journal-entries";
 import { Stock } from "@/db/schema/stock";
 import { StockMovements } from "@/db/schema/stock-movements";
@@ -514,6 +515,19 @@ export const applyReceipt = async (
     kg: weightKg,
     date: todayDateString(),
   });
+
+  // The reception names the lot it became: `Charge 612345 · Internal charge
+  // 26AQWF` on 404355's Receipts panel and on its `Partijregistratie
+  // instellingen` (11-10-2026). The first lot to land on a reception names it.
+  if (receivalUuid) {
+    await tx
+      .update(PurchaseLineReceivals)
+      .set({
+        charge: sql`COALESCE(${PurchaseLineReceivals.charge}, ${supplied?.charge ?? normaliseCharge(params.charge)})`,
+        internalCharge: sql`COALESCE(${PurchaseLineReceivals.internalCharge}, ${internalCharge})`,
+      })
+      .where(eq(PurchaseLineReceivals.uuid, receivalUuid));
+  }
 
   // An option on the line is priced on the weight that came back (C10).
   await restatePurchaseLineOptions(tx, purchaseLine.uuid);

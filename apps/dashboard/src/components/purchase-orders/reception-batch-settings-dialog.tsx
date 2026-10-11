@@ -20,7 +20,12 @@ import {
   DialogTitle,
 } from "@/components/shadcn/dialog";
 import { FormError } from "@/components/ui/form-error";
-import { formatDateColumn, formatNumber, orDash } from "@/lib/helpers";
+import {
+  COIL_LENGTH_SENTINEL,
+  formatDateColumn,
+  formatNumber,
+  orDash,
+} from "@/lib/helpers";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TriangleAlert } from "lucide-react";
 import { startTransition, useActionState, useEffect } from "react";
@@ -101,12 +106,21 @@ export const ReceptionBatchSettingsDialog = ({
     });
   });
 
-  // `Afmetingen / gewicht` on the reference reads `19x0,8 / 158 KG(w)` — the
-  // line's width by its thickness, then the weight actually received.
-  const dimensions = [reception.widthMm, reception.thicknessMm]
+  // `Afmetingen / gewicht` on the reference reads `19x0,8 / 158 KG(w)` for a
+  // coil and `2000x1000x2 / 314 KG(w)` for a plate (404355, 11-10-2026): the
+  // length when the parcel has one, then width by thickness, then the weight
+  // actually received.
+  const dimensions = [
+    Number(reception.lengthMm ?? 0) > 0 &&
+    Number(reception.lengthMm) !== COIL_LENGTH_SENTINEL
+      ? reception.lengthMm
+      : null,
+    reception.widthMm,
+    reception.thicknessMm,
+  ]
     .filter((value) => value !== null && value !== undefined)
-    .map((value) => formatNumber(Number(value)))
-    .join(" × ");
+    .map((value) => String(Number(value)))
+    .join("x");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -131,9 +145,11 @@ export const ReceptionBatchSettingsDialog = ({
               <div>
                 <dt className="text-xs text-muted-foreground">Article</dt>
                 <dd className="text-sm font-medium">
-                  {[reception.productCode, reception.productName]
+                  {/* `Cold-rolled plate 304L  2000x1000x2mm` — the article as
+                      it is described, with its size. */}
+                  {[reception.productName, dimensions ? `${dimensions}mm` : null]
                     .filter(Boolean)
-                    .join(" — ") || "—"}
+                    .join("  ") || "—"}
                 </dd>
               </div>
               <div>
@@ -143,7 +159,7 @@ export const ReceptionBatchSettingsDialog = ({
                 <dd className="text-sm font-medium">
                   {[
                     dimensions || null,
-                    `${formatNumber(Number(reception.kgActual ?? 0))} kg`,
+                    `${formatNumber(Number(reception.kgActual ?? 0))} KG(w)`,
                   ]
                     .filter(Boolean)
                     .join(" / ")}
@@ -208,7 +224,7 @@ export const ReceptionBatchSettingsDialog = ({
               Cancel
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving…" : "Save"}
+              {isPending ? "Saving…" : "OK"}
             </Button>
           </DialogFooter>
         </form>

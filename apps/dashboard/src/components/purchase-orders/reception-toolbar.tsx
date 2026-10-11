@@ -156,7 +156,9 @@ export const ReceptionToolbar = ({ orderId, selected }: Props) => {
         <ReceptionBatchSettingsDialog
           /* The reference titles this `404150/10` — the order, then the
              line the reception hangs off. */
-          orderCode={`${orderId}/${selected.lineNumber ?? "—"}`}
+          orderCode={`${orderId}/${
+            selected.lineNumber === null ? "—" : selected.lineNumber * 10
+          }`}
           reception={selected}
           open={isBatchOpen}
           onOpenChange={setIsBatchOpen}
