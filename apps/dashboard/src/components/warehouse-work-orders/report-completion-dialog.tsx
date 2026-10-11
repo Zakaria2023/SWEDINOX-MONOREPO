@@ -524,7 +524,9 @@ export const ReportCompletionDialog = ({
               </Button>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* The grid scrolls inside the window, as the reference's does, so
+                the title, the totals and OK stay in view with ten rows. */}
+            <div className="max-h-96 overflow-auto">
               <Table>
                 <TableHeader>
                   {isReceipt ? (
@@ -791,12 +793,19 @@ export const ReportCompletionDialog = ({
                   <dt className="text-muted-foreground">Total weight</dt>
                   <dd className="tabular-nums">
                     {formatNumber(
-                      (watchedPicks ?? []).reduce(
-                        (sum, pick) =>
-                          sum +
-                          Number(String(pick?.kgActual ?? "0").replace(",", ".")),
-                        0,
-                      ),
+                      // The scale's figure where there is one, the row's
+                      // calculated `Gewicht` otherwise — 314 on 327402 with
+                      // nothing weighed.
+                      (watchedPicks ?? []).reduce((sum, pick) => {
+                        const weighed = Number(
+                          String(pick?.kgActual ?? "0").replace(",", "."),
+                        );
+                        const calculated =
+                          Number(pick?.qtyPlanned ?? 0) > 0
+                            ? Number(line?.kgPlanned ?? 0)
+                            : 0;
+                        return sum + (weighed > 0 ? weighed : calculated);
+                      }, 0),
                     )}
                   </dd>
                 </div>
