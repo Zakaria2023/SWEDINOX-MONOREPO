@@ -484,6 +484,13 @@ export const applyReceipt = async (
     internalCharge,
     internalBatch,
     receiptDate: supplied?.receiptDate ?? todayDateString(),
+    // The parcel as it was bought: 2000 × 1000 × 2,00 in 304L on the lot
+    // 404355 produced (26AQWF, 11-10-2026), read off the purchase line.
+    lengthMm,
+    widthMm,
+    thicknessMm: purchaseLine.thicknessMm,
+    quality: purchaseLine.qualityCode,
+    stockCategory: purchaseLine.stockCategory,
     valuationPrice: unitCostString(unitCost),
     valuationEuro: moneyString(value),
   });
