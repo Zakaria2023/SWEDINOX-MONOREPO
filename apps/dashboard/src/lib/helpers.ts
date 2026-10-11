@@ -11128,3 +11128,13 @@ export const lotWeights = (lot: {
         : null,
   };
 };
+
+/**
+ * Whether a sales return order can still be changed: its lines, quantities
+ * and header stay open until the goods are back on the shelf. Received,
+ * credited and cancelled returns have moved stock or money, or never will.
+ */
+export const isReturnOrderEditable = (
+  status: string | null | undefined,
+): boolean =>
+  status !== "received" && status !== "credited" && status !== "cancelled";

@@ -2245,3 +2245,19 @@ export const STOCK_OPTION_STATUS_LABELS: Record<StockOptionStatus, string> = {
   to_remove: "To remove",
   applied: "Applied",
 };
+
+/**
+ * A sales return order's status as its own document banner reads it — the
+ * reference's `Provisional` until `Make final`, then `Released`, and
+ * `Invoiced` once it is credited (return 290247, 29-9-2026).
+ */
+export const RETURN_ORDER_DOCUMENT_STATUS_LABELS: Record<
+  ReturnOrderStatus,
+  string
+> = {
+  open: "Provisional",
+  in_progress: "Released",
+  received: "Received",
+  credited: "Invoiced",
+  cancelled: "Cancelled",
+};

@@ -52,6 +52,7 @@ import {
   generateUuid,
   getInvoiceVatRatePercent,
   getQuoteVatRatePercent,
+  isReturnOrderEditable,
   moneyString,
   proRataSlice,
   normaliseCharge,
@@ -144,6 +145,12 @@ export type ReturnableLine = {
   weightKg: SelectInvoiceItems["weightKg"];
   invoiceUuid: NonNullable<SelectInvoices["uuid"]>;
   invoiceId: SelectInvoices["id"];
+  // The lot the line was delivered from, so a lot picked in the Stock window
+  // can be traced back to the sale it left on.
+  stockUuid: SelectOrderItems["stockUuid"];
+  lengthMm: SelectOrderItems["lengthMm"];
+  widthMm: SelectOrderItems["widthMm"];
+  priceUnit: SelectOrderItems["priceUnit"];
 };
 
 // The invoice lines behind a return — the "Invoice lines" section of the
@@ -182,6 +189,25 @@ export type ReturnOrderListItem = SelectReturnOrders & {
   companyName: SelectCompanies["companyName"] | null;
   contactFirstName: SelectContacts["firstName"] | null;
   contactLastName: SelectContacts["lastName"] | null;
+};
+
+type InsertReturnLinesParams = {
+  returnOrderUuid: string;
+  items: ReturnOrderItemInput[];
+  returnableByUuid: Map<string, ReturnableLine>;
+  /** The first line's number; the lines after it count on from there. */
+  firstLineNumber: number;
+  fallbackReason: ReturnOrderReason | null;
+  lineStatus: SelectReturnOrderItems["lineStatus"];
+};
+
+// What the return's screen submits: the header, its surcharges and texts, and
+// — on a return not saved yet — the lines added under `Lines → New`.
+export type SaveReturnOrderInput = {
+  returnOrderUuid?: string;
+  fields: ReturnOrderFields;
+  extras: ReturnOrderExtras;
+  items: ReturnOrderItemInput[];
 };
 
 const RETURN_ORDER_SEARCH = [
@@ -608,6 +634,10 @@ export const updateReturnOrder = async (
           })),
         );
       }
+
+      // The surcharges and the VAT switch feed the Summary, so it is struck
+      // again with them.
+      await refreshReturnOrderSummary(tx, uuid);
     });
   } catch (error) {
     return {
@@ -669,6 +699,10 @@ const invoicedLineColumns = {
   weightKg: InvoiceItems.weightKg,
   invoiceUuid: InvoiceItems.invoiceUuid,
   invoiceId: Invoices.id,
+  stockUuid: OrderItems.stockUuid,
+  lengthMm: OrderItems.lengthMm,
+  widthMm: OrderItems.widthMm,
+  priceUnit: OrderItems.priceUnit,
 };
 
 /**
@@ -759,6 +793,108 @@ const buildReturnOrderSummary = async (
     totalInclVat: moneyString(totalExclVat + vatAmount),
     totalWeightKg: totalWeightKg.toFixed(2),
   };
+};
+
+/** The return's Summary struck again from what is on it now. */
+const refreshReturnOrderSummary = async (
+  tx: ReturnTransaction,
+  returnOrderUuid: string,
+): Promise<void> => {
+  const [header] = await tx
+    .select({
+      companyUuid: ReturnOrders.companyUuid,
+      calculateVatIfApplicable: ReturnOrders.calculateVatIfApplicable,
+    })
+    .from(ReturnOrders)
+    .where(eq(ReturnOrders.uuid, returnOrderUuid))
+    .limit(1);
+
+  if (!header) {
+    return;
+  }
+
+  await tx
+    .update(ReturnOrders)
+    .set(
+      await buildReturnOrderSummary(
+        tx,
+        returnOrderUuid,
+        header.companyUuid,
+        header.calculateVatIfApplicable ?? false,
+      ),
+    )
+    .where(eq(ReturnOrders.uuid, returnOrderUuid));
+};
+
+/**
+ * Why a set of lines cannot come back, or null when they all can: each has to
+ * be a line this customer was invoiced for, and never for more than was
+ * billed.
+ */
+const checkReturnLines = (
+  items: ReturnOrderItemInput[],
+  returnableByUuid: Map<string, ReturnableLine>,
+): string | null => {
+  for (const item of items) {
+    const line = returnableByUuid.get(item.orderItemUuid);
+    if (!line) {
+      return "One or more selected lines are not invoiced to this customer, or have already been returned.";
+    }
+    const returnQty = Number(item.returnQty ?? 0);
+    if (returnQty <= 0) {
+      return "Every returned line needs a quantity.";
+    }
+    if (returnQty > Number(line.quantity)) {
+      return `Cannot return more than was invoiced (${Number(line.quantity).toFixed(3)}).`;
+    }
+  }
+  return null;
+};
+
+/**
+ * Writes return lines against the invoiced lines they reverse, priced at what
+ * the customer was charged — the figure the credit note will hand back — and
+ * weighed in proportion to what was billed.
+ */
+const insertReturnLines = async (
+  tx: ReturnTransaction,
+  params: InsertReturnLinesParams,
+): Promise<void> => {
+  for (const [index, item] of params.items.entries()) {
+    const line = params.returnableByUuid.get(item.orderItemUuid);
+    if (!line) {
+      continue;
+    }
+
+    const returnQty = Number(item.returnQty);
+    const invoicedQty = Number(line.quantity) || 1;
+    const netPrice = Number(line.netPrice ?? 0);
+
+    await tx.insert(ReturnOrderItems).values({
+      uuid: generateUuid(),
+      returnOrderUuid: params.returnOrderUuid,
+      productUuid: line.productUuid,
+      complaintUuid: item.complaintUuid ?? null,
+      originalOrderUuid: line.orderUuid,
+      originalOrderLine: line.lineNumber,
+      originalOrderItemUuid: line.orderItemUuid,
+      lineNumber: params.firstLineNumber + index,
+      lineStatus: params.lineStatus,
+      reference: line.orderId != null ? String(line.orderId) : null,
+      unit: line.unit,
+      lengthMm: line.lengthMm,
+      widthMm: line.widthMm,
+      priceUnit: line.priceUnit,
+      quantity: line.quantity,
+      returnQty: returnQty.toFixed(3),
+      returnReason: item.returnReason ?? params.fallbackReason,
+      netPrice: moneyString(netPrice),
+      amount: moneyString(netPrice * returnQty),
+      weightKg: moneyString(
+        (Number(line.weightKg ?? 0) / invoicedQty) * returnQty,
+      ),
+    });
+  }
 };
 
 /**
@@ -1473,23 +1609,9 @@ export const createReturnOrder = async (
       returnable.map((line) => [line.orderItemUuid, line]),
     );
 
-    for (const item of items) {
-      const line = returnableByUuid.get(item.orderItemUuid);
-      if (!line) {
-        return {
-          error:
-            "One or more selected lines are not invoiced to this customer, or have already been returned.",
-        };
-      }
-      const returnQty = Number(item.returnQty ?? 0);
-      if (returnQty <= 0) {
-        return { error: "Every returned line needs a quantity." };
-      }
-      if (returnQty > Number(line.quantity)) {
-        return {
-          error: `Cannot return more than was invoiced (${Number(line.quantity).toFixed(3)}).`,
-        };
-      }
+    const lineError = checkReturnLines(items, returnableByUuid);
+    if (lineError) {
+      return { error: lineError };
     }
 
     await db.transaction(async (tx) => {
@@ -1507,37 +1629,18 @@ export const createReturnOrder = async (
 
       // Lines were previously dropped on the floor here — a return order was
       // only ever a header, which is why nothing downstream could credit it.
-      for (const [index, item] of items.entries()) {
-        const line = returnableByUuid.get(item.orderItemUuid);
-        if (!line) {
-          continue;
-        }
-
-        const returnQty = Number(item.returnQty);
-        const invoicedQty = Number(line.quantity) || 1;
-        const netPrice = Number(line.netPrice ?? 0);
-
-        await tx.insert(ReturnOrderItems).values({
-          uuid: generateUuid(),
-          returnOrderUuid: uuid,
-          productUuid: line.productUuid,
-          complaintUuid: item.complaintUuid ?? null,
-          originalOrderUuid: line.orderUuid,
-          originalOrderLine: line.lineNumber,
-          originalOrderItemUuid: line.orderItemUuid,
-          lineNumber: index + 1,
-          reference: line.orderId != null ? String(line.orderId) : null,
-          unit: line.unit,
-          quantity: line.quantity,
-          returnQty: returnQty.toFixed(3),
-          returnReason: item.returnReason ?? fields.returnReason ?? null,
-          netPrice: moneyString(netPrice),
-          amount: moneyString(netPrice * returnQty),
-          weightKg: moneyString(
-            (Number(line.weightKg ?? 0) / invoicedQty) * returnQty,
-          ),
-        });
-      }
+      // A return still being typed is `Provisional`, and so are its lines.
+      await insertReturnLines(tx, {
+        returnOrderUuid: uuid,
+        items,
+        returnableByUuid,
+        firstLineNumber: 1,
+        fallbackReason: fields.returnReason ?? null,
+        lineStatus:
+          !fields.status || fields.status === "open"
+            ? "provisional"
+            : "in_progress",
+      });
 
       if (extras.surcharges.length > 0) {
         await tx.insert(ReturnOrderSurcharges).values(
@@ -1587,4 +1690,290 @@ export const createReturnOrder = async (
           : "Failed to create return order",
     };
   }
+};
+
+/**
+ * The return's screen submitting: a new return is created with the lines added
+ * under `Lines → New` and opens on its own page; a saved one has its header,
+ * surcharges and texts written back, and `updateReturnOrder` redirects.
+ */
+export const saveReturnOrder = async (
+  _prevState: ReturnOrderActionResult,
+  input: SaveReturnOrderInput,
+): Promise<ReturnOrderActionResult> => {
+  if (input.returnOrderUuid) {
+    return updateReturnOrder(input.returnOrderUuid, input.fields, input.extras);
+  }
+
+  const result = await createReturnOrder(
+    input.fields,
+    input.extras,
+    input.items,
+  );
+  if (result.error || !result.returnOrderUuid) {
+    return result;
+  }
+
+  redirect(`/return-orders/${result.returnOrderUuid}`);
+};
+
+/**
+ * `Lines → New` on a saved return: the invoiced lines picked come back onto it,
+ * numbered on from its last line, and the Summary follows.
+ */
+export const addReturnOrderLines = async (
+  returnOrderUuid: string,
+  items: ReturnOrderItemInput[],
+): Promise<ReturnOrderActionResult> => {
+  try {
+    const [returnOrder] = await db
+      .select({
+        status: ReturnOrders.status,
+        companyUuid: ReturnOrders.companyUuid,
+        returnReason: ReturnOrders.returnReason,
+      })
+      .from(ReturnOrders)
+      .where(eq(ReturnOrders.uuid, returnOrderUuid))
+      .limit(1);
+
+    if (!returnOrder) {
+      return { error: "Return order not found." };
+    }
+    if (!isReturnOrderEditable(returnOrder.status)) {
+      return {
+        error:
+          "The goods on this return are already back, credited or cancelled, so its lines can no longer change.",
+      };
+    }
+
+    const returnable = await getReturnableLines(returnOrder.companyUuid);
+    const returnableByUuid = new Map(
+      returnable.map((line) => [line.orderItemUuid, line]),
+    );
+    const lineError = checkReturnLines(items, returnableByUuid);
+    if (lineError) {
+      return { error: lineError };
+    }
+
+    const lines = await db
+      .select({
+        lineNumber: ReturnOrderItems.lineNumber,
+        originalOrderItemUuid: ReturnOrderItems.originalOrderItemUuid,
+      })
+      .from(ReturnOrderItems)
+      .where(eq(ReturnOrderItems.returnOrderUuid, returnOrderUuid));
+
+    if (
+      items.some((item) =>
+        lines.some((line) => line.originalOrderItemUuid === item.orderItemUuid),
+      )
+    ) {
+      return {
+        error:
+          "That invoiced line is already on this return — change its Qty(p) instead.",
+      };
+    }
+
+    const lastLineNumber = lines.reduce(
+      (last, line) => Math.max(last, line.lineNumber ?? 0),
+      0,
+    );
+
+    await db.transaction(async (tx) => {
+      await insertReturnLines(tx, {
+        returnOrderUuid,
+        items,
+        returnableByUuid,
+        firstLineNumber: lastLineNumber + 1,
+        fallbackReason: returnOrder.returnReason ?? null,
+        lineStatus: returnOrder.status === "open" ? "provisional" : "released",
+      });
+      await refreshReturnOrderSummary(tx, returnOrderUuid);
+    });
+  } catch (error) {
+    return { error: describeError(error, "Failed to add the return line") };
+  }
+
+  revalidatePath("/return-orders");
+  revalidatePath("/return-lines");
+  revalidatePath(`/return-orders/${returnOrderUuid}`);
+  return { success: true, returnOrderUuid };
+};
+
+/** `Lines → Delete` on a return whose goods are not back yet. */
+export const deleteReturnOrderLine = async (
+  returnOrderUuid: string,
+  itemUuid: string,
+): Promise<ReturnOrderActionResult> => {
+  try {
+    const [returnOrder] = await db
+      .select({ status: ReturnOrders.status })
+      .from(ReturnOrders)
+      .where(eq(ReturnOrders.uuid, returnOrderUuid))
+      .limit(1);
+
+    if (!returnOrder) {
+      return { error: "Return order not found." };
+    }
+    if (!isReturnOrderEditable(returnOrder.status)) {
+      return {
+        error:
+          "The goods on this return are already back, credited or cancelled, so its lines can no longer change.",
+      };
+    }
+
+    // A line an unloading has been raised for is the warehouse's to undo.
+    const [unloading] = await db
+      .select({ uuid: WarehouseWorkOrderLines.uuid })
+      .from(WarehouseWorkOrderLines)
+      .where(eq(WarehouseWorkOrderLines.returnOrderItemUuid, itemUuid))
+      .limit(1);
+    if (unloading) {
+      return {
+        error:
+          "This line is on a warehouse workorder. Cancel that workorder before deleting the line.",
+      };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(ReturnOrderItems)
+        .where(
+          and(
+            eq(ReturnOrderItems.uuid, itemUuid),
+            eq(ReturnOrderItems.returnOrderUuid, returnOrderUuid),
+          ),
+        );
+      await refreshReturnOrderSummary(tx, returnOrderUuid);
+    });
+  } catch (error) {
+    return { error: describeError(error, "Failed to delete the return line") };
+  }
+
+  revalidatePath("/return-orders");
+  revalidatePath("/return-lines");
+  revalidatePath(`/return-orders/${returnOrderUuid}`);
+  return { success: true, returnOrderUuid };
+};
+
+/**
+ * `Qty(p)` typed on a line of a return whose goods are not back yet. The
+ * weight follows the quantity, the amount follows it at the price the line was
+ * invoiced at, and never more comes back than was billed.
+ */
+export const updateReturnOrderLineQuantity = async (
+  returnOrderUuid: string,
+  itemUuid: string,
+  returnQty: string,
+): Promise<ReturnOrderActionResult> => {
+  try {
+    const quantity = Number(returnQty);
+    if (!(quantity > 0)) {
+      return { error: "Qty(p) has to be more than 0." };
+    }
+
+    const [returnOrder] = await db
+      .select({ status: ReturnOrders.status })
+      .from(ReturnOrders)
+      .where(eq(ReturnOrders.uuid, returnOrderUuid))
+      .limit(1);
+
+    if (!returnOrder) {
+      return { error: "Return order not found." };
+    }
+    if (!isReturnOrderEditable(returnOrder.status)) {
+      return {
+        error:
+          "The goods on this return are already back, credited or cancelled, so its lines can no longer change.",
+      };
+    }
+
+    const [item] = await db
+      .select()
+      .from(ReturnOrderItems)
+      .where(
+        and(
+          eq(ReturnOrderItems.uuid, itemUuid),
+          eq(ReturnOrderItems.returnOrderUuid, returnOrderUuid),
+        ),
+      )
+      .limit(1);
+
+    if (!item) {
+      return { error: "Return line not found." };
+    }
+
+    const invoiced = Number(item.quantity ?? 0);
+    if (item.originalOrderItemUuid && quantity > invoiced + QUANTITY_EPSILON) {
+      return {
+        error: `Cannot return more than was invoiced (${invoiced.toFixed(3)}).`,
+      };
+    }
+
+    const previous = Number(item.returnQty ?? 0);
+    const weightKg =
+      previous > 0
+        ? (Number(item.weightKg ?? 0) / previous) * quantity
+        : Number(item.weightKg ?? 0);
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(ReturnOrderItems)
+        .set({
+          returnQty: quantity.toFixed(3),
+          weightKg: moneyString(weightKg),
+          amount: moneyString(Number(item.netPrice ?? 0) * quantity),
+        })
+        .where(eq(ReturnOrderItems.uuid, itemUuid));
+      await refreshReturnOrderSummary(tx, returnOrderUuid);
+    });
+  } catch (error) {
+    return {
+      error: describeError(error, "Failed to change the return quantity"),
+    };
+  }
+
+  revalidatePath("/return-orders");
+  revalidatePath("/return-lines");
+  revalidatePath(`/return-orders/${returnOrderUuid}`);
+  return { success: true, returnOrderUuid };
+};
+
+/**
+ * `Make final`: silent, as the reference's is — the return and its lines go
+ * from `Provisional` to `Released`, and the customer and return date lock
+ * (return 290247, 29-9-2026). It accepts a return at € 0,00, as the reference
+ * does.
+ */
+export const makeReturnOrderFinal = async (
+  uuid: string,
+): Promise<ReturnOrderActionResult> => {
+  try {
+    await db.transaction(async (tx) => {
+      const [claimed] = await tx
+        .update(ReturnOrders)
+        .set({ status: "in_progress" })
+        .where(and(eq(ReturnOrders.uuid, uuid), eq(ReturnOrders.status, "open")));
+
+      if (claimed.affectedRows === 0) {
+        throw new Error(
+          "Only a provisional return order can be made final — please refresh and try again.",
+        );
+      }
+
+      await tx
+        .update(ReturnOrderItems)
+        .set({ lineStatus: "released" })
+        .where(eq(ReturnOrderItems.returnOrderUuid, uuid));
+    });
+  } catch (error) {
+    return {
+      error: describeError(error, "Failed to make the return order final"),
+    };
+  }
+
+  revalidatePath("/return-orders");
+  revalidatePath("/return-lines");
+  revalidatePath(`/return-orders/${uuid}`);
+  return { success: true, returnOrderUuid: uuid };
 };
