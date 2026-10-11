@@ -1650,10 +1650,17 @@ export const reportWarehouseWorkOrderLineCompletion = async (
         (total, pick) => total + Number(pick.qtyActual),
         0,
       );
-      const kgActual = reported.reduce(
+      const weighedKg = reported.reduce(
         (total, pick) => total + Number(pick.kgActual ?? 0),
         0,
       );
+      // An unloading reported without a scale keeps the calculated weight, as
+      // its lot does: `Gewogen gewicht` left at 0 on 327402 (11-10-2026).
+      const plannedQty = Number(line.qtyPlanned ?? 0);
+      const kgActual =
+        weighedKg === 0 && meta.stockEffect === "in" && plannedQty > 0
+          ? (Number(line.kgPlanned ?? 0) * qtyActual) / plannedQty
+          : weighedKg;
 
       // 🔴 Reporting a line approves it — unless the product says otherwise.
       //

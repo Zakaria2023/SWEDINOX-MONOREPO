@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import {
   getPickableLotsForLine,
   getWarehouseWorkOrderPicks,
@@ -102,6 +102,9 @@ export const ReportCompletionDialog = ({
   // — 2 lots out of the product's 14. The chip can be taken off, so this is a
   // default and not a rule.
   const [onLineLocationOnly, setOnLineLocationOnly] = useState(true);
+  // The row `Verwijder` acts on — the reference deletes the selected row from
+  // a toolbar above the grid, not from a button on every row.
+  const [selectedRow, setSelectedRow] = useState(0);
 
   const {
     control,
@@ -139,6 +142,7 @@ export const ReportCompletionDialog = ({
     setLoading(true);
     setFormError(undefined);
     setOnLineLocationOnly(true);
+    setSelectedRow(0);
 
     const load = async () => {
       // Sequential rather than concurrent: this database caps connections.
@@ -182,8 +186,11 @@ export const ReportCompletionDialog = ({
               uuid: undefined,
               stockUuid: "",
               qtyPlanned: index === 0 ? (line.qtyPlanned ?? "0") : "0",
-              qtyActual: index === 0 ? (line.qtyPlanned ?? "") : "",
-              kgActual: index === 0 ? (line.kgPlanned ?? "") : "",
+              // `10`, not `10.000`, and `Gewogen gewicht` opens at nothing:
+              // the scale has not spoken yet, and an empty weight takes the
+              // calculated one on the lot (327402, 11-10-2026).
+              qtyActual: index === 0 ? String(plannedPieces) : "",
+              kgActual: "",
               charge: line.charge ?? "",
               internalCharge: mintedCharge,
               internalBatch: line.internalBatch ?? "",
@@ -193,8 +200,10 @@ export const ReportCompletionDialog = ({
                 uuid: undefined,
                 stockUuid: line.stockUuid ?? "",
                 qtyPlanned: line.qtyPlanned ?? "0",
-                qtyActual: line.qtyPlanned ?? "",
-                kgActual: line.kgPlanned ?? "",
+                qtyActual: line.qtyPlanned
+                  ? String(Number(line.qtyPlanned))
+                  : "",
+                kgActual: incoming ? "" : (line.kgPlanned ?? ""),
                 charge: line.charge ?? "",
                 internalCharge: mintedCharge,
                 internalBatch: line.internalBatch ?? "",
@@ -363,11 +372,22 @@ export const ReportCompletionDialog = ({
     value: user.value,
   }));
 
-  const columnCount = isReceipt ? 16 : isDrawnFromStock ? 8 : 7;
+  const columnCount = isReceipt ? 15 : isDrawnFromStock ? 7 : 6;
+  // `Nieuw` is greyed on an unloading opened one row per piece: every piece
+  // already has its row (327402, 11-10-2026).
+  const canAddRow =
+    !isReceipt || fields.length < Math.round(Number(line?.qtyPlanned ?? 0));
+
+  const deleteSelectedRow = () => {
+    remove(selectedRow);
+    setSelectedRow(Math.max(0, selectedRow - 1));
+  };
 
   return (
     <Dialog open={!!line} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl">
+      {/* Wide enough for all fifteen of the reference's columns, Charge
+          included, without scrolling sideways to reach it. */}
+      <DialogContent className="max-w-none">
         <DialogHeader>
           <DialogTitle>
             Report completion{" "}
@@ -445,8 +465,10 @@ export const ReportCompletionDialog = ({
                 />
               </div>
               {/* Where the goods end up. `Laad` in the reference, but not
-                  always: work order 318341 sends its line to `Afroep`. */}
-              <div>
+                  always: work order 318341 sends its line to `Afroep`. An
+                  unloading's header has no such field — each row's `Naar`
+                  says it. */}
+              <div className={cn(isReceipt && "hidden")}>
                 <FormLabel htmlFor="toLocationUuid">To location</FormLabel>
                 <Controller
                   control={control}
@@ -463,6 +485,43 @@ export const ReportCompletionDialog = ({
                   )}
                 />
               </div>
+            </div>
+
+            {/* `Nieuw` · `Verwijder`, above the grid as the reference has them.
+                One planned line is routinely reported as several parcels — 50
+                pieces walked out as 20, 25 and 5 — each on a shelf of its own. */}
+            <div className="flex items-center gap-2 border-b pb-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  append({
+                    uuid: undefined,
+                    stockUuid: "",
+                    qtyPlanned: "0",
+                    qtyActual: "",
+                    kgActual: "",
+                    charge: "",
+                    internalCharge: "",
+                    internalBatch: "",
+                  })
+                }
+                disabled={isPending || !canAddRow}
+              >
+                <Plus className="size-4" />
+                New
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={deleteSelectedRow}
+                disabled={isPending || fields.length <= 1}
+              >
+                <X className="size-4 text-destructive" />
+                Delete
+              </Button>
             </div>
 
             <div className="overflow-x-auto">
@@ -490,7 +549,6 @@ export const ReportCompletionDialog = ({
                       <TableHead>Charge</TableHead>
                       <TableHead>Batch</TableHead>
                       <TableHead>Plate number</TableHead>
-                      <TableHead />
                     </TableRow>
                   ) : (
                   <TableRow>
@@ -503,7 +561,6 @@ export const ReportCompletionDialog = ({
                     <TableHead>Charge</TableHead>
                     <TableHead>Internal charge</TableHead>
                     <TableHead>Internal batch</TableHead>
-                    <TableHead />
                   </TableRow>
                   )}
                 </TableHeader>
@@ -519,7 +576,11 @@ export const ReportCompletionDialog = ({
                     </TableRow>
                   ) : (
                     fields.map((field, index) => (
-                      <TableRow key={field.id}>
+                      <TableRow
+                        key={field.id}
+                        onClick={() => setSelectedRow(index)}
+                        className={cn(index === selectedRow && "bg-muted")}
+                      >
                         {isReceipt ? (
                           <>
                             <TableCell />
@@ -690,18 +751,6 @@ export const ReportCompletionDialog = ({
                             </TableCell>
                           </>
                         )}
-                        <TableCell>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => remove(index)}
-                            disabled={isPending || fields.length === 1}
-                            aria-label="Remove row"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -755,31 +804,6 @@ export const ReportCompletionDialog = ({
             ) : null}
 
             <div className="flex flex-wrap items-center gap-4">
-              {/* One planned line is routinely reported as several parcels —
-                  50 pieces walked out as 20, 25 and 5 — and each parcel may sit
-                  on a shelf of its own. */}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  append({
-                    uuid: undefined,
-                    stockUuid: "",
-                    qtyPlanned: "0",
-                    qtyActual: "",
-                    kgActual: "",
-                    charge: "",
-                    internalCharge: "",
-                    internalBatch: "",
-                  })
-                }
-                disabled={isPending}
-              >
-                <Plus className="size-4" />
-                New
-              </Button>
-
               {isDrawnFromStock && lots.some((lot) => lot.onLineLocation) ? (
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Checkbox
