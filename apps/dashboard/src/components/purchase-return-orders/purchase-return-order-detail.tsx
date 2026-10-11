@@ -52,15 +52,18 @@ type Props = {
   /** Clerk id -> name; these columns store the id, not the name. */
   userNames: Record<string, string>;
   returnOrder: PurchaseReturnOrderDetail;
+  /** Arrived from `New` on an unsaved return: open the parcel picker. */
+  openLinePicker?: boolean;
 };
 
 export const PurchaseReturnOrderDetailView = ({
   returnOrder,
   userNames,
+  openLinePicker = false,
 }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(openLinePicker);
   const [selectedLineUuid, setSelectedLineUuid] = useState<string | null>(
     null,
   );

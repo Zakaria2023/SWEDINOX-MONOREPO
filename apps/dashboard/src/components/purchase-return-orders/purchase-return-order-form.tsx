@@ -106,6 +106,7 @@ export const PurchaseReturnOrderForm = ({
     isPending,
     isEditing,
     onSubmit,
+    onSubmitAndAddLine,
     state,
     isDropOff,
     supplierOptions,
@@ -423,10 +424,20 @@ export const PurchaseReturnOrderForm = ({
 
           <CollapsibleSection title="Lines" summary="0 lines" defaultOpen>
             <div className="space-y-2 p-3">
-              {/* `New` is greyed until there is a supplier and a saved
-                  return to put the line on. */}
+              {/* `New` wakes once there is a supplier, as the reference's
+                  does: it saves the return and opens the parcel picker on
+                  it. A return being edited takes its lines on its own page. */}
               <div className="flex flex-wrap gap-2">
-                {["New", "Delete", "Sawing specifications"].map((action) => (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void onSubmitAndAddLine()}
+                  disabled={isPending || isEditing || !watch("supplierUuid")}
+                >
+                  New
+                </Button>
+                {["Delete", "Sawing specifications"].map((action) => (
                   <Button
                     key={action}
                     type="button"

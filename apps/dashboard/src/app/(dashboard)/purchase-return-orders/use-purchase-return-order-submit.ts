@@ -286,7 +286,11 @@ export const usePurchaseReturnOrderSubmit = ({
         : "/purchase-return-orders",
     );
 
-  const onSubmit = form.handleSubmit((values) => {
+  // `openLinePicker`: the Lines panel's `New` on an unsaved return saves it
+  // first, as the reference numbers a return the moment it has a supplier
+  // (950034, 11-10-2026), then opens the parcel picker on it.
+  const submitWith = (openLinePicker: boolean) =>
+    form.handleSubmit((values) => {
     startTransition(async () => {
       const extras: PurchaseReturnOrderExtras = {
         surcharges: values.surcharges.map((surcharge) => ({
@@ -364,16 +368,24 @@ export const usePurchaseReturnOrderSubmit = ({
       const result = await createPurchaseReturnOrder(fields, extras);
       setState(result);
       if (result.success) {
-        router.push("/purchase-return-orders");
+        router.push(
+          openLinePicker && result.purchaseReturnOrderUuid
+            ? `/purchase-return-orders/${result.purchaseReturnOrderUuid}?newLine=1`
+            : "/purchase-return-orders",
+        );
       }
     });
   });
+
+  const onSubmit = submitWith(false);
+  const onSubmitAndAddLine = submitWith(true);
 
   return {
     form,
     isPending,
     isEditing: Boolean(purchaseReturnOrderUuid),
     onSubmit,
+    onSubmitAndAddLine,
     state,
     isDropOff,
     supplierOptions,
