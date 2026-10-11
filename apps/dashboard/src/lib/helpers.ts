@@ -8136,6 +8136,22 @@ export const deliveryTimeInDays = (
 };
 
 /**
+ * A `yyyy-MM-dd` date moved off the weekend onto the Monday after it; a weekday
+ * stays as it is. A return dated Sunday 11-10-2026 gave its line delivery date
+ * 12-10-2026 (950034).
+ */
+export const onWorkingDay = (date: string): string => {
+  const day = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(day.getTime())) {
+    return date;
+  }
+  const weekday = day.getUTCDay();
+  const shift = weekday === 6 ? 2 : weekday === 0 ? 1 : 0;
+  day.setUTCDate(day.getUTCDate() + shift);
+  return day.toISOString().slice(0, 10);
+};
+
+/**
  * Working days from today up to a date, counting Monday to Friday and excluding
  * today itself — "how many more working days have I got before this lands".
  *

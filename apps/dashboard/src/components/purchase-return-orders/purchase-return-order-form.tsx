@@ -38,11 +38,11 @@ import {
   WORK_ORDER_PANELS,
 } from "@/components/purchase-orders/purchase-order-new-panels";
 import {
-  amountForWeight,
   cn,
   formatDateColumn,
   formatMoney,
   formatNumber,
+  onWorkingDay,
   orDash,
   VAT_CODE_RATE,
 } from "@/lib/helpers";
@@ -74,6 +74,7 @@ const RETURN_LINE_COLUMNS = [
   "Qty(a)",
   "U",
   "Length",
+  "Width",
   "Delivery date",
   "Kg(p)",
   "Kg(a)",
@@ -150,19 +151,15 @@ export const PurchaseReturnOrderForm = ({
   const [lineError, setLineError] = useState<string | undefined>();
   const supplierUuid = watch("supplierUuid");
 
-  // What each picked parcel is worth going back: its share of the line's
-  // weight, at the price it was bought for.
+  // Each picked parcel's share of the line's weight, and what it is worth.
   const lineFigures = pendingLines.map(({ lot, returnQty }) => {
     const quantity = Number(returnQty || 0);
     const planned = Number(lot.plannedQuantity ?? lot.receivedQuantity ?? 0);
     const weightKg =
       planned > 0 ? (Number(lot.kgPurchased ?? 0) * quantity) / planned : 0;
-    const amount = amountForWeight(
-      Number(lot.netPrice ?? 0),
-      lot.priceUnit ?? null,
-      weightKg,
-      { quantity },
-    );
+    // The reference leaves a picked return line at `Gross price € 0,00`, so
+    // it is worth nothing until somebody prices it (950034, 11-10-2026).
+    const amount = 0;
     return { quantity, weightKg, amount };
   });
   const materials = lineFigures.reduce((sum, line) => sum + line.amount, 0);
@@ -200,7 +197,8 @@ export const PurchaseReturnOrderForm = ({
       setPendingLines((current: PickedReturnLine[]) =>
         current.some((line) => line.lot.stockUuid === match.stockUuid)
           ? current
-          : [...current, { lot: match, returnQty: match.availableQuantity }],
+          : // Qty(p) opens at 0 and is typed, as the reference's does.
+            [...current, { lot: match, returnQty: "0" }],
       );
     });
   };
@@ -582,10 +580,10 @@ export const PurchaseReturnOrderForm = ({
                           <TableCell className="text-right tabular-nums">
                             {(index + 1) * 10}
                           </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            {lot.purchaseOrderId === null
-                              ? "—"
-                              : `${lot.purchaseOrderId}/${(lot.lineNumber ?? 0) * 10}`}
+                          {/* `0`: a line picked from stock is not one of the
+                              order's lines; `Par. return` fills it. */}
+                          <TableCell className="text-right tabular-nums">
+                            0
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             {orDash(lot.productCode)}
@@ -612,8 +610,15 @@ export const PurchaseReturnOrderForm = ({
                           <TableCell className="text-right tabular-nums">
                             {lot.lengthMm ? `${lot.lengthMm} mm` : "—"}
                           </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {lot.widthMm ? `${lot.widthMm} mm` : "—"}
+                          </TableCell>
                           <TableCell className="whitespace-nowrap">
-                            {formatDateColumn(watch("returnDate") ?? null)}
+                            {formatDateColumn(
+                              watch("returnDate")
+                                ? onWorkingDay(watch("returnDate") ?? "")
+                                : null,
+                            )}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
                             {formatNumber(lineFigures[index]?.weightKg ?? 0)}
@@ -622,7 +627,7 @@ export const PurchaseReturnOrderForm = ({
                             0
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
-                            {formatMoney(Number(lot.netPrice ?? 0))}
+                            {formatMoney(0)}
                           </TableCell>
                           <TableCell>{orDash(lot.priceUnit)}</TableCell>
                           <TableCell className="text-right tabular-nums">
