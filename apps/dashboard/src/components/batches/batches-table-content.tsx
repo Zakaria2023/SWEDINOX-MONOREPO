@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Building2, Package, Pencil, ShoppingCart, Tag } from "lucide-react";
+import {
+  Building2,
+  FileText,
+  Package,
+  Pencil,
+  ShoppingCart,
+  Tag,
+} from "lucide-react";
 import { BatchRow, exportBatches } from "@/app/(dashboard)/batches/actions";
 import {
   BATCH_COLUMNS,
@@ -18,7 +25,11 @@ import {
 } from "@/components/shadcn/table";
 import { BooleanFlag } from "@/components/ui/boolean-flag";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { RowAction } from "@/components/ui/row-action";
+import { Button } from "@/components/shadcn/button";
+import {
+  TableRowActionItem,
+  TableRowToolbar,
+} from "@/components/ui/table-row-toolbar";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
@@ -26,6 +37,7 @@ import { TableToolbar } from "@/components/ui/table-toolbar";
 import { selectorColumns } from "@/lib/excel";
 import {
   buildColumnVisibility,
+  cn,
   formatDateColumn,
   formatLengthMm,
   formatNumber,
@@ -138,7 +150,7 @@ const BatchCell = ({ row, column }: BatchCellProps) => {
       return (
         <TableCell>
           <BooleanFlag
-            on={row.mandatoryIgnoreDocument}
+            on={row.mandatoryIgnoreDocument ?? false}
             label="Mandatory, ignore document"
           />
         </TableCell>
@@ -179,6 +191,36 @@ export const BatchesTable = ({ page, filters }: Props) => {
     Record<BatchColumnKey, boolean>
   >(buildColumnVisibility(ALL_COLUMNS));
   const [adjusting, setAdjusting] = useState<BatchRow | null>(null);
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+  const selected = page.rows.find((row) => row.uuid === selectedUuid) ?? null;
+
+  // `Show Product · Show Company · Show Purchase order · Show File`, above the
+  // grid and acting on the selected row (Batches, 11-10-2026).
+  const rowActions: TableRowActionItem[] = [
+    {
+      label: "Show Product",
+      icon: <Package className="size-4" />,
+      href: selected?.productUuid ? `/products/${selected.productUuid}` : null,
+    },
+    {
+      label: "Show Company",
+      icon: <Building2 className="size-4" />,
+      href: selected?.supplierUuid ? `/companies/${selected.supplierUuid}` : null,
+    },
+    {
+      label: "Show Purchase order",
+      icon: <ShoppingCart className="size-4" />,
+      href: selected?.purchaseOrderUuid
+        ? `/purchase-orders/${selected.purchaseOrderUuid}`
+        : null,
+    },
+    {
+      label: "Show File",
+      icon: <FileText className="size-4" />,
+      // A batch names its certificate file but holds no link to it yet.
+      href: null,
+    },
+  ];
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -209,6 +251,41 @@ export const BatchesTable = ({ page, filters }: Props) => {
         />
       </TableToolbar>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <TableRowToolbar
+          actions={rowActions}
+          selectedLabel={selected?.internalCharge ?? null}
+        />
+        {/* Ours beyond the reference's four: the charge correction and the
+            stock label, on the same selected row. */}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setAdjusting(selected)}
+          disabled={!selected}
+        >
+          <Pencil className="me-1.5 size-4" />
+          Adjust charge
+        </Button>
+        {selected ? (
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={<Link href={`/batches/${selected.uuid}/label`} />}
+          >
+            <Tag className="me-1.5 size-4" />
+            Stock label
+          </Button>
+        ) : (
+          <Button type="button" variant="outline" size="sm" disabled>
+            <Tag className="me-1.5 size-4" />
+            Stock label
+          </Button>
+        )}
+      </div>
+
       {page.rows.length === 0 ? (
         <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
           <p className="font-medium">No batches match this view</p>
@@ -233,63 +310,21 @@ export const BatchesTable = ({ page, filters }: Props) => {
                     <TableHead key={col.key}>{col.label}</TableHead>
                   );
                 })}
-                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
               {page.rows.map((row) => (
-                <TableRow key={row.uuid}>
+                <TableRow
+                  key={row.uuid}
+                  onClick={() => setSelectedUuid(row.uuid)}
+                  className={cn(
+                    "cursor-pointer",
+                    row.uuid === selectedUuid && "bg-accent",
+                  )}
+                >
                   {visibleColumns.map((col) => (
                     <BatchCell key={col.key} row={row} column={col.key} />
                   ))}
-                  {/* The reference's row menu: show the product, the company
-                      and the purchase order, adjust the charge, print the
-                      stock label. */}
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      {row.productUuid && (
-                        <RowAction
-                          label="Show product"
-                          tone="view"
-                          href={`/products/${row.productUuid}`}
-                        >
-                          <Package className="size-4" />
-                        </RowAction>
-                      )}
-                      {row.supplierUuid && (
-                        <RowAction
-                          label="Show company"
-                          tone="view"
-                          href={`/companies/${row.supplierUuid}`}
-                        >
-                          <Building2 className="size-4" />
-                        </RowAction>
-                      )}
-                      {row.purchaseOrderUuid && (
-                        <RowAction
-                          label="Show purchase order"
-                          tone="view"
-                          href={`/purchase-orders/${row.purchaseOrderUuid}`}
-                        >
-                          <ShoppingCart className="size-4" />
-                        </RowAction>
-                      )}
-                      <RowAction
-                        label="Adjust charge"
-                        tone="edit"
-                        onClick={() => setAdjusting(row)}
-                      >
-                        <Pencil className="size-4" />
-                      </RowAction>
-                      <RowAction
-                        label="Stock label"
-                        tone="neutral"
-                        href={`/batches/${row.uuid}/label`}
-                      >
-                        <Tag className="size-4" />
-                      </RowAction>
-                    </div>
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

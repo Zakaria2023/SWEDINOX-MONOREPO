@@ -492,6 +492,9 @@ export const applyReceipt = async (
     thicknessMm: purchaseLine.thicknessMm,
     quality: purchaseLine.qualityCode,
     stockCategory: purchaseLine.stockCategory,
+    // Counted in what the line was bought in — `10 ST` on 26AQWF, not the
+    // column's `kg` default.
+    unit: purchaseLine.unit ?? undefined,
     valuationPrice: unitCostString(unitCost),
     valuationEuro: moneyString(value),
   });

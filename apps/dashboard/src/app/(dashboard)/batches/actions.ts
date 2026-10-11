@@ -67,7 +67,7 @@ const BATCH_SORTABLE: SortableColumns = {
 
 export type BatchRow = SelectBatches & {
   purchaseOrderId: SelectPurchaseOrders["id"] | null;
-  supplierCode: SelectCompanies["id"] | null;
+  supplierCode: SelectCompanies["searchCode1"] | null;
   supplierName: SelectCompanies["companyName"] | null;
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
@@ -124,7 +124,7 @@ const batchRows =
       .select({
         batch: Batches,
         purchaseOrderId: PurchaseOrders.id,
-        supplierCode: Companies.id,
+        supplierCode: Companies.searchCode1,
         supplierName: Companies.companyName,
         productCode: Products.productCode,
         productName: Products.name,
@@ -211,7 +211,7 @@ export const getBatchDetail = async (
     .select({
       batch: Batches,
       purchaseOrderId: PurchaseOrders.id,
-      supplierCode: Companies.id,
+      supplierCode: Companies.searchCode1,
       supplierName: Companies.companyName,
       productCode: Products.productCode,
       productName: Products.name,
