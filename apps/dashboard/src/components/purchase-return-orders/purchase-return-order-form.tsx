@@ -47,10 +47,12 @@ import {
   VAT_CODE_RATE,
 } from "@/lib/helpers";
 import { useState } from "react";
+import { getReturnablePurchaseLines } from "@/app/(dashboard)/purchase-return-orders/actions";
+import { PickedReturnLine } from "@/app/(dashboard)/purchase-return-orders/use-purchase-return-order-submit";
 import {
-  PickedReturnLine,
-  ReturnLinesPickerDialog,
-} from "./return-lines-picker-dialog";
+  StockSearchChoice,
+  StockSearchDialog,
+} from "@/components/orders/stock-search-dialog";
 import { DocumentUploader } from "@/components/document-uploader";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
@@ -145,6 +147,7 @@ export const PurchaseReturnOrderForm = ({
 
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [selectedLine, setSelectedLine] = useState<number | null>(null);
+  const [lineError, setLineError] = useState<string | undefined>();
   const supplierUuid = watch("supplierUuid");
 
   // What each picked parcel is worth going back: its share of the line's
@@ -175,16 +178,37 @@ export const PurchaseReturnOrderForm = ({
     ["Total weight", `${formatNumber(totalKg)} Kg`],
   ];
 
-  const addPicked = (lines: PickedReturnLine[]) =>
-    setPendingLines((current) => [
-      ...current,
-      ...lines.filter(
-        (line) =>
-          !current.some(
-            (existing) => existing.lot.stockUuid === line.lot.stockUuid,
-          ),
-      ),
-    ]);
+  // The reference's `…` on a return line opens `Voorraad`, the stock window
+  // every document line picks from (950034, 11-10-2026). The lot chosen
+  // there has to be one this supplier delivered, or there is nothing to send
+  // back to it.
+  const chooseLot = (choice: StockSearchChoice) => {
+    const lot = choice.lot;
+    setLineError(undefined);
+    if (!lot || !supplierUuid) {
+      setLineError("Pick a lot, not just an article: a return sends a parcel back.");
+      return;
+    }
+    void getReturnablePurchaseLines(supplierUuid).then((returnable) => {
+      const match = returnable.find((line) => line.stockUuid === lot.uuid);
+      if (!match) {
+        setLineError(
+          `Lot ${lot.internalCharge ?? lot.charge ?? ""} did not come from this supplier, or is no longer on the shelf.`,
+        );
+        return;
+      }
+      setPendingLines((current: PickedReturnLine[]) =>
+        current.some((line) => line.lot.stockUuid === match.stockUuid)
+          ? current
+          : [...current, { lot: match, returnQty: match.availableQuantity }],
+      );
+    });
+  };
+
+  const setReturnQty = (index: number, returnQty: string) =>
+    setPendingLines((current: PickedReturnLine[]) =>
+      current.map((line, at) => (at === index ? { ...line, returnQty } : line)),
+    );
 
   const deleteSelectedLine = () => {
     if (selectedLine === null) {
@@ -518,11 +542,13 @@ export const PurchaseReturnOrderForm = ({
                   Sawing specifications
                 </Button>
               </div>
-              <ReturnLinesPickerDialog
-                supplierUuid={supplierUuid || undefined}
-                onPick={addPicked}
+              <StockSearchDialog
                 open={isPickerOpen}
                 onOpenChange={setIsPickerOpen}
+                onChoose={(choice) => {
+                  setIsPickerOpen(false);
+                  chooseLot(choice);
+                }}
               />
               <div className="overflow-x-auto rounded-lg border">
                 <Table>
@@ -565,8 +591,17 @@ export const PurchaseReturnOrderForm = ({
                             {orDash(lot.productCode)}
                           </TableCell>
                           <TableCell>{orDash(lot.productName)}</TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatNumber(Number(returnQty || 0))}
+                          <TableCell className="text-right">
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              className="w-20 text-right"
+                              value={returnQty}
+                              onClick={(event) => event.stopPropagation()}
+                              onChange={(event) =>
+                                setReturnQty(index, event.target.value)
+                              }
+                            />
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
                             0
@@ -608,6 +643,7 @@ export const PurchaseReturnOrderForm = ({
                   </TableBody>
                 </Table>
               </div>
+              <FormError>{lineError}</FormError>
             </div>
           </CollapsibleSection>
 

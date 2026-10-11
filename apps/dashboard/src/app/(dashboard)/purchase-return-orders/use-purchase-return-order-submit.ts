@@ -10,6 +10,7 @@ import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
+import { ReturnablePurchaseLine } from "./actions";
 import {
   getPurchaseOrdersForCompany,
   getPurchaseSupplierDefaults,
@@ -17,7 +18,6 @@ import {
   PurchaseOrderOption,
 } from "@/app/(dashboard)/purchase-orders/actions";
 import { SelectOption } from "@/components/shadcn/select";
-import { PickedReturnLine } from "@/components/purchase-return-orders/return-lines-picker-dialog";
 import {
   InvoicePaymentTerm,
   invoicePaymentTerms,
@@ -61,6 +61,12 @@ type UsePurchaseReturnOrderSubmitParams = {
   defaultValues?: PurchaseReturnOrderFormValues;
   /** Who is signed in — a new return's purchaser, as the reference fills it. */
   currentUserId?: string;
+};
+
+/** A lot picked for a return that has not been saved yet. */
+export type PickedReturnLine = {
+  lot: ReturnablePurchaseLine;
+  returnQty: string;
 };
 
 const emptyOpt = { value: "", label: "Empty" };
