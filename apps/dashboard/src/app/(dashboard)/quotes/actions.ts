@@ -35,7 +35,9 @@ import {
   quoteLineFinancials,
   QuoteSummary,
   resolveSurchargeAmounts,
+  todayDateString,
 } from "@/lib/helpers";
+import { convertQuoteToOrder } from "@/app/(dashboard)/quote-lines/actions";
 import {
   loadSalesPricingContext,
   minimumMarginFor,
@@ -163,6 +165,15 @@ type PriceQuoteLinesParams = {
   reference: string | null;
   deliveryDate: string | null;
   items: QuoteLineInput[];
+};
+
+// What the quote screen dispatches on Save: the header, its lines and its
+// surcharges, and — for a saved quote — which one it is.
+export type QuoteSubmitPayload = {
+  quoteUuid?: string;
+  fields: QuoteFields;
+  items: QuoteLineInput[];
+  surcharges: QuoteSurchargeInput[];
 };
 
 const QUOTE_SEARCH = [
@@ -800,4 +811,116 @@ export const deleteQuote = async (uuid: string): Promise<QuoteActionResult> => {
   revalidatePath("/quotes");
   revalidatePath("/quote-lines");
   redirect("/quotes");
+};
+
+/**
+ * The quote screen's Save, as `useActionState` dispatches it. A new quote is
+ * created and opened on its own page — the same screen, now with a number —
+ * and a saved one is re-priced and rewritten; both redirect from here.
+ */
+export const submitQuote = async (
+  _prevState: QuoteActionResult,
+  payload: QuoteSubmitPayload,
+): Promise<QuoteActionResult> => {
+  if (payload.quoteUuid) {
+    return updateQuote(
+      payload.quoteUuid,
+      payload.fields,
+      payload.items,
+      payload.surcharges,
+    );
+  }
+
+  const result = await createQuote(
+    payload.fields,
+    payload.items,
+    payload.surcharges,
+  );
+  if (!result.success || !result.quoteUuid) {
+    return result;
+  }
+  redirect(`/quotes/${result.quoteUuid}`);
+};
+
+/**
+ * The toolbar's `Finalize`: a provisional quote is released to the customer.
+ * It is what stamps the greyed `Quote date` and works out `Valid u/i` — the
+ * quote date plus its validity period in calendar days (three on every quote
+ * the reference holds) — and, as the reference prints the quote it releases,
+ * it ticks `Printed`.
+ */
+export const finalizeQuote = async (
+  uuid: string,
+): Promise<QuoteActionResult> => {
+  try {
+    const [quote] = await db
+      .select({
+        status: Quotes.status,
+        validityPeriodDays: Quotes.validityPeriodDays,
+      })
+      .from(Quotes)
+      .where(eq(Quotes.uuid, uuid))
+      .limit(1);
+
+    if (!quote) {
+      return { error: "Quote not found." };
+    }
+    if (quote.status !== "provisional") {
+      return { error: "Only a provisional quote can be finalized." };
+    }
+
+    const quoteDate = todayDateString();
+    const validUntil = new Date(`${quoteDate}T00:00:00Z`);
+    validUntil.setUTCDate(
+      validUntil.getUTCDate() + (quote.validityPeriodDays ?? 0),
+    );
+
+    await db
+      .update(Quotes)
+      .set({
+        status: "released",
+        quoteDate: new Date(`${quoteDate}T00:00:00Z`),
+        validUntil,
+        isPrinted: true,
+      })
+      .where(and(eq(Quotes.uuid, uuid), eq(Quotes.status, "provisional")));
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Failed to finalize quote",
+    };
+  }
+
+  revalidatePath("/quotes");
+  revalidatePath(`/quotes/${uuid}`);
+  return { success: true, quoteUuid: uuid };
+};
+
+/**
+ * The toolbar's `Order`: a released quote becomes a sales order, priced as it
+ * was offered and with its stock reserved, and the screen moves to that order.
+ * The conversion itself is the one the quote-lines overview runs.
+ */
+export const convertQuote = async (
+  uuid: string,
+): Promise<QuoteActionResult> => {
+  const [quote] = await db
+    .select({ status: Quotes.status })
+    .from(Quotes)
+    .where(eq(Quotes.uuid, uuid))
+    .limit(1);
+
+  if (!quote) {
+    return { error: "Quote not found." };
+  }
+  if (quote.status !== "released") {
+    return { error: "Finalize the quote before turning it into an order." };
+  }
+
+  const result = await convertQuoteToOrder(uuid);
+  if (result.error || !result.orderUuid) {
+    return { error: result.error ?? "Failed to convert the quote to an order" };
+  }
+
+  revalidatePath(`/quotes/${uuid}`);
+  redirect(`/orders/${result.orderUuid}`);
 };

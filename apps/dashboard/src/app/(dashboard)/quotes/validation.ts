@@ -107,6 +107,7 @@ export const quoteSchema = z.object({
 
   // Follow-up
   expired: z.boolean(),
+  expirationReason: z.string().optional(),
 
   // Remarks
   remarks: z.string().optional(),
@@ -178,6 +179,7 @@ export const DEFAULT_QUOTE: QuoteFormValues = {
   deliveryRemark: "",
 
   expired: false,
+  expirationReason: "",
 
   remarks: "",
 

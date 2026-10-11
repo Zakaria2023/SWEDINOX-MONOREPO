@@ -32,16 +32,35 @@ import {
 import {
   computeQuoteSummary,
   getQuoteVatRatePercent,
+  marginFloorFor,
   previewQuoteLine,
   productPieceWeightKg,
+  quoteSummaryFromSnapshot,
 } from "@/lib/helpers";
-import { DELIVERY_TERM_LABELS, DELIVERY_TIME_UNIT_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_METHOD_LABELS, ORDER_WEIGHT_TYPE_LABELS } from "@/lib/labels";
+import {
+  DELIVERY_TERM_LABELS,
+  DELIVERY_TIME_UNIT_LABELS,
+  INVOICE_PAYMENT_TERM_LABELS,
+  ORDER_METHOD_LABELS,
+  ORDER_WEIGHT_TYPE_LABELS,
+} from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { createQuote, QuoteActionResult, updateQuote } from "./actions";
-import { DEFAULT_QUOTE, QuoteFormValues, quoteSchema } from "./validation";
+import {
+  startTransition,
+  useActionState,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { QuoteDetail, QuoteSubmitPayload, submitQuote } from "./actions";
+import {
+  DEFAULT_QUOTE,
+  QuoteFormValues,
+  QuoteLineFormValues,
+  quoteSchema,
+} from "./validation";
 
 // The amounts the consignment's `duration of [..]` dropdown offers; its unit
 // sits in the `u/i [..]` dropdown beside it (#392).
@@ -49,34 +68,45 @@ const CONSIGNMENT_DURATION_VALUES = Array.from({ length: 52 }, (_, i) =>
   String(i + 1),
 );
 
+const EMPTY_OPTION = { value: "", label: "Empty" };
+
 type UseQuoteSubmitParams = {
   companies: CompanyOption[];
   contracts: ContractForProjectOption[];
   products: ProductPricingOption[];
-  /** The quote being edited. Omitted when creating a new one. */
-  quoteUuid?: string;
+  /** The saved quote; omitted when a new one is being typed. */
+  existing: QuoteDetail | null;
   defaultValues?: QuoteFormValues;
   /** The signed-in user, who a new quote's Seller starts as (#392). */
   defaultSeller?: string;
 };
 
 /**
- * The rung a quote sits on, from the one thing the form asks about it.
- *
- * A quote climbs the same ladder as an order and expiry is one of its rungs,
- * so the checkbox has to move the status with it — otherwise a quote could
- * read `expired` on one screen and `provisional` on the next.
+ * What one line of the grid reports in money and weight. A line that still
+ * reads as it was saved shows the figures the server priced it at (contract
+ * terms included); a line typed or changed since is a list-price preview.
  */
-const quoteStatusFor = (expired: boolean): OrderStatus =>
-  expired ? "expired" : "provisional";
-
-const emptyOpt = { value: "", label: "Empty" };
+export type QuoteLineFigures = {
+  saved: boolean;
+  weightKg: number;
+  theoreticalWeightKg: number;
+  m1PerPiece: number;
+  netPrice: number;
+  priceUnit: string | null;
+  amount: number;
+  purchasePrice: number;
+  costAmount: number;
+  replacementCost: number;
+  profitMargin: number;
+  profit: number;
+  profitTooLow: boolean;
+};
 
 const makeOptions = <T extends string>(
   values: readonly T[],
   labels: Record<T, string>,
 ): SelectOption[] => [
-  emptyOpt,
+  EMPTY_OPTION,
   ...values.map((v) => ({ value: v, label: labels[v] })),
 ];
 
@@ -89,17 +119,44 @@ const addressLabel = (a: AddressOption) =>
   [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
   a.uuid;
 
+/**
+ * The rung a quote is saved on. Expiry is a rung of the ladder rather than a
+ * flag beside it, so the `Expired` box moves the status — and un-ticking it
+ * puts the quote back at `Provisional`. Any other rung (a finalized,
+ * `Released` quote) is the toolbar's to move, never the Save button's.
+ */
+const quoteStatusFor = (
+  expired: boolean,
+  currentStatus: OrderStatus,
+): OrderStatus => {
+  if (expired) {
+    return "expired";
+  }
+  return currentStatus === "expired" ? "provisional" : currentStatus;
+};
+
+/** Whether a grid line still reads exactly as the saved line it came from. */
+const isUnchangedLine = (
+  line: QuoteLineFormValues,
+  saved: QuoteDetail["items"][number] | undefined,
+): saved is QuoteDetail["items"][number] =>
+  saved !== undefined &&
+  saved.productUuid === line.productUuid &&
+  Number(saved.quantity ?? 0) === Number(line.quantity || 0) &&
+  String(saved.lengthMm ?? "") === (line.lengthMm ?? "") &&
+  (saved.unit ?? "st") === (line.unit ?? "st") &&
+  saved.sourceType === (line.sourceType ?? "stock");
+
 export const useQuoteSubmit = ({
   companies,
   contracts,
   products,
-  quoteUuid,
+  existing,
   defaultValues,
   defaultSeller,
 }: UseQuoteSubmitParams) => {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [state, setState] = useState<QuoteActionResult>({});
+  const [state, dispatch, isPending] = useActionState(submitQuote, {});
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [addresses, setAddresses] = useState<AddressOption[]>([]);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
@@ -113,68 +170,127 @@ export const useQuoteSubmit = ({
     },
   });
 
-  const isPickup = form.watch("isPickup");
-  const isConsignment = form.watch("isConsignment");
-  const consignmentDuration = form.watch("consignmentDuration");
-  const deliveryType = form.watch("deliveryType");
-  const items = form.watch("items");
-  const surcharges = form.watch("surcharges");
-  const calculateVatIfApplicable = form.watch("calculateVatIfApplicable");
+  const [
+    isPickup,
+    isConsignment,
+    consignmentDuration,
+    deliveryType,
+    expired,
+    items,
+    surcharges,
+    calculateVatIfApplicable,
+  ] = useWatch({
+    control: form.control,
+    name: [
+      "isPickup",
+      "isConsignment",
+      "consignmentDuration",
+      "deliveryType",
+      "expired",
+      "items",
+      "surcharges",
+      "calculateVatIfApplicable",
+    ],
+  });
+  const isDirty = form.formState.isDirty;
 
-  // The summary is never typed in — it is recomputed from the lines on every
-  // keystroke here, and again on the server from the prices it actually saves.
-  const summary = computeQuoteSummary({
-    lines: items.map((item) => {
-      const product = products.find((p) => p.uuid === item.productUuid);
-      const line = previewQuoteLine({
-        quantity: Number(item.quantity),
-        lengthMm: item.lengthMm ? Number(item.lengthMm) : null,
-        basePrice: Number(product?.basePrice ?? 0),
-        replacementPrice: Number(product?.replacementPrice ?? 0),
-        purchasePrice: Number(product?.averagePurchasePrice ?? 0),
-        // The catalogue column is a density when the weight unit says
-        // M3, so it is read through the helper that checks the unit.
-        theoreticalWeight:
-          productPieceWeightKg({
-            weightTheoretical: product?.weightTheoretical,
-            theoreticalWeight: product?.theoreticalWeight,
-            weightUnit: product?.weightUnit,
-            lengthMm: Number(product?.length ?? 0),
-            widthMm: Number(product?.widthDiameter ?? 0),
-            thicknessMm: Number(product?.thickness ?? 0),
-          }) ?? 0,
-        priceUnit: product?.priceUnit,
-        widthMm: Number(product?.widthDiameter ?? 0),
-        thicknessMm: Number(product?.thickness ?? 0),
-        productLengthMm: Number(product?.length ?? 0),
-        minProfitMargin: 0,
-      });
-
+  const lineFigures: QuoteLineFigures[] = (items ?? []).map((item, index) => {
+    const saved = existing?.items[index];
+    if (isUnchangedLine(item, saved)) {
+      const quantity = Number(saved.quantity ?? 0);
       return {
-        amount: line.amount,
-        costAmount: line.costAmount,
-        replacementCost: line.replacementCost,
-        weightKg: line.weightKg,
-        theoreticalWeightKg: line.weightKg,
+        saved: true,
+        weightKg: Number(saved.weightKg ?? 0),
+        theoreticalWeightKg: Number(saved.weightKg ?? 0),
+        m1PerPiece: Number(saved.m1PerPiece ?? 0),
+        netPrice: Number(saved.netPrice ?? 0),
+        priceUnit: saved.priceUnit,
+        amount: Number(saved.amount ?? 0),
+        purchasePrice: Number(saved.purchasePrice ?? 0),
+        costAmount: Number(saved.costAmount ?? 0),
+        replacementCost: Number(saved.replacementPrice ?? 0) * quantity,
+        profitMargin: Number(saved.profitMargin ?? 0),
+        profit: Number(saved.profit ?? 0),
+        profitTooLow: saved.profitTooLow ?? false,
       };
-    }),
-    surcharges: surcharges.map((surcharge) => ({
-      amount: Number(surcharge.amount ?? 0),
-      profit: Number(surcharge.profit ?? 0),
-    })),
-    // Only the quote's own flag is known here. Whether the customer is one VAT
-    // is calculated for is settled server-side on save, so a VAT-exempt
-    // customer can turn this preview's VAT into 0 when the quote is written.
-    vatRatePercent: getQuoteVatRatePercent(calculateVatIfApplicable, true),
+    }
+
+    const product = products.find((p) => p.uuid === item.productUuid);
+    const preview = previewQuoteLine({
+      quantity: Number(item.quantity || 0),
+      lengthMm: item.lengthMm ? Number(item.lengthMm) : null,
+      basePrice: Number(product?.basePrice ?? 0),
+      replacementPrice: Number(product?.replacementPrice ?? 0),
+      purchasePrice: Number(product?.averagePurchasePrice ?? 0),
+      // The catalogue column is a density when the weight unit says M3, so it
+      // is read through the helper that checks the unit.
+      theoreticalWeight:
+        productPieceWeightKg({
+          weightTheoretical: product?.weightTheoretical,
+          theoreticalWeight: product?.theoreticalWeight,
+          weightUnit: product?.weightUnit,
+          lengthMm: Number(product?.length ?? 0),
+          widthMm: Number(product?.widthDiameter ?? 0),
+          thicknessMm: Number(product?.thickness ?? 0),
+        }) ?? 0,
+      priceUnit: product?.priceUnit,
+      widthMm: Number(product?.widthDiameter ?? 0),
+      thicknessMm: Number(product?.thickness ?? 0),
+      productLengthMm: Number(product?.length ?? 0),
+      minProfitMargin: marginFloorFor(product, item.sourceType ?? "stock"),
+    });
+    return {
+      saved: false,
+      weightKg: preview.weightKg,
+      theoreticalWeightKg: preview.theoreticalWeightKg,
+      m1PerPiece: preview.m1PerPiece,
+      netPrice: preview.netPrice,
+      priceUnit: product?.priceUnit ?? null,
+      amount: preview.amount,
+      purchasePrice: preview.purchasePrice,
+      costAmount: preview.costAmount,
+      replacementCost: preview.replacementCost,
+      profitMargin: preview.profitMargin,
+      profit: preview.profit,
+      profitTooLow: preview.profitTooLow,
+    };
   });
 
-  // Only show customer/prospect companies
+  // The summary is never typed in. A saved quote that has not been touched
+  // reads the snapshot the server wrote; anything typed since is recomputed
+  // here on every keystroke, and again on the server from the prices it saves.
+  const summary =
+    existing && !isDirty
+      ? quoteSummaryFromSnapshot(existing)
+      : computeQuoteSummary({
+          lines: lineFigures.map((line) => ({
+            amount: line.amount,
+            costAmount: line.costAmount,
+            replacementCost: line.replacementCost,
+            weightKg: line.weightKg,
+            theoreticalWeightKg: line.theoreticalWeightKg,
+          })),
+          surcharges: (surcharges ?? []).map((surcharge) => ({
+            amount: Number(surcharge.amount ?? 0),
+            profit: Number(surcharge.profit ?? 0),
+          })),
+          transportCosts: Number(existing?.transportCosts ?? 0),
+          handlingCosts: Number(existing?.handlingCosts ?? 0),
+          // Whether the customer is one VAT is calculated for is settled on
+          // save, so a VAT-exempt customer can turn this preview's VAT into 0.
+          vatRatePercent: getQuoteVatRatePercent(
+            calculateVatIfApplicable,
+            existing?.companyCalculatesVat ?? true,
+          ),
+        });
+
+  // Only customer and prospect companies can be quoted.
   const customerCompanies = companies.filter(
     (c) => c.roles?.includes("customer") || c.roles?.includes("prospect"),
   );
 
   const companyOptions: SelectOption[] = [
-    emptyOpt,
+    EMPTY_OPTION,
     ...customerCompanies.map((c) => ({
       value: c.uuid,
       label: companyLabel(c),
@@ -182,7 +298,7 @@ export const useQuoteSubmit = ({
   ];
 
   const contactOptions: SelectOption[] = [
-    emptyOpt,
+    EMPTY_OPTION,
     ...contacts.map((c) => ({
       value: c.uuid,
       label: [c.firstName, c.lastName].filter(Boolean).join(" ") || c.uuid,
@@ -190,12 +306,12 @@ export const useQuoteSubmit = ({
   ];
 
   const addressOptions: SelectOption[] = [
-    emptyOpt,
+    EMPTY_OPTION,
     ...addresses.map((a) => ({ value: a.uuid, label: addressLabel(a) })),
   ];
 
   const projectOptions: SelectOption[] = [
-    emptyOpt,
+    EMPTY_OPTION,
     ...projects.map((p) => ({
       value: p.uuid,
       label: p.projectName ?? p.uuid,
@@ -203,7 +319,7 @@ export const useQuoteSubmit = ({
   ];
 
   const contractOptions: SelectOption[] = [
-    emptyOpt,
+    EMPTY_OPTION,
     ...contracts.map((c) => ({
       value: c.uuid,
       label: `${c.code}${c.description ? ` — ${c.description}` : ""}`,
@@ -234,7 +350,7 @@ export const useQuoteSubmit = ({
       : CONSIGNMENT_DURATION_VALUES;
 
   const consignmentDurationOptions: SelectOption[] = [
-    emptyOpt,
+    EMPTY_OPTION,
     ...consignmentDurationValues.map((v) => ({ value: v, label: v })),
   ];
 
@@ -263,7 +379,7 @@ export const useQuoteSubmit = ({
   }, []);
 
   const handleCompanyChange = (uuid: string) => {
-    form.setValue("companyUuid", uuid);
+    form.setValue("companyUuid", uuid, { shouldDirty: true });
     form.setValue("contactUuid", "");
     form.setValue("projectUuid", "");
     form.setValue("deliveryAddressUuid", "");
@@ -277,7 +393,7 @@ export const useQuoteSubmit = ({
     loadCompanyData(uuid);
   };
 
-  // An existing quote already has a customer picked, so its contacts, projects
+  // A saved quote already has a customer picked, so its contacts, projects
   // and addresses have to be fetched before the form can show what is selected.
   const editingCompanyUuid = defaultValues?.companyUuid;
   useEffect(() => {
@@ -287,123 +403,115 @@ export const useQuoteSubmit = ({
     loadCompanyData(editingCompanyUuid);
   }, [editingCompanyUuid, loadCompanyData]);
 
-  const handleCancel = () =>
-    router.push(quoteUuid ? `/quotes/${quoteUuid}` : "/quotes");
+  // A saved quote is edited on its own page, so leaving goes to the list.
+  const handleCancel = () => router.push("/quotes");
 
   const onSubmit = form.handleSubmit((values) => {
-    startTransition(async () => {
-      const fields = {
-        companyUuid: values.companyUuid,
-        contactUuid: values.contactUuid || null,
-        customerRef: values.customerRef || null,
-        leaveCustomerRef: values.leaveCustomerRef,
-        requestMethod: values.requestMethod || null,
-        ourReference: values.ourReference || null,
-        seller: values.seller || null,
-        projectUuid: values.projectUuid || null,
-        contractUuid: values.contractUuid || null,
-        priceDate: values.priceDate ? new Date(values.priceDate) : null,
-        decisionDate: values.decisionDate
-          ? new Date(values.decisionDate)
-          : null,
-        quoteDate: values.quoteDate ? new Date(values.quoteDate) : null,
-        validityPeriodDays: values.validityPeriodDays
-          ? Number(values.validityPeriodDays)
-          : null,
-        validUntil: values.validUntil ? new Date(values.validUntil) : null,
-        handlingBlocked: values.handlingBlocked,
+    const fields: QuoteSubmitPayload["fields"] = {
+      companyUuid: values.companyUuid,
+      contactUuid: values.contactUuid || null,
+      customerRef: values.customerRef || null,
+      leaveCustomerRef: values.leaveCustomerRef,
+      requestMethod: values.requestMethod || null,
+      ourReference: values.ourReference || null,
+      seller: values.seller || null,
+      projectUuid: values.projectUuid || null,
+      contractUuid: values.contractUuid || null,
+      priceDate: values.priceDate ? new Date(values.priceDate) : null,
+      decisionDate: values.decisionDate ? new Date(values.decisionDate) : null,
+      quoteDate: values.quoteDate ? new Date(values.quoteDate) : null,
+      validityPeriodDays: values.validityPeriodDays
+        ? Number(values.validityPeriodDays)
+        : null,
+      validUntil: values.validUntil ? new Date(values.validUntil) : null,
+      handlingBlocked: values.handlingBlocked,
 
-        isPickup: values.isPickup,
-        isIncidental: values.isIncidental,
-        isConsignment: values.isConsignment,
-        consignmentDuration: values.isConsignment
-          ? values.consignmentDuration || null
-          : null,
-        consignmentDurationUnit: values.isConsignment
-          ? values.consignmentDurationUnit || null
-          : null,
-        isInternalProduction: values.isInternalProduction,
-        isCustomerMaterial: values.isCustomerMaterial,
-        weightType: values.weightType || null,
-        isOverlength: values.isOverlength,
-        isPrinted: values.isPrinted,
-        isMailed: values.isMailed,
-        isFaxed: values.isFaxed,
+      isPickup: values.isPickup,
+      isIncidental: values.isIncidental,
+      isConsignment: values.isConsignment,
+      consignmentDuration: values.isConsignment
+        ? values.consignmentDuration || null
+        : null,
+      consignmentDurationUnit: values.isConsignment
+        ? values.consignmentDurationUnit || null
+        : null,
+      isInternalProduction: values.isInternalProduction,
+      isCustomerMaterial: values.isCustomerMaterial,
+      weightType: values.weightType || null,
+      isOverlength: values.isOverlength,
+      isPrinted: values.isPrinted,
+      isMailed: values.isMailed,
+      isFaxed: values.isFaxed,
 
-        showNetPrice: values.showNetPrice,
-        scrapSurchargeSeparate: values.scrapSurchargeSeparate,
-        calculateVatIfApplicable: values.calculateVatIfApplicable,
-        financialBlockage: values.financialBlockage,
-        onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
-        doNotShowTotalAmount: values.doNotShowTotalAmount,
-        includeOptionPricesInMaterialPrices:
-          values.includeOptionPricesInMaterialPrices,
-        paymentTerms: values.paymentTerms || null,
-        billingAddressUuid: values.billingAddressUuid || null,
-        blockingReason: values.blockingReason || null,
+      showNetPrice: values.showNetPrice,
+      scrapSurchargeSeparate: values.scrapSurchargeSeparate,
+      calculateVatIfApplicable: values.calculateVatIfApplicable,
+      financialBlockage: values.financialBlockage,
+      onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
+      doNotShowTotalAmount: values.doNotShowTotalAmount,
+      includeOptionPricesInMaterialPrices:
+        values.includeOptionPricesInMaterialPrices,
+      paymentTerms: values.paymentTerms || null,
+      billingAddressUuid: values.billingAddressUuid || null,
+      blockingReason: values.blockingReason || null,
 
-        deliveryTerms: values.isPickup ? null : values.deliveryTerms || null,
-        deliveryAddressUuid: values.isPickup
-          ? null
-          : values.deliveryAddressUuid || null,
-        deliveryType: values.deliveryType,
-        deliveryDate: values.deliveryDate
-          ? new Date(values.deliveryDate)
-          : null,
-        deliveryWeek: values.deliveryWeek ? Number(values.deliveryWeek) : null,
-        deliveryYear: values.deliveryYear ? Number(values.deliveryYear) : null,
-        deliveryRemark: values.deliveryRemark || null,
+      deliveryTerms: values.isPickup ? null : values.deliveryTerms || null,
+      deliveryAddressUuid: values.isPickup
+        ? null
+        : values.deliveryAddressUuid || null,
+      deliveryType: values.deliveryType,
+      deliveryDate: values.deliveryDate ? new Date(values.deliveryDate) : null,
+      deliveryWeek: values.deliveryWeek ? Number(values.deliveryWeek) : null,
+      deliveryYear: values.deliveryYear ? Number(values.deliveryYear) : null,
+      deliveryRemark: values.deliveryRemark || null,
 
-        // `expired` is the rung a salesperson toggles directly; the status is
-        // the ladder it sits on. Both are written from the one checkbox so the
-        // quotes list, which filters on each, can never show them disagreeing.
-        expired: values.expired,
-        status: quoteStatusFor(values.expired),
+      // `expired` is the box a salesperson ticks; the status is the ladder it
+      // sits on. Both are written together so the overview, which filters on
+      // each, can never show them disagreeing.
+      expired: values.expired,
+      expirationReason: values.expired
+        ? values.expirationReason || null
+        : null,
+      status: quoteStatusFor(values.expired, existing?.status ?? "provisional"),
 
-        remarks: values.remarks || null,
-        documents: values.documents?.length ? values.documents : null,
-      };
+      remarks: values.remarks || null,
+      documents: values.documents?.length ? values.documents : null,
+    };
 
-      const lines = values.items.map((item) => ({
-        productUuid: item.productUuid,
-        quantity: item.quantity,
-        unit: item.unit,
-        lengthMm: item.lengthMm ? Number(item.lengthMm) : null,
-        widthMm: item.widthMm ? Number(item.widthMm) : null,
-        thicknessMm: item.thicknessMm || null,
-        options: item.options || null,
-        sourceType: item.sourceType ?? "stock",
-      }));
+    const lines = values.items.map((item) => ({
+      productUuid: item.productUuid,
+      quantity: item.quantity,
+      unit: item.unit,
+      lengthMm: item.lengthMm ? Number(item.lengthMm) : null,
+      widthMm: item.widthMm ? Number(item.widthMm) : null,
+      thicknessMm: item.thicknessMm || null,
+      options: item.options || null,
+      sourceType: item.sourceType ?? "stock",
+    }));
 
-      const quoteSurcharges = values.surcharges.map((surcharge) => ({
-        description: surcharge.description || null,
-        surcharge: surcharge.surcharge || "0.00",
-        unit: surcharge.unit || null,
-        fromValue: surcharge.fromValue || "0.00",
-        unitIndication: surcharge.unitIndication || null,
-        tierUnit: surcharge.tierUnit || null,
-        amount: surcharge.amount || "0.00",
-        profit: surcharge.profit || "0.00",
-        thirdParties: surcharge.thirdParties,
-        companyCode: surcharge.companyCode || null,
-        companyUuid: surcharge.companyUuid || null,
-      }));
+    const quoteSurcharges = values.surcharges.map((surcharge) => ({
+      description: surcharge.description || null,
+      surcharge: surcharge.surcharge || "0.00",
+      unit: surcharge.unit || null,
+      fromValue: surcharge.fromValue || "0.00",
+      unitIndication: surcharge.unitIndication || null,
+      tierUnit: surcharge.tierUnit || null,
+      amount: surcharge.amount || "0.00",
+      profit: surcharge.profit || "0.00",
+      thirdParties: surcharge.thirdParties,
+      companyCode: surcharge.companyCode || null,
+      companyUuid: surcharge.companyUuid || null,
+    }));
 
-      // Updating redirects from inside the action, so only the create path has
-      // a result worth navigating on.
-      if (quoteUuid) {
-        setState(
-          await updateQuote(quoteUuid, fields, lines, quoteSurcharges),
-        );
-        return;
-      }
-
-      const result = await createQuote(fields, lines, quoteSurcharges);
-      setState(result);
-      if (result.success && result.quoteUuid) {
-        router.push(`/quotes/${result.quoteUuid}`);
-      }
-    });
+    // Both paths redirect from inside the action; only an error comes back.
+    startTransition(() =>
+      dispatch({
+        quoteUuid: existing?.uuid,
+        fields,
+        items: lines,
+        surcharges: quoteSurcharges,
+      }),
+    );
   });
 
   return {
@@ -412,10 +520,12 @@ export const useQuoteSubmit = ({
     onSubmit,
     state,
     summary,
-    isEditing: Boolean(quoteUuid),
+    lineFigures,
+    isEditing: existing !== null,
     isPickup,
     isConsignment,
     deliveryType,
+    expired,
     companyOptions,
     contactOptions,
     projectOptions,

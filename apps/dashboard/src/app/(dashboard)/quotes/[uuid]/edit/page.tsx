@@ -1,64 +1,15 @@
-import { ChevronLeft } from "lucide-react";
-import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
-import { getContractsForProjects } from "@/app/(dashboard)/contracts/actions";
-import { getProductsForPricing } from "@/app/(dashboard)/products/actions";
-import { getQuoteDetail } from "@/app/(dashboard)/quotes/actions";
-import { quoteDetailToFormValues } from "@/app/(dashboard)/quotes/mappers";
-import { PageHeading } from "@/components/layout/page-heading";
-import { QuoteForm } from "@/components/quotes/quote-form";
-import { getClerkUsersForSelect } from "@/lib/server/clerk";
+import QuoteDetailPage from "../page";
 
 type Props = {
   params: Promise<{ uuid: string }>;
 };
 
-const EditQuotePage = async ({ params }: Props) => {
-  const { uuid } = await params;
-
-  const [quote, companies, clerkUsers, contracts, products] = await Promise.all(
-    [
-      getQuoteDetail(uuid),
-      getCompaniesForSelect(),
-      getClerkUsersForSelect(),
-      getContractsForProjects(),
-      getProductsForPricing(),
-    ],
-  );
-
-  if (!quote) {
-    notFound();
-  }
-
-  // An expired quote's header is read-only (#395), so there is no edit
-  // screen to open.
-  if (quote.status === "expired" || quote.expired) {
-    redirect(`/quotes/${uuid}`);
-  }
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <Link
-          href={`/quotes/${uuid}`}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ChevronLeft className="size-4" />
-          Quote #{quote.id}
-        </Link>
-      </div>
-      <PageHeading title={`Edit Quote #${quote.id}`} />
-      <QuoteForm
-        companies={companies}
-        clerkUsers={clerkUsers}
-        contracts={contracts}
-        products={products}
-        quoteUuid={uuid}
-        defaultValues={quoteDetailToFormValues(quote)}
-      />
-    </div>
-  );
-};
+/**
+ * The reference edits a quote on the screen it is shown on, so Edit is the
+ * quote's own page: the header there is the form, the toolbar above it.
+ */
+const EditQuotePage = ({ params }: Props) => (
+  <QuoteDetailPage params={params} />
+);
 
 export default EditQuotePage;

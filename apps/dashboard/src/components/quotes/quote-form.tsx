@@ -1,45 +1,61 @@
 "use client";
 
-import { Controller } from "react-hook-form";
-import { useQuoteSubmit } from "@/app/(dashboard)/quotes/use-quote-submit";
-import { ClerkUserOption } from "@/lib/server/clerk";
+import { useEffect, useRef, useState } from "react";
+import { FormProvider } from "react-hook-form";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ContractForProjectOption } from "@/app/(dashboard)/contracts/actions";
 import { ProductPricingOption } from "@/app/(dashboard)/products/actions";
-import { QuoteFormValues } from "@/app/(dashboard)/quotes/validation";
-import { DatePicker } from "@/components/shadcn/date-picker";
-import { Input } from "@/components/shadcn/input";
-import { Textarea } from "@/components/shadcn/textarea";
-import { SearchSelect } from "@/components/shadcn/search-select";
-import { DocumentUploader } from "@/components/document-uploader";
-import { QuoteLinesEditor } from "@/components/quotes/quote-lines-editor";
-import { QuoteSummaryPanel } from "@/components/quotes/quote-summary";
-import { QuoteSurchargesSection } from "@/components/quotes/sections/surcharges-section";
+import { QuoteDetail } from "@/app/(dashboard)/quotes/actions";
+import { quoteDetailToFormValues } from "@/app/(dashboard)/quotes/mappers";
+import { useQuoteSubmit } from "@/app/(dashboard)/quotes/use-quote-submit";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
-import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { FormSelectField } from "@/components/ui/form-select-field";
-import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
+import { QuoteLinePanels } from "@/components/quotes/quote-line-panels";
+import { QuoteLines } from "@/components/quotes/quote-lines";
+import {
+  QuoteCustomerPanels,
+  QuoteOptionsPanel,
+} from "@/components/quotes/quote-related-panels";
+import { QuoteSummaryPanel } from "@/components/quotes/quote-summary";
+import { QuoteTabs } from "@/components/quotes/quote-tabs";
+import { QuoteToolbar } from "@/components/quotes/quote-toolbar";
+import { QuoteDeliverySection } from "@/components/quotes/sections/quote-delivery-section";
+import { QuoteFinancesSection } from "@/components/quotes/sections/quote-finances-section";
+import { QuoteIdentitySection } from "@/components/quotes/sections/quote-identity-section";
+import { QuoteOrderTypeSection } from "@/components/quotes/sections/quote-order-type-section";
+import { QuoteSurchargesSection } from "@/components/quotes/sections/surcharges-section";
+import { formatDateValue, pluralize, todayDateString } from "@/lib/helpers";
+import {
+  INVOICE_PAYMENT_TERM_LABELS,
+  ORDER_STATUS_LABELS,
+} from "@/lib/labels";
+import { ClerkUserOption } from "@/lib/server/clerk";
 
 type Props = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
   contracts: ContractForProjectOption[];
   products: ProductPricingOption[];
-  /** Set when editing an existing quote; omitted when creating one. */
-  quoteUuid?: string;
-  defaultValues?: QuoteFormValues;
-  /** The signed-in user; a new quote's Seller starts as them. */
+  /** The saved quote: its own page is this same screen, prefilled. */
+  existing?: QuoteDetail | null;
+  /** The signed-in user; a new quote's Seller starts as them (#392). */
   defaultSeller?: string;
 };
 
+/**
+ * A sales quote, in the reference's document window — the same window a sales
+ * order opens in. A new quote and a saved one are this one screen: the
+ * toolbar, the header (who and when on the left; the order type, the
+ * sent-stamps and the money on the right), the lines, the panels that follow
+ * the selected line, and the Texts / Documents / PDF files tabs.
+ */
 export const QuoteForm = ({
   companies,
   clerkUsers,
   contracts,
   products,
-  quoteUuid,
-  defaultValues,
+  existing = null,
   defaultSeller,
 }: Props) => {
   const {
@@ -48,10 +64,8 @@ export const QuoteForm = ({
     onSubmit,
     state,
     summary,
+    lineFigures,
     isEditing,
-    isPickup,
-    isConsignment,
-    deliveryType,
     companyOptions,
     contactOptions,
     projectOptions,
@@ -70,671 +84,196 @@ export const QuoteForm = ({
     companies,
     contracts,
     products,
-    quoteUuid,
-    defaultValues,
+    existing,
+    defaultValues: existing ? quoteDetailToFormValues(existing) : undefined,
     defaultSeller,
   });
+  const { control, register, reset, watch } = form;
+  const [selectedLine, setSelectedLine] = useState<number | null>(null);
 
-  const {
-    register,
-    control,
-    watch,
-    setValue,
-    formState: { errors },
-  } = form;
+  // Saving re-prices the lines and Finalize stamps the quote date, Valid u/i
+  // and Printed — both on the server, which then re-renders this page. The
+  // screen follows what was saved rather than holding (and saving back) what
+  // it opened with. Neither runs with unsaved edits, so nothing typed is lost.
+  const savedAt = existing ? new Date(existing.updatedAt).getTime() : null;
+  const syncedAt = useRef(savedAt);
+  useEffect(() => {
+    if (!existing || savedAt === syncedAt.current) {
+      return;
+    }
+    syncedAt.current = savedAt;
+    reset(quoteDetailToFormValues(existing));
+  }, [existing, savedAt, reset]);
+
+  // An expired or converted quote is read-only (#395): updateQuote refuses it,
+  // so the screen does not pretend otherwise.
+  const isConverted =
+    existing?.status === "converted" ||
+    (existing?.items.some((item) => item.convertedToOrderUuid) ?? false);
+  const isExpired = existing?.status === "expired" || Boolean(existing?.expired);
+  const isReadOnly = existing !== null && (isConverted || isExpired);
+
+  // The reference's banner: `Quote 300009, Stappert Intramet S.A., Tel: 4275
+  // 8211, Fax: 4275 8290 - Expired, Printed, Mailed` (#395).
+  const banner = existing
+    ? `${[
+        `Quote ${existing.id}`,
+        existing.companyName,
+        `Tel: ${existing.companyTelephone ?? "-"}`,
+        `Fax: ${existing.companyFax ?? "-"}`,
+      ]
+        .filter(Boolean)
+        .join(", ")} - ${[
+        ORDER_STATUS_LABELS[existing.status],
+        existing.isPrinted && "Printed",
+        existing.isMailed && "Mailed",
+        existing.isFaxed && "Faxed",
+      ]
+        .filter(Boolean)
+        .join(", ")}`
+    : "Quote (new) - Provisional";
+  const deliveryDate = watch("deliveryDate");
+  const paymentTerms = watch("paymentTerms");
+
+  const selectedFigures =
+    selectedLine === null ? undefined : lineFigures[selectedLine];
+  const selectedSavedLine =
+    selectedLine !== null && selectedFigures?.saved
+      ? existing?.items[selectedLine]
+      : undefined;
 
   return (
-    <form onSubmit={onSubmit} className="space-y-8">
-      <FormError>{state.error}</FormError>
+    <FormProvider {...form}>
+      <form onSubmit={onSubmit} className="space-y-6">
+        <FormError>{state.error}</FormError>
 
-      {/* ── Quote ─────────────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">Quote</h2>
+        <QuoteToolbar quote={existing} />
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <FormLabel htmlFor="companyUuid" required>
-              Customer
-              {isLoadingCompanyData && (
-                <span className="ml-2 text-xs font-normal text-muted-foreground">
-                  Loading...
-                </span>
-              )}
-            </FormLabel>
-            {/* The reference's Customer is a code you type and search (#391),
-                not a list of every company. */}
-            <Controller
-              control={control}
-              name="companyUuid"
-              render={({ field }) => (
-                <SearchSelect
-                  id="companyUuid"
-                  value={field.value || ""}
-                  options={companyOptions}
-                  onValueChange={handleCompanyChange}
-                  invalid={!!errors.companyUuid}
-                />
-              )}
-            />
-            <FormFieldError message={errors.companyUuid?.message} />
+        <section className="space-y-4 rounded-lg border p-4">
+          <div className="space-y-1">
+            <h1 className="text-lg font-semibold">{banner}</h1>
+            <p className="text-sm text-muted-foreground">
+              Creation date:{" "}
+              {formatDateValue(existing?.createdAt ?? todayDateString())} -
+              Delivery planned: {formatDateValue(deliveryDate || null)}
+            </p>
           </div>
 
-          <FormSelectField
-            control={control}
-            id="contactUuid"
-            name="contactUuid"
-            label="Contact"
-            options={contactOptions}
-            emptyValue=""
-            disabled={contactOptions.length <= 1}
-          />
-
-          <div>
-            <FormLabel htmlFor="customerRef">Customer Ref.</FormLabel>
-            <Input id="customerRef" {...register("customerRef")} />
-          </div>
-
-          <div>
-            <FormLabel htmlFor="ourReference">Our reference</FormLabel>
-            <Input id="ourReference" {...register("ourReference")} />
-          </div>
-
-          <FormSelectField
-            control={control}
-            id="requestMethod"
-            name="requestMethod"
-            label="Request"
-            options={requestMethodOptions}
-            emptyValue=""
-          />
-
-          <FormSelectField
-            control={control}
-            id="seller"
-            name="seller"
-            label="Seller"
-            options={clerkUsers}
-            emptyValue=""
-          />
-
-          <FormSelectField
-            control={control}
-            id="projectUuid"
-            name="projectUuid"
-            label="Project"
-            options={projectOptions}
-            emptyValue=""
-            disabled={projectOptions.length <= 1}
-          />
-
-          <FormSelectField
-            control={control}
-            id="contractUuid"
-            name="contractUuid"
-            label="Contract"
-            options={contractOptions}
-            emptyValue=""
-          />
-
-          <div>
-            <FormLabel htmlFor="priceDate">Price date</FormLabel>
-            <Controller
-              name="priceDate"
-              control={control}
-              render={({ field }) => (
-                <DatePicker
-                  id="priceDate"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-          </div>
-
-          <div>
-            <FormLabel htmlFor="decisionDate">Decision date</FormLabel>
-            <Controller
-              name="decisionDate"
-              control={control}
-              render={({ field }) => (
-                <DatePicker
-                  id="decisionDate"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-          </div>
-
-          {/* Quote date and Valid u/i are greyed: they are set when the quote
-              is finalized, not typed (#392, #396). */}
-          <div>
-            <FormLabel htmlFor="quoteDate">Quote date</FormLabel>
-            <Controller
-              name="quoteDate"
-              control={control}
-              render={({ field }) => (
-                <DatePicker
-                  id="quoteDate"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  disabled
-                />
-              )}
-            />
-          </div>
-
-          <div>
-            <FormLabel htmlFor="validityPeriodDays">
-              Validity period (calendar days)
-            </FormLabel>
-            <Input
-              id="validityPeriodDays"
-              type="number"
-              min={0}
-              {...register("validityPeriodDays")}
-            />
-          </div>
-
-          <div>
-            <FormLabel htmlFor="validUntil">Valid u/i</FormLabel>
-            <Controller
-              name="validUntil"
-              control={control}
-              render={({ field }) => (
-                <DatePicker
-                  id="validUntil"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  disabled
-                />
-              )}
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-6">
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input type="checkbox" {...register("leaveCustomerRef")} />
-            Leave customer reference
-          </label>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input type="checkbox" {...register("handlingBlocked")} />
-            Handling blocked
-          </label>
-        </div>
-      </section>
-
-      {/* ── Order Type ────────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">Order Type</h2>
-
-        <div className="grid grid-cols-3 gap-3">
-          <Controller
-            control={control}
-            name="isPickup"
-            render={({ field }) => (
-              <FormCheckboxCard
-                label="Pick-up"
-                checked={field.value}
-                active={field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
+          <fieldset
+            disabled={isReadOnly}
+            className="grid gap-x-10 gap-y-6 xl:grid-cols-2"
+          >
+            <div className="space-y-6">
+              <QuoteIdentitySection
+                companyOptions={companyOptions}
+                contactOptions={contactOptions}
+                projectOptions={projectOptions}
+                contractOptions={contractOptions}
+                requestMethodOptions={requestMethodOptions}
+                clerkUsers={clerkUsers}
+                isLoadingCompanyData={isLoadingCompanyData}
+                handleCompanyChange={handleCompanyChange}
               />
-            )}
-          />
-          <Controller
-            control={control}
-            name="isIncidental"
-            render={({ field }) => (
-              <FormCheckboxCard
-                label="Incidental"
-                checked={field.value}
-                active={field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
+              <QuoteDeliverySection
+                deliveryTermOptions={deliveryTermOptions}
+                addressOptions={addressOptions}
               />
-            )}
-          />
-          {/* Set by the system, not the salesperson (#392). */}
-          <Controller
-            control={control}
-            name="isInternalProduction"
-            render={({ field }) => (
-              <FormCheckboxCard
-                label="Internal production / processing"
-                checked={field.value}
-                active={field.value}
-                disabled
-                className="cursor-not-allowed opacity-60"
-                onChange={(e) => field.onChange(e.target.checked)}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="isCustomerMaterial"
-            render={({ field }) => (
-              <FormCheckboxCard
-                label="Customer material"
-                checked={field.value}
-                active={field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="isOverlength"
-            render={({ field }) => (
-              <FormCheckboxCard
-                label="Overlength"
-                checked={field.value}
-                active={field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
-              />
-            )}
-          />
-        </div>
-
-        {/* Consignment row: "with a duration of [..] u/i [..]", greyed until
-            the box is ticked (#392). */}
-        <div className="flex items-end gap-4">
-          <Controller
-            control={control}
-            name="isConsignment"
-            render={({ field }) => (
-              <label className="flex cursor-pointer items-center gap-2 pb-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={field.value}
-                  onChange={(e) => field.onChange(e.target.checked)}
-                />
-                Consignment with a duration of
-              </label>
-            )}
-          />
-          <div className="w-32">
-            <FormSelectField
-              control={control}
-              id="consignmentDuration"
-              name="consignmentDuration"
-              label="Duration"
-              options={consignmentDurationOptions}
-              emptyValue=""
-              disabled={!isConsignment}
-            />
-          </div>
-          <div className="w-40">
-            <FormSelectField
-              control={control}
-              id="consignmentDurationUnit"
-              name="consignmentDurationUnit"
-              label="u/i"
-              options={consignmentDurationUnitOptions}
-              emptyValue=""
-              disabled={!isConsignment}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormSelectField
-            control={control}
-            id="weightType"
-            name="weightType"
-            label="Weight type"
-            options={weightTypeOptions}
-            emptyValue=""
-          />
-
-          {/* Printed / Mailed / Faxed record what the system sent, so they
-              are read-only (#392). */}
-          <div className="flex items-end gap-6 pb-1">
-            <Controller
-              control={control}
-              name="isPrinted"
-              render={({ field }) => (
-                <label className="flex cursor-not-allowed items-center gap-2 text-sm text-muted-foreground">
-                  <input type="checkbox" checked={field.value} disabled readOnly />
-                  Printed
-                </label>
-              )}
-            />
-            <Controller
-              control={control}
-              name="isMailed"
-              render={({ field }) => (
-                <label className="flex cursor-not-allowed items-center gap-2 text-sm text-muted-foreground">
-                  <input type="checkbox" checked={field.value} disabled readOnly />
-                  Mailed
-                </label>
-              )}
-            />
-            <Controller
-              control={control}
-              name="isFaxed"
-              render={({ field }) => (
-                <label className="flex cursor-not-allowed items-center gap-2 text-sm text-muted-foreground">
-                  <input type="checkbox" checked={field.value} disabled readOnly />
-                  Faxed
-                </label>
-              )}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Finances ──────────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">Finances</h2>
-
-        <div className="grid grid-cols-3 gap-3">
-          <Controller
-            control={control}
-            name="showNetPrice"
-            render={({ field }) => (
-              <FormCheckboxCard
-                label="Show net price"
-                checked={field.value}
-                active={field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="scrapSurchargeSeparate"
-            render={({ field }) => (
-              <FormCheckboxCard
-                label="Scrap surcharge separately"
-                checked={field.value}
-                active={field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="calculateVatIfApplicable"
-            render={({ field }) => (
-              <FormCheckboxCard
-                label="Calculate VAT if applicable"
-                checked={field.value}
-                active={field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="financialBlockage"
-            render={({ field }) => (
-              <FormCheckboxCard
-                label="Financial blockage"
-                checked={field.value}
-                active={field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="onlyTotalAmountOnInvoice"
-            render={({ field }) => (
-              <FormCheckboxCard
-                label="Only total amount on invoice"
-                checked={field.value}
-                active={field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="doNotShowTotalAmount"
-            render={({ field }) => (
-              <FormCheckboxCard
-                label="Do not show total amount"
-                checked={field.value}
-                active={field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="includeOptionPricesInMaterialPrices"
-            render={({ field }) => (
-              <FormCheckboxCard
-                label="Include option prices in material prices"
-                checked={field.value}
-                active={field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
-              />
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormSelectField
-            control={control}
-            id="paymentTerms"
-            name="paymentTerms"
-            label="Payment terms"
-            options={paymentTermOptions}
-            emptyValue=""
-          />
-
-          <FormSelectField
-            control={control}
-            id="billingAddressUuid"
-            name="billingAddressUuid"
-            label="Billing address"
-            options={addressOptions}
-            emptyValue=""
-            disabled={addressOptions.length <= 1}
-          />
-
-          <div>
-            <FormLabel htmlFor="blockingReason">Blocking reason</FormLabel>
-            <Input id="blockingReason" {...register("blockingReason")} />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Delivery ──────────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">Delivery</h2>
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormSelectField
-            control={control}
-            id="deliveryTerms"
-            name="deliveryTerms"
-            label="Delivery terms"
-            options={deliveryTermOptions}
-            emptyValue=""
-            disabled={isPickup}
-          />
-
-          <FormSelectField
-            control={control}
-            id="deliveryAddressUuid"
-            name="deliveryAddressUuid"
-            label="Delivery address"
-            options={addressOptions}
-            emptyValue=""
-            disabled={isPickup || addressOptions.length <= 1}
-          />
-        </div>
-
-        {/* Delivery date / week toggle */}
-        <div className="space-y-3">
-          <FormLabel>Delivery Planned</FormLabel>
-          <div className="flex gap-6">
-            <Controller
-              control={control}
-              name="deliveryType"
-              render={({ field }) => (
-                <>
-                  <label className="flex cursor-pointer items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      value="date"
-                      checked={field.value === "date"}
-                      onChange={() => field.onChange("date")}
-                    />
-                    Date
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      value="week"
-                      checked={field.value === "week"}
-                      onChange={() => field.onChange("week")}
-                    />
-                    Week
-                  </label>
-                </>
-              )}
-            />
-          </div>
-
-          {deliveryType === "date" ? (
-            <div className="flex items-end gap-3">
-              <div>
-                <FormLabel htmlFor="deliveryDate">Date</FormLabel>
-                <Controller
-                  name="deliveryDate"
-                  control={control}
-                  render={({ field }) => (
-                    <DatePicker
-                      id="deliveryDate"
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                      className="w-48"
-                    />
-                  )}
-                />
-              </div>
-              <div>
-                <FormLabel htmlFor="deliveryRemark">Rem</FormLabel>
-                <Input
-                  id="deliveryRemark"
-                  className="w-40"
-                  {...register("deliveryRemark")}
-                />
-              </div>
             </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <div>
-                <FormLabel htmlFor="deliveryWeek">Week</FormLabel>
-                <Input
-                  id="deliveryWeek"
-                  type="number"
-                  min={1}
-                  max={53}
-                  className="w-20"
-                  {...register("deliveryWeek")}
-                />
-              </div>
-              <div>
-                <FormLabel htmlFor="deliveryYear">Year</FormLabel>
-                <Input
-                  id="deliveryYear"
-                  type="number"
-                  className="w-28"
-                  {...register("deliveryYear")}
-                />
-              </div>
+            <div className="min-w-0 space-y-8">
+              <QuoteOrderTypeSection
+                weightTypeOptions={weightTypeOptions}
+                consignmentDurationOptions={consignmentDurationOptions}
+                consignmentDurationUnitOptions={consignmentDurationUnitOptions}
+              />
+              <QuoteSummaryPanel
+                summary={summary}
+                note={
+                  lineFigures.some((figures) => !figures.saved)
+                    ? "An estimate from list prices. The saved quote is recalculated with the customer's contract terms."
+                    : undefined
+                }
+              />
             </div>
-          )}
-        </div>
-      </section>
+          </fieldset>
+        </section>
 
-      {/* ── Follow-up ─────────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">Follow-up</h2>
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <input type="checkbox" {...register("expired")} />
-          Expired
-        </label>
-      </section>
-
-      {/* ── Lines ─────────────────────────────────────────────────────── */}
-      <QuoteLinesEditor control={control} products={products} />
-
-      {/* ── Surcharges ────────────────────────────────────────────────── */}
-      <QuoteSurchargesSection
-        control={control}
-        register={register}
-        companyOptions={companyOptions}
-      />
-
-      {/* ── Summary ───────────────────────────────────────────────────── */}
-      <QuoteSummaryPanel
-        summary={summary}
-        note="An estimate from list prices. The saved quote is recalculated with the customer's contract terms."
-      />
-
-      {/* ── Remarks ───────────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">Remarks</h2>
-        <Textarea
-          id="remarks"
-          rows={4}
-          placeholder="Additional remarks..."
-          {...register("remarks")}
-        />
-      </section>
-
-      {/* ── Documents ─────────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">Documents</h2>
+        {/* The panels the reference stacks under the header, in its order.
+            Only Lines is open. */}
         <div className="space-y-2">
-          {watch("documents")?.map((doc, index) => (
-            <div key={doc.id} className="flex items-center gap-3 text-sm">
-              <span className="flex-1">{doc.fileName}</span>
-              <button
-                type="button"
-                onClick={async () => {
-                  await fetch(`/api/documents/${doc.id}/delete`, {
-                    method: "DELETE",
-                  });
-                  const current = watch("documents") ?? [];
-                  setValue(
-                    "documents",
-                    current.filter((_, i) => i !== index),
-                  );
-                }}
-                className="text-muted-foreground hover:text-destructive"
-                aria-label="Remove"
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-        </div>
-        <DocumentUploader
-          onSuccess={(uploads) => {
-            const current = watch("documents") ?? [];
-            setValue("documents", [
-              ...current,
-              ...uploads.map((u) => ({
-                id: u.documentId,
-                fileName: u.fileName,
-              })),
-            ]);
-          }}
-        />
-      </section>
+          <CollapsibleSection
+            title="Lines"
+            summary={pluralize(lineFigures.length, "line")}
+            defaultOpen
+          >
+            <QuoteLines
+              products={products}
+              lineFigures={lineFigures}
+              savedItems={existing?.items ?? []}
+              selectedLine={selectedLine}
+              onSelectLine={setSelectedLine}
+              readOnly={isReadOnly}
+            />
+          </CollapsibleSection>
 
-      <FormActions
-        submitLabel={isEditing ? "Save Quote" : "Create Quote"}
-        pendingLabel={isEditing ? "Saving..." : "Creating..."}
-        isPending={isPending}
-        onCancel={handleCancel}
-      />
-    </form>
+          <QuoteOptionsPanel
+            quote={existing}
+            selectedLine={selectedLine}
+            readOnly={isReadOnly}
+          />
+
+          <CollapsibleSection
+            title="Surcharges"
+            summary={pluralize(watch("surcharges").length, "surcharge")}
+          >
+            <fieldset disabled={isReadOnly} className="p-3">
+              <QuoteSurchargesSection
+                control={control}
+                register={register}
+                companyOptions={companyOptions}
+              />
+            </fieldset>
+          </CollapsibleSection>
+
+          <QuoteLinePanels
+            selectedLine={selectedLine}
+            savedLine={selectedSavedLine}
+            figures={selectedFigures}
+          />
+
+          <CollapsibleSection
+            title="Finances"
+            summary={`Payment terms: ${
+              paymentTerms ? INVOICE_PAYMENT_TERM_LABELS[paymentTerms] : "—"
+            }`}
+          >
+            <fieldset disabled={isReadOnly} className="p-3">
+              <QuoteFinancesSection
+                paymentTermOptions={paymentTermOptions}
+                addressOptions={addressOptions}
+              />
+            </fieldset>
+          </CollapsibleSection>
+
+          {existing && <QuoteCustomerPanels quote={existing} />}
+        </div>
+
+        <QuoteTabs readOnly={isReadOnly} />
+
+        {isReadOnly ? (
+          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            {isConverted
+              ? "This quote has been turned into an order. Its lines are the order's now, so the quote can no longer be changed."
+              : "This quote has expired. Its header is read-only."}
+          </p>
+        ) : (
+          <FormActions
+            submitLabel={isEditing ? "Save changes" : "Create Quote"}
+            pendingLabel={isEditing ? "Saving..." : "Creating..."}
+            isPending={isPending}
+            onCancel={handleCancel}
+          />
+        )}
+      </form>
+    </FormProvider>
   );
 };

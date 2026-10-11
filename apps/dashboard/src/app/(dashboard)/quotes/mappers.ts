@@ -57,6 +57,7 @@ export const quoteDetailToFormValues = (quote: QuoteDetail): QuoteFormValues => 
   deliveryRemark: quote.deliveryRemark ?? "",
 
   expired: quote.expired ?? false,
+  expirationReason: quote.expirationReason ?? "",
 
   remarks: quote.remarks ?? "",
 

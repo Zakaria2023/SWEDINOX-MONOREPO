@@ -1,47 +1,37 @@
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
+import { getContractsForProjects } from "@/app/(dashboard)/contracts/actions";
+import { getProductsForPricing } from "@/app/(dashboard)/products/actions";
 import { getQuoteDetail } from "@/app/(dashboard)/quotes/actions";
-import { PageHeading } from "@/components/layout/page-heading";
-import { QuoteDetailView } from "@/components/quotes/quote-detail";
-import { getClerkUserNames } from "@/lib/server/clerk";
-import { ORDER_STATUS_LABELS } from "@/lib/labels";
+import { QuoteForm } from "@/components/quotes/quote-form";
+import { requireAuth } from "@/lib/auth";
+import { getClerkUsersForSelect } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
 };
 
+/**
+ * One screen, as the reference has it: a saved quote is the form it was typed
+ * on — the toolbar, the header, then the lines and every panel.
+ */
 const QuoteDetailPage = async ({ params }: Props) => {
   const { uuid } = await params;
+  await requireAuth();
 
+  // Sequential rather than concurrent: this database caps connections.
   const quote = await getQuoteDetail(uuid);
 
   if (!quote) {
     notFound();
   }
 
-  // These columns store a Clerk id; Clerk owns the names.
-
-  const userNames = await getClerkUserNames();
-
-  // The reference's banner: `Quote 300009, Stappert Intramet S.A., Tel: 4275
-  // 8211, Fax: 4275 8290 - Expired, Printed, Mailed` (#395).
-  const heading = [
-    `Quote ${quote.id}`,
-    quote.companyName,
-    `Tel: ${quote.companyTelephone ?? "-"}`,
-    `Fax: ${quote.companyFax ?? "-"}`,
-  ]
-    .filter(Boolean)
-    .join(", ");
-  const state = [
-    ORDER_STATUS_LABELS[quote.status],
-    quote.isPrinted && "Printed",
-    quote.isMailed && "Mailed",
-    quote.isFaxed && "Faxed",
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const companies = await getCompaniesForSelect();
+  const clerkUsers = await getClerkUsersForSelect();
+  const contracts = await getContractsForProjects();
+  const products = await getProductsForPricing();
 
   return (
     <div className="space-y-4">
@@ -54,8 +44,13 @@ const QuoteDetailPage = async ({ params }: Props) => {
           Quotes
         </Link>
       </div>
-      <PageHeading title={`${heading} - ${state}`} />
-      <QuoteDetailView quote={quote}  userNames={userNames} />
+      <QuoteForm
+        companies={companies}
+        clerkUsers={clerkUsers}
+        contracts={contracts}
+        products={products}
+        existing={quote}
+      />
     </div>
   );
 };
