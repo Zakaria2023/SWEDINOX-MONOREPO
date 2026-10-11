@@ -815,7 +815,7 @@ const PreviousOrdersPanel = ({ rows }: PreviousOrdersProps) => (
                 className="font-medium text-foreground underline-offset-4 hover:underline"
               >
                 {row.orderId}
-                {row.lineNumber === null ? "" : ` / ${row.lineNumber}`}
+                {row.lineNumber === null ? "" : ` / ${row.lineNumber * 10}`}
               </Link>
             </TableCell>
             <TableCell>
@@ -894,7 +894,7 @@ const PreviousQuotesPanel = ({ rows }: PreviousQuotesProps) => (
                 className="font-medium text-foreground underline-offset-4 hover:underline"
               >
                 {row.quoteId}
-                {row.lineNumber === null ? "" : ` / ${row.lineNumber}`}
+                {row.lineNumber === null ? "" : ` / ${row.lineNumber * 10}`}
               </Link>
             </TableCell>
             <TableCell>

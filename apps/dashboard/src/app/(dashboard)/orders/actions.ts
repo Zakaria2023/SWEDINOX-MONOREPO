@@ -17,6 +17,8 @@ import {
   SelectOrders,
 } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
+import { PurchaseQuoteItems } from "@/db/schema/purchase-quote-items";
+import { PurchaseRequestItems } from "@/db/schema/purchase-request-items";
 import { Reservations } from "@/db/schema/reservations";
 import {
   TransportWorkOrderLines,
@@ -28,7 +30,7 @@ import {
 } from "@/db/schema/warehouse-work-orders";
 import { Warehouses } from "@/db/schema/warehouses";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { InsertTexts, Texts } from "@/db/schema/texts";
+import { InsertTexts, SelectTexts, Texts } from "@/db/schema/texts";
 import { requireAuth } from "@/lib/auth";
 import {
   AddressCategory,
@@ -105,10 +107,67 @@ import {
   gte,
   inArray,
   ne,
+  notInArray,
   sql,
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
+/**
+ * What a saved order's own screen may change in its header. Left out on
+ * purpose: the customer (the lines were priced for it), the system's flags
+ * (`Printed`, `Mailed`, `Faxed`, `Internal production`, `Klant materiaal`) and
+ * the financial block with its reason, which only Finance lifts.
+ */
+const ORDER_HEADER_EDIT_KEYS = [
+  "contactUuid",
+  "orderMethod",
+  "customerRef",
+  "leaveCustomer",
+  "ourReference",
+  "seller",
+  "projectUuid",
+  "priceDate",
+  "orderCategory",
+  "handlingBlocked",
+  "isPickup",
+  "isIncidental",
+  "isConsignment",
+  "consignmentDuration",
+  "orderType",
+  "callOffPeriodFrom",
+  "callOffPeriodTo",
+  "weightType",
+  "isOverlength",
+  "deliveryTerms",
+  "deliveryAddressUuid",
+  "deliveryType",
+  "deliveryDate",
+  "deliveryWeek",
+  "deliveryYear",
+  "deliveryRemark",
+  "completeDelivery",
+  "transportBlockage",
+  "vehicleWithCrane",
+  "vehicleWithCanopy",
+  "bundlingSeparate",
+  "transportRegion",
+  "maxLengthMm",
+  "maxBundleWeightKg",
+  "deliveryAfterTime",
+  "deliverForTime",
+  "transportMode",
+  "showNetPrice",
+  "scrapSurchargeSeparate",
+  "calculateVatIfApplicable",
+  "invoiceBlockage",
+  "onlyTotalAmountOnInvoice",
+  "includeOptionPricesInMaterialPrices",
+  "paymentTerms",
+  "billingAddressUuid",
+  "remarks",
+  "documents",
+] as const satisfies readonly (keyof InsertOrders)[];
 
 export type OrderFields = Omit<
   InsertOrders,
@@ -133,7 +192,10 @@ export type OrderSurchargeInput = Omit<
 export type OrderTextInput = Pick<
   InsertTexts,
   "title" | "textBlock" | "textCategoryUuid"
->;
+> & {
+  /** Set on a text the order already has, so saving updates it in place. */
+  uuid?: SelectTexts["uuid"];
+};
 
 export type OrderExtras = {
   surcharges: OrderSurchargeInput[];
@@ -166,6 +228,10 @@ export type OrderItemDetail = SelectOrderItems & {
   /** `Category` and `Quality` on the reference's line grid: the lot's own. */
   stockCategory: SelectStock["stockCategory"] | null;
   quality: SelectStock["quality"] | null;
+  /** The lot's own measurements, for a line written before it kept its own. */
+  lotLengthMm: SelectStock["lengthMm"] | null;
+  lotWidthMm: SelectStock["widthMm"] | null;
+  lotThicknessMm: SelectStock["thicknessMm"] | null;
 };
 
 export type OrderDetail = SelectOrders & {
@@ -177,8 +243,58 @@ export type OrderDetail = SelectOrders & {
 
 export type OrderHeaderEdit = Pick<
   OrderFields,
-  "customerRef" | "ourReference" | "deliveryDate" | "deliveryRemark" | "remarks"
+  (typeof ORDER_HEADER_EDIT_KEYS)[number]
 >;
+
+/** The order screen's Save, as `useActionState` dispatches it. */
+export type OrderSubmitPayload = {
+  /** Set on a saved order; absent on a new one. */
+  orderUuid?: string;
+  fields: OrderFields;
+  /** The lines typed on a new order. A saved order adds lines one by one. */
+  items: OrderItemInput[];
+  extras: OrderExtras;
+};
+
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+type SalesPricingContext = Awaited<ReturnType<typeof loadSalesPricingContext>>;
+
+type LotLineInput = OrderItemInput & { stockUuid: string };
+
+type CrossDockLineInput = OrderItemInput & { productUuid: string };
+
+/** Lines checked against the shelf and priced, ready to be written. */
+type PreparedOrderLines = {
+  lotItems: LotLineInput[];
+  crossDockItems: CrossDockLineInput[];
+  stockByUuid: Map<string, SelectStock>;
+  pricingContext: SalesPricingContext;
+  reserveByProduct: Map<string, boolean>;
+};
+
+type PrepareOrderLinesResult =
+  | { ok: false; error: string }
+  | { ok: true; prepared: PreparedOrderLines };
+
+/** What a line takes from the order it is written on. */
+type OrderLineWriteContext = {
+  orderUuid: string;
+  weightType: OrderFields["weightType"];
+  deliveryDate: OrderFields["deliveryDate"];
+  /** The number the first written line gets; the codes print it ×10. */
+  firstLineNumber: number;
+};
+
+type WrittenOrderLines = {
+  goodsValue: number;
+  weightKg: number;
+  lineCount: number;
+  lineUuids: string[];
+};
+
+/** Anything that can read — the database or an open transaction. */
+type ReadQuery = Pick<typeof db, "select">;
 
 export type OrderCustomerDefaults = {
   paymentTerms: SelectCompanies["paymentTerms"];
@@ -441,6 +557,621 @@ export const buildOrderSummary = async (
   };
 };
 
+/**
+ * Checks a batch of new lines against the shelf and prices them, before any
+ * transaction is opened — every step here is a read.
+ *
+ * 🔴 Two kinds of line. One cut from a lot on the shelf, and one — `CD` — that
+ * names the article to be bought for it and has no lot yet (C3, captured on
+ * `O108183` / `404299`, 8-10-2026).
+ *
+ * `query` is the database for a new order and the open transaction when a
+ * saved line is re-entered, so a quantity being raised can count the pieces
+ * the old line just gave back.
+ */
+const prepareOrderLines = async (
+  query: ReadQuery,
+  items: OrderItemInput[],
+  contractUuid: string | null,
+): Promise<PrepareOrderLinesResult> => {
+  if (items.some((item) => !(Number(item.quantity) > 0))) {
+    return { ok: false, error: "Every line needs a Qty(p) above 0." };
+  }
+
+  const lotItems = items.flatMap((item) =>
+    item.stockUuid ? [{ ...item, stockUuid: item.stockUuid }] : [],
+  );
+  const crossDockItems = items.flatMap((item) =>
+    !item.stockUuid && item.productUuid
+      ? [{ ...item, productUuid: item.productUuid }]
+      : [],
+  );
+  if (lotItems.length + crossDockItems.length !== items.length) {
+    return {
+      ok: false,
+      error:
+        "Every line needs a stock lot — or, for a CD line, the article to be bought.",
+    };
+  }
+  if (crossDockItems.some((item) => item.sourceType !== "cross_dock")) {
+    return {
+      ok: false,
+      error: "Only a CD line can be entered without a stock lot.",
+    };
+  }
+
+  const stockByUuid = new Map<string, SelectStock>();
+  if (lotItems.length > 0) {
+    const stockRows = await query
+      .select()
+      .from(Stock)
+      .where(
+        inArray(
+          Stock.uuid,
+          lotItems.map((item) => item.stockUuid),
+        ),
+      );
+    for (const row of stockRows) {
+      stockByUuid.set(row.uuid, row);
+    }
+
+    for (const item of lotItems) {
+      const stockRow = stockByUuid.get(item.stockUuid);
+      if (!stockRow) {
+        return {
+          ok: false,
+          error: "One or more selected stock items could not be found.",
+        };
+      }
+      if (stockRow.status !== "pending") {
+        return {
+          ok: false,
+          error: "One or more selected stock items are no longer available.",
+        };
+      }
+      const freeQuantity =
+        Number(stockRow.quantity) - Number(stockRow.reservedQuantity);
+      if (Number(item.quantity) > freeQuantity) {
+        return {
+          ok: false,
+          error: `Cannot reserve more than the available quantity (${freeQuantity.toFixed(3)}).`,
+        };
+      }
+    }
+  }
+
+  // An order references its contracts the other way round
+  // (Contracts.orderUuid), so the contract being applied is whichever was
+  // attached to the order; the first is the one its prices come from.
+  const pricingContext = await loadSalesPricingContext(contractUuid, [
+    ...new Set([
+      ...lotItems.flatMap((item) => {
+        const stockRow = stockByUuid.get(item.stockUuid);
+        return stockRow ? [stockRow.productUuid] : [];
+      }),
+      ...crossDockItems.map((item) => item.productUuid),
+    ]),
+  ]);
+
+  // 🔴 Whether a line holds the lot it names is the product's decision.
+  //
+  // `Sales → Always reserve stock` was ticked on `PK44115025125` (2-10-2026),
+  // and that is why every line on that product binds a lot the moment it is
+  // created. We had treated automatic reservation as something the system
+  // simply did. A product that unticks it is sold from unheld stock.
+  //
+  // ⚠️ Absent reads as *reserve*. Not holding metal that has been sold is the
+  // expensive mistake, so the flag has to be switched off on purpose.
+  const reserveByProduct = new Map<string, boolean>();
+  const reservableProductUuids = [
+    ...new Set(
+      lotItems.flatMap((item) => {
+        const stockRow = stockByUuid.get(item.stockUuid);
+        return stockRow ? [stockRow.productUuid] : [];
+      }),
+    ),
+  ];
+  if (reservableProductUuids.length > 0) {
+    const reserveRows = await query
+      .select({
+        uuid: Products.uuid,
+        alwaysReserveStock: Products.alwaysReserveStock,
+      })
+      .from(Products)
+      .where(inArray(Products.uuid, reservableProductUuids));
+    for (const row of reserveRows) {
+      reserveByProduct.set(row.uuid, row.alwaysReserveStock !== false);
+    }
+  }
+
+  return {
+    ok: true,
+    prepared: {
+      lotItems,
+      crossDockItems,
+      stockByUuid,
+      pricingContext,
+      reserveByProduct,
+    },
+  };
+};
+
+/**
+ * Writes prepared lines onto an order: reserves the lots, prices and costs
+ * every line and records who holds what. Shared by a new order and by `New`
+ * on a saved one, so a line is the same line however it was entered.
+ */
+const writeOrderLines = async (
+  tx: Transaction,
+  prepared: PreparedOrderLines,
+  context: OrderLineWriteContext,
+): Promise<WrittenOrderLines> => {
+  const {
+    lotItems,
+    crossDockItems,
+    stockByUuid,
+    pricingContext,
+    reserveByProduct,
+  } = prepared;
+  const written: WrittenOrderLines = {
+    goodsValue: 0,
+    weightKg: 0,
+    lineCount: 0,
+    lineUuids: [],
+  };
+  // The line inherits the order's promise; the reference prints a delivery
+  // date on every line.
+  const deliveryDate = context.deliveryDate
+    ? toDateString(context.deliveryDate)
+    : null;
+
+  // Only items whose stock lot still exists become order lines; the line
+  // number counts those, not the raw submitted rows.
+  const reservableItems = lotItems.flatMap((item) => {
+    const stockRow = stockByUuid.get(item.stockUuid);
+    return stockRow ? [{ item, stockRow }] : [];
+  });
+
+  for (const [index, { item, stockRow }] of reservableItems.entries()) {
+    const holdsStock = reserveByProduct.get(stockRow.productUuid) !== false;
+
+    if (holdsStock) {
+      const nextReserved = (
+        Number(stockRow.reservedQuantity) + Number(item.quantity)
+      ).toFixed(STOCK_QUANTITY_SCALE);
+
+      // Guard: only reserve if the free quantity validated before is still
+      // there — a concurrent reservation/consumption can't cause this lot to
+      // be oversold.
+      const [updateResult] = await tx
+        .update(Stock)
+        .set({ reservedQuantity: nextReserved })
+        .where(
+          and(
+            eq(Stock.uuid, item.stockUuid),
+            eq(Stock.status, "pending"),
+            gte(
+              sql`(${Stock.quantity} - ${Stock.reservedQuantity})`,
+              item.quantity,
+            ),
+          ),
+        );
+
+      if (updateResult.affectedRows === 0) {
+        throw new Error(
+          "Stock changed while reserving — please refresh and try again.",
+        );
+      }
+    }
+
+    const quantity = Number(item.quantity);
+    const product = pricingContext.productByUuid.get(stockRow.productUuid);
+    const { grossPrice, groupDiscount, lineDiscount, netPrice } =
+      resolveLineNetPrice(pricingContext, stockRow.productUuid, quantity);
+
+    // The line is allocated to this exact lot, so its cost is what the lot is
+    // valued at — not an average across every lot of the product. That is the
+    // whole reason an order can report a truer margin than the quote it came
+    // from.
+    // 🔑 The lot's own measurements win over the article's nominal ones.
+    //
+    // A line is allocated to one parcel, and that parcel has been measured:
+    // nominal 1,50 mm plate that really runs 1,44 weighs 35,325 kg, not
+    // 36,797. The reference bills the metal it is shipping, so the cost basis
+    // has to be the lot in front of it rather than the catalogue.
+    const lineLengthMm = stockRow.lengthMm ?? Number(product?.length ?? 0);
+    const lineWidthMm =
+      stockRow.widthMm ?? Number(product?.widthDiameter ?? 0);
+    const lineThicknessMm =
+      Number(stockRow.thicknessMm ?? 0) > 0
+        ? Number(stockRow.thicknessMm)
+        : Number(product?.thickness ?? 0);
+
+    const financials = quoteLineFinancials({
+      netPrice,
+      quantity,
+      purchasePrice: Number(stockRow.valuationPrice ?? 0),
+      replacementPrice: Number(product?.replacementPrice ?? 0),
+      fspPrice: product?.fsp ?? 0,
+      // `theoreticalWeight` is a density when the weight unit says M3, so it
+      // is only ever read through the helper that checks the unit.
+      theoreticalWeight:
+        lotPieceWeightKg(
+          {
+            weightTheoretical: product?.weightTheoretical,
+            theoreticalWeight: product?.theoreticalWeight,
+            weightUnit: product?.weightUnit,
+            lengthMm: Number(product?.length ?? 0),
+            widthMm: Number(product?.widthDiameter ?? 0),
+            thicknessMm: Number(product?.thickness ?? 0),
+          },
+          {
+            lengthMm: lineLengthMm,
+            widthMm: lineWidthMm,
+            thicknessMm: lineThicknessMm,
+          },
+        ) ?? 0,
+      // What the customer is billed on, which is not what the line costs.
+      // The order's weight type — inherited from the customer — picks which of
+      // the product's weights bills it.
+      tradeWeight:
+        pieceWeightForBasis(
+          {
+            weightTrade: product?.weightTrade,
+            weightGerman: product?.weightGerman,
+          },
+          context.weightType,
+        ) ?? undefined,
+      lengthMm: lineLengthMm,
+      widthMm: lineWidthMm,
+      thicknessMm: lineThicknessMm,
+      priceUnit: product?.priceUnit,
+      // The line's own type picks the floor. `Pick-up` does not: the reference
+      // has 307 pick-up orders and one `Ex works` one.
+      minProfitMargin: minimumMarginFor(product, item.sourceType ?? "stock"),
+    });
+
+    const orderItemUuid = generateUuid();
+
+    await tx.insert(OrderItems).values({
+      uuid: orderItemUuid,
+      orderUuid: context.orderUuid,
+      stockUuid: item.stockUuid,
+      productUuid: stockRow.productUuid,
+      quantity: item.quantity,
+      sourceType: item.sourceType ?? "stock",
+      // Planned = the ordered amount; nothing is called off yet, so the full
+      // quantity is still "to be called" until call-offs reduce it.
+      qtyPlanned: item.quantity,
+      qtyReserved: item.quantity,
+      kgPlanned: financials.weightKg.toFixed(2),
+      lineNumber: context.firstLineNumber + index,
+      status: "reserved",
+      // A line on an order nobody has made final is `Provisional`, as the
+      // reference's new line 10 was; `Make final` releases it.
+      lineStatus: "provisional",
+      deliveryDate,
+      // The parcel the line is cut from, measured — what the line grid and
+      // the picking it raises print.
+      unit: stockRow.unit,
+      lengthMm: lineLengthMm > 0 ? Math.round(lineLengthMm) : null,
+      widthMm: lineWidthMm > 0 ? Math.round(lineWidthMm) : null,
+      thicknessMm: lineThicknessMm > 0 ? lineThicknessMm.toFixed(2) : null,
+
+      grossPrice: moneyString(grossPrice),
+      priceUnit: product?.priceUnit ?? null,
+      groupDiscount: moneyString(groupDiscount),
+      lineDiscount: moneyString(lineDiscount),
+      netPrice: moneyString(netPrice),
+      amount: moneyString(financials.amount),
+
+      costPrice: financials.costPrice.toFixed(4),
+      costAmount: moneyString(financials.costAmount),
+      replacementPrice: moneyString(Number(product?.replacementPrice ?? 0)),
+      profit: moneyString(financials.profit),
+      profitMargin: financials.profitMargin.toFixed(2),
+      profitReplPrice: moneyString(financials.profitReplPrice),
+      profitFsp: moneyString(financials.profitFsp),
+      profitTooLow: financials.profitTooLow,
+    });
+
+    // The reservation, said out loud. `Stock.reservedQuantity` above holds the
+    // number; this holds who is holding it, which is what the reference's
+    // `Toon reserveringen` panel shows and a bare number cannot: one lot can
+    // be spoken for by several lines at once.
+    if (holdsStock) {
+      await tx.insert(Reservations).values({
+        uuid: generateUuid(),
+        stockUuid: item.stockUuid,
+        orderItemUuid,
+        type: "sale",
+        status: "definitive",
+        quantity: item.quantity,
+        unit: stockRow.unit ?? "st",
+        quantityKg: financials.weightKg.toFixed(2),
+        reservedFor: context.deliveryDate ?? null,
+      });
+    }
+
+    written.goodsValue += financials.amount;
+    written.weightKg += financials.weightKg;
+    written.lineCount += 1;
+    written.lineUuids.push(orderItemUuid);
+  }
+
+  // 🔴 The `CD` lines: sold before the metal is bought. No lot, no
+  // reservation — the line is held by the purchase line raised for it, and the
+  // receipt of that purchase gives it its lot (C3). Until a purchase covers
+  // it, it is costed at the article's replacement price; once one does, at the
+  // purchase price (C11).
+  for (const [offset, item] of crossDockItems.entries()) {
+    const quantity = Number(item.quantity);
+    const product = pricingContext.productByUuid.get(item.productUuid);
+    if (!product) {
+      throw new Error("A CD line names an article that could not be found.");
+    }
+    const { grossPrice, groupDiscount, lineDiscount, netPrice } =
+      resolveLineNetPrice(pricingContext, item.productUuid, quantity);
+    const lineLengthMm = Number(product.length ?? 0);
+    const lineWidthMm = Number(product.widthDiameter ?? 0);
+    const lineThicknessMm = Number(product.thickness ?? 0);
+
+    const financials = quoteLineFinancials({
+      netPrice,
+      quantity,
+      purchasePrice: Number(product.replacementPrice ?? 0),
+      replacementPrice: Number(product.replacementPrice ?? 0),
+      fspPrice: product.fsp ?? 0,
+      theoreticalWeight:
+        lotPieceWeightKg(
+          {
+            weightTheoretical: product.weightTheoretical,
+            theoreticalWeight: product.theoreticalWeight,
+            weightUnit: product.weightUnit,
+            lengthMm: lineLengthMm,
+            widthMm: lineWidthMm,
+            thicknessMm: lineThicknessMm,
+          },
+          {
+            lengthMm: lineLengthMm,
+            widthMm: lineWidthMm,
+            thicknessMm: lineThicknessMm,
+          },
+        ) ?? 0,
+      tradeWeight:
+        pieceWeightForBasis(
+          {
+            weightTrade: product.weightTrade,
+            weightGerman: product.weightGerman,
+          },
+          context.weightType,
+        ) ?? undefined,
+      lengthMm: lineLengthMm,
+      widthMm: lineWidthMm,
+      thicknessMm: lineThicknessMm,
+      priceUnit: product.priceUnit,
+      minProfitMargin: minimumMarginFor(product, "cross_dock"),
+    });
+
+    const orderItemUuid = generateUuid();
+
+    await tx.insert(OrderItems).values({
+      uuid: orderItemUuid,
+      orderUuid: context.orderUuid,
+      stockUuid: null,
+      productUuid: item.productUuid,
+      quantity: item.quantity,
+      sourceType: "cross_dock",
+      qtyPlanned: item.quantity,
+      qtyReserved: "0.000",
+      kgPlanned: financials.weightKg.toFixed(2),
+      lineNumber: context.firstLineNumber + reservableItems.length + offset,
+      status: "reserved",
+      lineStatus: "provisional",
+      deliveryDate,
+      lengthMm: lineLengthMm > 0 ? Math.round(lineLengthMm) : null,
+      widthMm: lineWidthMm > 0 ? Math.round(lineWidthMm) : null,
+      thicknessMm: lineThicknessMm > 0 ? lineThicknessMm.toFixed(2) : null,
+
+      grossPrice: moneyString(grossPrice),
+      priceUnit: product.priceUnit ?? null,
+      groupDiscount: moneyString(groupDiscount),
+      lineDiscount: moneyString(lineDiscount),
+      netPrice: moneyString(netPrice),
+      amount: moneyString(financials.amount),
+
+      costPrice: financials.costPrice.toFixed(4),
+      costAmount: moneyString(financials.costAmount),
+      replacementPrice: moneyString(Number(product.replacementPrice ?? 0)),
+      profit: moneyString(financials.profit),
+      profitMargin: financials.profitMargin.toFixed(2),
+      profitReplPrice: moneyString(financials.profitReplPrice),
+      profitFsp: moneyString(financials.profitFsp),
+      profitTooLow: financials.profitTooLow,
+    });
+
+    written.goodsValue += financials.amount;
+    written.weightKg += financials.weightKg;
+    written.lineCount += 1;
+    written.lineUuids.push(orderItemUuid);
+  }
+
+  return written;
+};
+
+/**
+ * Gives back what a line held on its lot: the pieces off `reservedQuantity`
+ * and the reservation rows that named it. A line written without a
+ * reservation row still held its lot when its product always reserves —
+ * which is how a converted quote's lines hold theirs.
+ */
+const releaseOrderLine = async (
+  tx: Transaction,
+  item: Pick<SelectOrderItems, "uuid" | "stockUuid" | "productUuid" | "quantity">,
+): Promise<void> => {
+  const lotUuid = item.stockUuid;
+  if (!lotUuid) {
+    return;
+  }
+
+  const reservations = await tx
+    .select({ quantity: Reservations.quantity })
+    .from(Reservations)
+    .where(eq(Reservations.orderItemUuid, item.uuid));
+
+  const [product] =
+    reservations.length > 0
+      ? []
+      : await tx
+          .select({ alwaysReserveStock: Products.alwaysReserveStock })
+          .from(Products)
+          .where(eq(Products.uuid, item.productUuid))
+          .limit(1);
+
+  const held =
+    reservations.length > 0
+      ? reservations.reduce((sum, row) => sum + Number(row.quantity ?? 0), 0)
+      : product?.alwaysReserveStock !== false
+        ? Number(item.quantity)
+        : 0;
+
+  if (held > 0) {
+    const [stockRow] = await tx
+      .select({ reservedQuantity: Stock.reservedQuantity })
+      .from(Stock)
+      .where(eq(Stock.uuid, lotUuid))
+      .limit(1);
+    if (stockRow) {
+      await tx
+        .update(Stock)
+        .set({
+          reservedQuantity: Math.max(
+            0,
+            Number(stockRow.reservedQuantity) - held,
+          ).toFixed(STOCK_QUANTITY_SCALE),
+        })
+        .where(eq(Stock.uuid, lotUuid));
+    }
+  }
+
+  await tx.delete(Reservations).where(eq(Reservations.orderItemUuid, item.uuid));
+};
+
+/**
+ * After a line comes or goes: the surcharges re-measured against the goods
+ * now on the order, and the header's summary rolled up again from what is
+ * stored.
+ */
+const refreshOrderTotals = async (
+  tx: Transaction,
+  orderUuid: string,
+  companyUuid: string,
+) => {
+  const lines = await tx
+    .select({ amount: OrderItems.amount, kgPlanned: OrderItems.kgPlanned })
+    .from(OrderItems)
+    .where(
+      and(eq(OrderItems.orderUuid, orderUuid), ne(OrderItems.status, "cancelled")),
+    );
+
+  const surcharges = await tx
+    .select()
+    .from(OrderSurcharges)
+    .where(eq(OrderSurcharges.orderUuid, orderUuid));
+
+  const resolved = resolveSurchargeAmounts(surcharges, {
+    goodsValue: lines.reduce((sum, line) => sum + Number(line.amount ?? 0), 0),
+    weightKg: lines.reduce((sum, line) => sum + Number(line.kgPlanned ?? 0), 0),
+    lineCount: lines.length,
+  });
+  for (const surcharge of resolved) {
+    const before = surcharges.find((row) => row.uuid === surcharge.uuid);
+    if (before && before.amount !== surcharge.amount) {
+      await tx
+        .update(OrderSurcharges)
+        .set({ amount: surcharge.amount })
+        .where(eq(OrderSurcharges.uuid, surcharge.uuid));
+    }
+  }
+
+  const summary = await buildOrderSummary(tx, orderUuid, companyUuid);
+  await tx.update(Orders).set(summary).where(eq(Orders.uuid, orderUuid));
+  return summary;
+};
+
+/**
+ * Holds an order whose total has just grown past what the customer may owe —
+ * the same rule a new order meets. A block is only ever added here, never
+ * lifted: that is Finance's decision, on the Financially blocked screen.
+ */
+const holdForCredit = async (
+  tx: Transaction,
+  order: Pick<SelectOrders, "uuid" | "id" | "companyUuid" | "financialBlockage">,
+  orderAmount: number,
+  userId: string,
+): Promise<void> => {
+  const credit = await checkCredit(tx, {
+    companyUuid: order.companyUuid,
+    orderAmount,
+    excludeOrderUuid: order.uuid,
+  });
+  if (!credit.reason && !credit.blocked) {
+    return;
+  }
+  await tx
+    .update(Orders)
+    .set({
+      ...(credit.reason ? { blockingReason: credit.reason } : {}),
+      ...(credit.blocked ? { financialBlockage: true } : {}),
+    })
+    .where(eq(Orders.uuid, order.uuid));
+  if (credit.blocked && !order.financialBlockage) {
+    await writeSystemLog(tx, {
+      category: "financial_block",
+      message: `Order ${order.id} held by the credit rule — ${credit.reason}`,
+      orderUuid: order.uuid,
+      userId,
+    });
+  }
+};
+
+/** A saved order whose lines may still change: one nobody has made final. */
+const loadProvisionalOrder = async (orderUuid: string) => {
+  const [order] = await db
+    .select({
+      uuid: Orders.uuid,
+      id: Orders.id,
+      status: Orders.status,
+      companyUuid: Orders.companyUuid,
+      weightType: Orders.weightType,
+      deliveryDate: Orders.deliveryDate,
+      financialBlockage: Orders.financialBlockage,
+    })
+    .from(Orders)
+    .where(eq(Orders.uuid, orderUuid))
+    .limit(1);
+  if (!order) {
+    throw new Error("Order not found.");
+  }
+  if (order.status !== "provisional") {
+    throw new Error(
+      "Lines change while the order is provisional — this one has been made final.",
+    );
+  }
+  return order;
+};
+
+/** The contract a saved order's new lines are priced on, if it has one. */
+const orderContractUuid = async (orderUuid: string): Promise<string | null> => {
+  const [contract] = await db
+    .select({ uuid: Contracts.uuid })
+    .from(Contracts)
+    .where(eq(Contracts.orderUuid, orderUuid))
+    .orderBy(asc(Contracts.code))
+    .limit(1);
+  return contract?.uuid ?? null;
+};
+
 export const createOrder = async (
   fields: OrderFields,
   items: OrderItemInput[] = [],
@@ -486,111 +1217,15 @@ export const createOrder = async (
         fields.vehicleWithCrane || unloading.needsVehicleWithCrane,
     };
 
-    // 🔴 Two kinds of line. One cut from a lot on the shelf, and one — `CD` —
-    // that names the article to be bought for it and has no lot yet (C3,
-    // captured on `O108183` / `404299`, 8-10-2026).
-    const lotItems = items.flatMap((item) =>
-      item.stockUuid ? [{ ...item, stockUuid: item.stockUuid }] : [],
-    );
-    const crossDockItems = items.flatMap((item) =>
-      !item.stockUuid && item.productUuid
-        ? [{ ...item, productUuid: item.productUuid }]
-        : [],
-    );
-    if (lotItems.length + crossDockItems.length !== items.length) {
-      return {
-        error:
-          "Every line needs a stock lot — or, for a CD line, the article to be bought.",
-      };
-    }
-    if (crossDockItems.some((item) => item.sourceType !== "cross_dock")) {
-      return {
-        error: "Only a CD line can be entered without a stock lot.",
-      };
-    }
-
-    // Validate stock availability before opening the transaction.
-    const stockByUuid = new Map<string, SelectStock>();
-    if (lotItems.length > 0) {
-      const stockUuids = lotItems.map((item) => item.stockUuid);
-      const stockRows = await db
-        .select()
-        .from(Stock)
-        .where(inArray(Stock.uuid, stockUuids));
-      for (const row of stockRows) {
-        stockByUuid.set(row.uuid, row);
-      }
-
-      for (const item of lotItems) {
-        const stockRow = stockByUuid.get(item.stockUuid);
-        if (!stockRow) {
-          return {
-            error: "One or more selected stock items could not be found.",
-          };
-        }
-        if (stockRow.status !== "pending") {
-          return {
-            error: "One or more selected stock items are no longer available.",
-          };
-        }
-        const freeQuantity =
-          Number(stockRow.quantity) - Number(stockRow.reservedQuantity);
-        if (Number(item.quantity) > freeQuantity) {
-          return {
-            error: `Cannot reserve more than the available quantity (${freeQuantity.toFixed(3)}).`,
-          };
-        }
-      }
-    }
-
-    // Price and cost the lines before opening the transaction — both are reads,
-    // and neither should hold the stock rows locked while it happens.
-    //
-    // An order references its contracts the other way round (Contracts.orderUuid),
-    // so the contract being applied is whichever was attached on the form; the
-    // first is the one its prices come from.
-    const pricingContext = await loadSalesPricingContext(
+    // Check and price the lines before opening the transaction — both are
+    // reads, and neither should hold the stock rows locked while it happens.
+    const preparation = await prepareOrderLines(
+      db,
+      items,
       extras.contractUuids[0] ?? null,
-      [
-        ...new Set([
-          ...lotItems.flatMap((item) => {
-            const stockRow = stockByUuid.get(item.stockUuid);
-            return stockRow ? [stockRow.productUuid] : [];
-          }),
-          ...crossDockItems.map((item) => item.productUuid),
-        ]),
-      ],
     );
-
-    // 🔴 Whether a line holds the lot it names is the product's decision.
-    //
-    // `Sales → Always reserve stock` was ticked on `PK44115025125` (2-10-2026),
-    // and that is why every line on that product binds a lot the moment it is
-    // created. We had treated automatic reservation as something the system
-    // simply did. A product that unticks it is sold from unheld stock.
-    //
-    // ⚠️ Absent reads as *reserve*. Not holding metal that has been sold is the
-    // expensive mistake, so the flag has to be switched off on purpose.
-    const reserveByProduct = new Map<string, boolean>();
-    const reservableProductUuids = [
-      ...new Set(
-        lotItems.flatMap((item) => {
-          const stockRow = stockByUuid.get(item.stockUuid);
-          return stockRow ? [stockRow.productUuid] : [];
-        }),
-      ),
-    ];
-    if (reservableProductUuids.length > 0) {
-      const reserveRows = await db
-        .select({
-          uuid: Products.uuid,
-          alwaysReserveStock: Products.alwaysReserveStock,
-        })
-        .from(Products)
-        .where(inArray(Products.uuid, reservableProductUuids));
-      for (const row of reserveRows) {
-        reserveByProduct.set(row.uuid, row.alwaysReserveStock !== false);
-      }
+    if (!preparation.ok) {
+      return { error: preparation.error };
     }
 
     await db.transaction(async (tx) => {
@@ -603,268 +1238,21 @@ export const createOrder = async (
         changedAfterFinancialDeblock: false,
       });
 
-      // Only items whose stock lot still exists become order lines; the line
-      // number counts those, not the raw submitted rows.
-      const reservableItems = lotItems.flatMap((item) => {
-        const stockRow = stockByUuid.get(item.stockUuid);
-        return stockRow ? [{ item, stockRow }] : [];
+      const lineTotals = await writeOrderLines(tx, preparation.prepared, {
+        orderUuid: uuid,
+        weightType: fields.weightType,
+        deliveryDate: fields.deliveryDate,
+        firstLineNumber: 1,
       });
 
-      // What the surcharges below are measured against, accumulated as the
-      // lines are priced: a per-kilo surcharge needs the order's weight and a
-      // percentage one its value, and neither is known until then.
-      const lineTotals = { goodsValue: 0, weightKg: 0 };
-
-      for (const [index, { item, stockRow }] of reservableItems.entries()) {
-        const holdsStock = reserveByProduct.get(stockRow.productUuid) !== false;
-
-        if (holdsStock) {
-          const nextReserved = (
-            Number(stockRow.reservedQuantity) + Number(item.quantity)
-          ).toFixed(STOCK_QUANTITY_SCALE);
-
-          // Guard: only reserve if the free quantity we validated above is
-          // still there — a concurrent reservation/consumption can't cause
-          // this lot to be oversold.
-          const [updateResult] = await tx
-            .update(Stock)
-            .set({ reservedQuantity: nextReserved })
-            .where(
-              and(
-                eq(Stock.uuid, item.stockUuid),
-                eq(Stock.status, "pending"),
-                gte(
-                  sql`(${Stock.quantity} - ${Stock.reservedQuantity})`,
-                  item.quantity,
-                ),
-              ),
-            );
-
-          if (updateResult.affectedRows === 0) {
-            throw new Error(
-              "Stock changed while reserving — please refresh and try again.",
-            );
-          }
-        }
-
-        const quantity = Number(item.quantity);
-        const product = pricingContext.productByUuid.get(stockRow.productUuid);
-        const { grossPrice, groupDiscount, lineDiscount, netPrice } =
-          resolveLineNetPrice(pricingContext, stockRow.productUuid, quantity);
-
-        // The line is allocated to this exact lot, so its cost is what the lot
-        // is valued at — not an average across every lot of the product. That
-        // is the whole reason an order can report a truer margin than the quote
-        // it came from.
-        // 🔑 The lot's own measurements win over the article's nominal ones.
-        //
-        // A line is allocated to one parcel, and that parcel has been measured:
-        // nominal 1,50 mm plate that really runs 1,44 weighs 35,325 kg, not
-        // 36,797. The reference bills the metal it is shipping, so the cost
-        // basis has to be the lot in front of it rather than the catalogue.
-        const lineLengthMm =
-          stockRow.lengthMm ?? Number(product?.length ?? 0);
-        const lineWidthMm =
-          stockRow.widthMm ?? Number(product?.widthDiameter ?? 0);
-        const lineThicknessMm =
-          Number(stockRow.thicknessMm ?? 0) > 0
-            ? Number(stockRow.thicknessMm)
-            : Number(product?.thickness ?? 0);
-
-        const financials = quoteLineFinancials({
-          netPrice,
-          quantity,
-          purchasePrice: Number(stockRow.valuationPrice ?? 0),
-          replacementPrice: Number(product?.replacementPrice ?? 0),
-          fspPrice: product?.fsp ?? 0,
-          // `theoreticalWeight` is a density when the weight unit says M3, so
-          // it is only ever read through the helper that checks the unit.
-          theoreticalWeight:
-            lotPieceWeightKg(
-              {
-                weightTheoretical: product?.weightTheoretical,
-                theoreticalWeight: product?.theoreticalWeight,
-                weightUnit: product?.weightUnit,
-                lengthMm: Number(product?.length ?? 0),
-                widthMm: Number(product?.widthDiameter ?? 0),
-                thicknessMm: Number(product?.thickness ?? 0),
-              },
-              {
-                lengthMm: lineLengthMm,
-                widthMm: lineWidthMm,
-                thicknessMm: lineThicknessMm,
-              },
-            ) ?? 0,
-          // What the customer is billed on, which is not what the line costs.
-          // The order's weight type — inherited from the customer — picks which
-          // of the product's weights bills it.
-          tradeWeight:
-            pieceWeightForBasis(
-              {
-                weightTrade: product?.weightTrade,
-                weightGerman: product?.weightGerman,
-              },
-              fields.weightType,
-            ) ?? undefined,
-          lengthMm: lineLengthMm,
-          widthMm: lineWidthMm,
-          thicknessMm: lineThicknessMm,
-          priceUnit: product?.priceUnit,
-          // The line's own type picks the floor. `Pick-up` does not: the
-          // reference has 307 pick-up orders and one `Ex works` one.
-          minProfitMargin: minimumMarginFor(product, item.sourceType ?? "stock"),
-        });
-
-        const orderItemUuid = generateUuid();
-
-        await tx.insert(OrderItems).values({
-          uuid: orderItemUuid,
-          orderUuid: uuid,
-          stockUuid: item.stockUuid,
-          productUuid: stockRow.productUuid,
-          quantity: item.quantity,
-          sourceType: item.sourceType ?? "stock",
-          // Planned = the ordered amount; nothing is called off yet, so the
-          // full quantity is still "to be called" until call-offs reduce it.
-          qtyPlanned: item.quantity,
-          qtyReserved: item.quantity,
-          kgPlanned: financials.weightKg.toFixed(2),
-          lineNumber: index + 1,
-          status: "reserved",
-
-          grossPrice: moneyString(grossPrice),
-          priceUnit: product?.priceUnit ?? null,
-          groupDiscount: moneyString(groupDiscount),
-          lineDiscount: moneyString(lineDiscount),
-          netPrice: moneyString(netPrice),
-          amount: moneyString(financials.amount),
-
-          costPrice: financials.costPrice.toFixed(4),
-          costAmount: moneyString(financials.costAmount),
-          replacementPrice: moneyString(Number(product?.replacementPrice ?? 0)),
-          profit: moneyString(financials.profit),
-          profitMargin: financials.profitMargin.toFixed(2),
-          profitReplPrice: moneyString(financials.profitReplPrice),
-          profitFsp: moneyString(financials.profitFsp),
-          profitTooLow: financials.profitTooLow,
-        });
-
-        // The reservation, said out loud. `Stock.reservedQuantity` above holds
-        // the number; this holds who is holding it, which is what the
-        // reference's `Toon reserveringen` panel shows and a bare number
-        // cannot: one lot can be spoken for by several lines at once.
-        if (holdsStock) {
-          await tx.insert(Reservations).values({
-            uuid: generateUuid(),
-            stockUuid: item.stockUuid,
-            orderItemUuid,
-            type: "sale",
-            status: "definitive",
-            quantity: item.quantity,
-            unit: stockRow.unit ?? "st",
-            quantityKg: financials.weightKg.toFixed(2),
-            reservedFor: fields.deliveryDate ?? null,
-          });
-        }
-
-        lineTotals.goodsValue += financials.amount;
-        lineTotals.weightKg += financials.weightKg;
-      }
-
-      // 🔴 The `CD` lines: sold before the metal is bought. No lot, no
-      // reservation — the line is held by the purchase line raised for it, and
-      // the receipt of that purchase gives it its lot (C3). Until a purchase
-      // covers it, it is costed at the article's replacement price; once one
-      // does, at the purchase price (C11).
-      for (const [offset, item] of crossDockItems.entries()) {
-        const quantity = Number(item.quantity);
-        const product = pricingContext.productByUuid.get(item.productUuid);
-        if (!product) {
-          throw new Error("A CD line names an article that could not be found.");
-        }
-        const { grossPrice, groupDiscount, lineDiscount, netPrice } =
-          resolveLineNetPrice(pricingContext, item.productUuid, quantity);
-        const lineLengthMm = Number(product.length ?? 0);
-        const lineWidthMm = Number(product.widthDiameter ?? 0);
-        const lineThicknessMm = Number(product.thickness ?? 0);
-
-        const financials = quoteLineFinancials({
-          netPrice,
-          quantity,
-          purchasePrice: Number(product.replacementPrice ?? 0),
-          replacementPrice: Number(product.replacementPrice ?? 0),
-          fspPrice: product.fsp ?? 0,
-          theoreticalWeight:
-            lotPieceWeightKg(
-              {
-                weightTheoretical: product.weightTheoretical,
-                theoreticalWeight: product.theoreticalWeight,
-                weightUnit: product.weightUnit,
-                lengthMm: lineLengthMm,
-                widthMm: lineWidthMm,
-                thicknessMm: lineThicknessMm,
-              },
-              {
-                lengthMm: lineLengthMm,
-                widthMm: lineWidthMm,
-                thicknessMm: lineThicknessMm,
-              },
-            ) ?? 0,
-          tradeWeight:
-            pieceWeightForBasis(
-              {
-                weightTrade: product.weightTrade,
-                weightGerman: product.weightGerman,
-              },
-              fields.weightType,
-            ) ?? undefined,
-          lengthMm: lineLengthMm,
-          widthMm: lineWidthMm,
-          thicknessMm: lineThicknessMm,
-          priceUnit: product.priceUnit,
-          minProfitMargin: minimumMarginFor(product, "cross_dock"),
-        });
-
-        await tx.insert(OrderItems).values({
-          uuid: generateUuid(),
-          orderUuid: uuid,
-          stockUuid: null,
-          productUuid: item.productUuid,
-          quantity: item.quantity,
-          sourceType: "cross_dock",
-          qtyPlanned: item.quantity,
-          qtyReserved: "0.000",
-          kgPlanned: financials.weightKg.toFixed(2),
-          lineNumber: reservableItems.length + offset + 1,
-          status: "reserved",
-
-          grossPrice: moneyString(grossPrice),
-          priceUnit: product.priceUnit ?? null,
-          groupDiscount: moneyString(groupDiscount),
-          lineDiscount: moneyString(lineDiscount),
-          netPrice: moneyString(netPrice),
-          amount: moneyString(financials.amount),
-
-          costPrice: financials.costPrice.toFixed(4),
-          costAmount: moneyString(financials.costAmount),
-          replacementPrice: moneyString(Number(product.replacementPrice ?? 0)),
-          profit: moneyString(financials.profit),
-          profitMargin: financials.profitMargin.toFixed(2),
-          profitReplPrice: moneyString(financials.profitReplPrice),
-          profitFsp: moneyString(financials.profitFsp),
-          profitTooLow: financials.profitTooLow,
-        });
-
-        lineTotals.goodsValue += financials.amount;
-        lineTotals.weightKg += financials.weightKg;
-      }
-
+      // A per-kilo surcharge needs the order's weight and a percentage one its
+      // value, and neither is known until the lines are priced.
       if (extras.surcharges.length > 0) {
         await tx.insert(OrderSurcharges).values(
           resolveSurchargeAmounts(extras.surcharges, {
             goodsValue: lineTotals.goodsValue,
             weightKg: lineTotals.weightKg,
-            lineCount: reservableItems.length + crossDockItems.length,
+            lineCount: lineTotals.lineCount,
           }).map((surcharge) => ({
             ...surcharge,
             uuid: generateUuid(),
@@ -948,6 +1336,232 @@ export const createOrder = async (
   }
 };
 
+/**
+ * The order screen's Save, as `useActionState` dispatches it. A new order is
+ * created and opened on its own page — the same screen, now with a number —
+ * and a saved one has its header written back; both redirect from here.
+ */
+export const submitOrder = async (
+  _prevState: OrderActionResult,
+  payload: OrderSubmitPayload,
+): Promise<OrderActionResult> => {
+  if (payload.orderUuid) {
+    return updateOrder(
+      payload.orderUuid,
+      Object.fromEntries(
+        ORDER_HEADER_EDIT_KEYS.map((key) => [key, payload.fields[key]]),
+      ) as OrderHeaderEdit,
+      payload.extras,
+    );
+  }
+
+  const result = await createOrder(
+    payload.fields,
+    payload.items,
+    payload.extras,
+  );
+  if (!result.success || !result.orderUuid) {
+    return result;
+  }
+  redirect(`/orders/${result.orderUuid}`);
+};
+
+/**
+ * `Order lines → New` on a saved order: the line typed on the blank row the
+ * button adds — a lot from the `Stock` window, or a `CD` article — written,
+ * reserved and priced the way a new order's lines are, numbered after the
+ * last one. Only while the order is provisional: once it is final its lines
+ * have a picking and a lorry waiting on them.
+ */
+export const addOrderLines = async (
+  orderUuid: string,
+  items: OrderItemInput[],
+): Promise<OrderActionResult> => {
+  const userId = await requireAuth();
+  try {
+    const order = await loadProvisionalOrder(orderUuid);
+    const preparation = await prepareOrderLines(
+      db,
+      items,
+      await orderContractUuid(orderUuid),
+    );
+    if (!preparation.ok) {
+      return { error: preparation.error };
+    }
+
+    await db.transaction(async (tx) => {
+      await assertWorkPanelFree(tx, "order", orderUuid, userId);
+      const [last] = await tx
+        .select({
+          lineNumber: sql<number | null>`MAX(${OrderItems.lineNumber})`,
+        })
+        .from(OrderItems)
+        .where(eq(OrderItems.orderUuid, orderUuid));
+      await writeOrderLines(tx, preparation.prepared, {
+        orderUuid,
+        weightType: order.weightType,
+        deliveryDate: order.deliveryDate,
+        firstLineNumber: Number(last?.lineNumber ?? 0) + 1,
+      });
+      const summary = await refreshOrderTotals(
+        tx,
+        orderUuid,
+        order.companyUuid,
+      );
+      await holdForCredit(tx, order, Number(summary.totalExclVat), userId);
+    });
+  } catch (error) {
+    return { error: describeError(error, "Failed to add the line") };
+  }
+
+  revalidatePath("/orders");
+  revalidatePath(`/orders/${orderUuid}`);
+  revalidatePath("/financially-blocked");
+  return { success: true, orderUuid };
+};
+
+/**
+ * `Order lines → Delete`: the selected line taken off a provisional order,
+ * its lot given back. The other lines keep their codes — the reference's own
+ * orders run `10 · 30 · 60 · 70` where lines came and went.
+ */
+export const deleteOrderLine = async (
+  orderUuid: string,
+  orderItemUuid: string,
+): Promise<OrderActionResult> => {
+  const userId = await requireAuth();
+  try {
+    const order = await loadProvisionalOrder(orderUuid);
+    const [item] = await db
+      .select()
+      .from(OrderItems)
+      .where(
+        and(
+          eq(OrderItems.uuid, orderItemUuid),
+          eq(OrderItems.orderUuid, orderUuid),
+        ),
+      )
+      .limit(1);
+    if (!item) {
+      return { error: "Line not found." };
+    }
+    if (item.status !== "reserved" || Number(item.invoicedQuantity ?? 0) > 0) {
+      return { error: "This line has moved on and can no longer be deleted." };
+    }
+
+    await db.transaction(async (tx) => {
+      await assertWorkPanelFree(tx, "order", orderUuid, userId);
+      await releaseOrderLine(tx, item);
+      // The options ride on the line; without it there is nothing to price
+      // them on.
+      await tx
+        .delete(OrderItemOptions)
+        .where(eq(OrderItemOptions.orderItemUuid, item.uuid));
+      await tx.delete(OrderItems).where(eq(OrderItems.uuid, item.uuid));
+      await refreshOrderTotals(tx, orderUuid, order.companyUuid);
+    });
+  } catch (error) {
+    return { error: describeError(error, "Failed to delete the line") };
+  }
+
+  revalidatePath("/orders");
+  revalidatePath(`/orders/${orderUuid}`);
+  return { success: true, orderUuid };
+};
+
+/**
+ * `Qty(p)` typed on a saved line of a provisional order. The line is entered
+ * again at the new quantity — re-reserved and re-priced the way `New` writes
+ * one — under the same code, and its options follow it.
+ */
+export const updateOrderLineQuantity = async (
+  orderUuid: string,
+  orderItemUuid: string,
+  quantity: string,
+): Promise<OrderActionResult> => {
+  const userId = await requireAuth();
+  try {
+    if (!(Number(quantity) > 0)) {
+      return { error: "Qty(p) must be above 0 — delete the line instead." };
+    }
+    const order = await loadProvisionalOrder(orderUuid);
+    const contractUuid = await orderContractUuid(orderUuid);
+    const [item] = await db
+      .select()
+      .from(OrderItems)
+      .where(
+        and(
+          eq(OrderItems.uuid, orderItemUuid),
+          eq(OrderItems.orderUuid, orderUuid),
+        ),
+      )
+      .limit(1);
+    if (!item) {
+      return { error: "Line not found." };
+    }
+    if (item.status !== "reserved" || Number(item.invoicedQuantity ?? 0) > 0) {
+      return { error: "This line has moved on and can no longer be changed." };
+    }
+
+    await db.transaction(async (tx) => {
+      await assertWorkPanelFree(tx, "order", orderUuid, userId);
+      // Give the old quantity back first, so raising a line can count the
+      // pieces it already held.
+      await releaseOrderLine(tx, item);
+      const preparation = await prepareOrderLines(
+        tx,
+        [
+          {
+            stockUuid: item.stockUuid,
+            productUuid: item.stockUuid ? null : item.productUuid,
+            quantity: Number(quantity).toFixed(3),
+            sourceType: item.sourceType,
+          },
+        ],
+        contractUuid,
+      );
+      if (!preparation.ok) {
+        throw new Error(preparation.error);
+      }
+      const written = await writeOrderLines(tx, preparation.prepared, {
+        orderUuid,
+        weightType: order.weightType,
+        deliveryDate: order.deliveryDate,
+        firstLineNumber: item.lineNumber ?? 1,
+      });
+      const [replacement] = written.lineUuids;
+      if (replacement) {
+        await tx
+          .update(OrderItemOptions)
+          .set({ orderItemUuid: replacement })
+          .where(eq(OrderItemOptions.orderItemUuid, item.uuid));
+        // A purchase request or quote raised for this line follows it.
+        await tx
+          .update(PurchaseRequestItems)
+          .set({ forOrderItemUuid: replacement })
+          .where(eq(PurchaseRequestItems.forOrderItemUuid, item.uuid));
+        await tx
+          .update(PurchaseQuoteItems)
+          .set({ forOrderItemUuid: replacement })
+          .where(eq(PurchaseQuoteItems.forOrderItemUuid, item.uuid));
+      }
+      await tx.delete(OrderItems).where(eq(OrderItems.uuid, item.uuid));
+      const summary = await refreshOrderTotals(
+        tx,
+        orderUuid,
+        order.companyUuid,
+      );
+      await holdForCredit(tx, order, Number(summary.totalExclVat), userId);
+    });
+  } catch (error) {
+    return { error: describeError(error, "Failed to change the quantity") };
+  }
+
+  revalidatePath("/orders");
+  revalidatePath(`/orders/${orderUuid}`);
+  return { success: true, orderUuid };
+};
+
 export const getOrderDetail = async (
   uuid: string,
 ): Promise<OrderDetail | null> => {
@@ -975,6 +1589,9 @@ export const getOrderDetail = async (
       productName: Products.name,
       stockCategory: Stock.stockCategory,
       quality: Stock.quality,
+      lotLengthMm: Stock.lengthMm,
+      lotWidthMm: Stock.widthMm,
+      lotThicknessMm: Stock.thicknessMm,
     })
     .from(OrderItems)
     .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
@@ -1096,10 +1713,14 @@ export const cancelOrder = async (uuid: string): Promise<OrderActionResult> => {
  * - **A change after a financial release.** The release covered the order as it
  *   was; once it is edited, the credit rule runs again before goods leave
  *   (`deliverOrderItem`).
+ *
+ * With `extras` — the order's own screen saving — its texts, contracts and,
+ * while it is provisional, its surcharges are written back too.
  */
 export const updateOrder = async (
   uuid: string,
   fields: OrderHeaderEdit,
+  extras?: OrderExtras,
 ): Promise<OrderActionResult> => {
   const userId = await requireAuth();
   try {
@@ -1107,6 +1728,8 @@ export const updateOrder = async (
       .select({
         id: Orders.id,
         status: Orders.status,
+        companyUuid: Orders.companyUuid,
+        weightType: Orders.weightType,
         deliveryDate: Orders.deliveryDate,
         financialBlockage: Orders.financialBlockage,
         changedAfterFinancialDeblock: Orders.changedAfterFinancialDeblock,
@@ -1134,6 +1757,17 @@ export const updateOrder = async (
       .limit(1);
     const changedAfterRelease = Boolean(released) && !order.financialBlockage;
 
+    // The lines were weighed and priced on the weight type, so once there are
+    // any it stays what it was — greyed on the reference's 108183.
+    const [lineCount] = await db
+      .select({ value: count() })
+      .from(OrderItems)
+      .where(eq(OrderItems.orderUuid, uuid));
+    const hasLines = Number(lineCount?.value ?? 0) > 0;
+    // Surcharges are measured against the lines, which only move while the
+    // order is provisional; after that they are what the customer agreed.
+    const surchargesOpen = order.status === "provisional";
+
     await db.transaction(async (tx) => {
       await assertWorkPanelFree(tx, "order", uuid, userId);
 
@@ -1141,9 +1775,87 @@ export const updateOrder = async (
         .update(Orders)
         .set({
           ...fields,
+          weightType: hasLines ? order.weightType : fields.weightType,
           ...(changedAfterRelease ? { changedAfterFinancialDeblock: true } : {}),
         })
         .where(eq(Orders.uuid, uuid));
+
+      if (extras) {
+        // Texts are kept by their uuid, so a text the form cannot show —
+        // which documents it prints on — survives a save.
+        const keptTextUuids = extras.texts.flatMap((text) =>
+          text.uuid ? [text.uuid] : [],
+        );
+        await tx
+          .delete(Texts)
+          .where(
+            keptTextUuids.length > 0
+              ? and(
+                  eq(Texts.orderUuid, uuid),
+                  notInArray(Texts.uuid, keptTextUuids),
+                )
+              : eq(Texts.orderUuid, uuid),
+          );
+        for (const text of extras.texts) {
+          if (text.uuid) {
+            await tx
+              .update(Texts)
+              .set({
+                title: text.title,
+                textBlock: text.textBlock,
+                textCategoryUuid: text.textCategoryUuid ?? null,
+              })
+              .where(and(eq(Texts.uuid, text.uuid), eq(Texts.orderUuid, uuid)));
+          } else {
+            await tx.insert(Texts).values({
+              uuid: generateUuid(),
+              orderUuid: uuid,
+              companyUuid: order.companyUuid,
+              title: text.title,
+              textBlock: text.textBlock,
+              textCategoryUuid: text.textCategoryUuid ?? null,
+            });
+          }
+        }
+
+        // An order names its contracts the other way round, so dropping one
+        // clears the contract's pointer rather than a row of the order's.
+        await tx
+          .update(Contracts)
+          .set({ orderUuid: null })
+          .where(
+            extras.contractUuids.length > 0
+              ? and(
+                  eq(Contracts.orderUuid, uuid),
+                  notInArray(Contracts.uuid, extras.contractUuids),
+                )
+              : eq(Contracts.orderUuid, uuid),
+          );
+        if (extras.contractUuids.length > 0) {
+          await tx
+            .update(Contracts)
+            .set({ orderUuid: uuid })
+            .where(inArray(Contracts.uuid, extras.contractUuids));
+        }
+
+        if (surchargesOpen) {
+          await tx
+            .delete(OrderSurcharges)
+            .where(eq(OrderSurcharges.orderUuid, uuid));
+          if (extras.surcharges.length > 0) {
+            await tx.insert(OrderSurcharges).values(
+              extras.surcharges.map((surcharge) => ({
+                ...surcharge,
+                uuid: generateUuid(),
+                orderUuid: uuid,
+              })),
+            );
+          }
+          // Measured against the goods on the order, and the summary rolled
+          // up again with them.
+          await refreshOrderTotals(tx, uuid, order.companyUuid);
+        }
+      }
 
       if (fields.deliveryDate !== undefined) {
         const before = formatDateColumn(order.deliveryDate);
@@ -1188,8 +1900,6 @@ export const updateOrder = async (
  * number of joins would not reach the top. The bound is a guard against a
  * parent cycle, not a claim about the depth.
  */
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
 const rootWarehouseOf = async (
   tx: Transaction,
   locationUuid: string,
@@ -1437,6 +2147,18 @@ export const makeOrderFinal = async (
         .update(Orders)
         .set({ status: "released", isPrinted: true })
         .where(eq(Orders.uuid, orderUuid));
+
+      // The lines go with it: line 10 of 102191 turned `Released` on the same
+      // press.
+      await tx
+        .update(OrderItems)
+        .set({ lineStatus: "released" })
+        .where(
+          and(
+            eq(OrderItems.orderUuid, orderUuid),
+            eq(OrderItems.lineStatus, "provisional"),
+          ),
+        );
 
       await writeSystemLog(tx, {
         category: "order_made_final",

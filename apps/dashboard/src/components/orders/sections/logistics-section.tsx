@@ -41,8 +41,6 @@ export const LogisticsSection = () => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-base font-semibold">Logistics</h2>
-
       <div className="grid grid-cols-3 gap-3">
         <Controller
           control={control}

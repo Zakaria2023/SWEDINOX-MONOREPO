@@ -9,7 +9,6 @@ export const RemarksSection = () => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-base font-semibold">Remarks</h2>
       <Textarea
         id="remarks"
         rows={4}

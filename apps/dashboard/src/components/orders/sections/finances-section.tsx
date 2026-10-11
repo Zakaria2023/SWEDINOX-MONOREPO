@@ -1,25 +1,59 @@
 "use client";
 
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Controller, useFormContext } from "react-hook-form";
+import { unblockOrder } from "@/app/(dashboard)/financially-blocked/actions";
 import { OrderFormValues } from "@/app/(dashboard)/orders/validation";
 import { Input } from "@/components/shadcn/input";
+import { FormError } from "@/components/ui/form-error";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { SelectOption } from "@/components/shadcn/select";
 
+type SavedBlock = {
+  orderUuid: string;
+  blocked: boolean;
+};
+
 type Props = {
   addressOptions: SelectOption[];
   paymentTermOptions: SelectOption[];
+  /**
+   * On a saved order: the block as it stands. Unticking it releases the order
+   * — immediately, as on the reference's 102191 — through Finance's own
+   * release, which records who did it. A block is not ticked by hand once the
+   * order exists; the credit rule sets it.
+   */
+  savedBlock?: SavedBlock | null;
 };
 
-export const FinancesSection = ({ addressOptions, paymentTermOptions }: Props) => {
+export const FinancesSection = ({
+  addressOptions,
+  paymentTermOptions,
+  savedBlock = null,
+}: Props) => {
   const { register, control } = useFormContext<OrderFormValues>();
+  const router = useRouter();
+  const [isReleasing, startRelease] = useTransition();
+  const [releaseError, setReleaseError] = useState<string | undefined>();
+
+  const releaseBlock = (orderUuid: string) => {
+    setReleaseError(undefined);
+    startRelease(async () => {
+      const result = await unblockOrder(orderUuid);
+      if (result.error) {
+        setReleaseError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  };
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-base font-semibold">Finances</h2>
-
+      <FormError>{releaseError}</FormError>
       <div className="grid grid-cols-3 gap-3">
         <Controller
           control={control}
@@ -57,18 +91,37 @@ export const FinancesSection = ({ addressOptions, paymentTermOptions }: Props) =
             />
           )}
         />
-        <Controller
-          control={control}
-          name="financialBlockage"
-          render={({ field }) => (
-            <FormCheckboxCard
-              label="Financial blockage"
-              checked={field.value}
-              active={field.value}
-              onChange={(e) => field.onChange(e.target.checked)}
-            />
-          )}
-        />
+        {savedBlock ? (
+          <FormCheckboxCard
+            label={isReleasing ? "Releasing…" : "Financial blockage"}
+            checked={savedBlock.blocked}
+            active={savedBlock.blocked}
+            disabled={!savedBlock.blocked || isReleasing}
+            title={
+              savedBlock.blocked
+                ? "Untick to release the block"
+                : "Set by the credit rule"
+            }
+            onChange={(e) => {
+              if (!e.target.checked) {
+                releaseBlock(savedBlock.orderUuid);
+              }
+            }}
+          />
+        ) : (
+          <Controller
+            control={control}
+            name="financialBlockage"
+            render={({ field }) => (
+              <FormCheckboxCard
+                label="Financial blockage"
+                checked={field.value}
+                active={field.value}
+                onChange={(e) => field.onChange(e.target.checked)}
+              />
+            )}
+          />
+        )}
         <Controller
           control={control}
           name="invoiceBlockage"

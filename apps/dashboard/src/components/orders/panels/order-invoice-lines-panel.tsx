@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { OrderInvoiceLineRow } from "@/app/(dashboard)/orders/[uuid]/actions";
-import { OrderDetail } from "@/app/(dashboard)/orders/actions";
 import {
   Table,
   TableBody,
@@ -10,21 +9,15 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
-import { DetailField } from "@/components/ui/detail-field";
 import { formatDateColumn, formatMoney, pluralize, yesNo } from "@/lib/helpers";
 import {
   DISCOUNT_UNIT_LABELS,
   INVOICE_LINE_TYPE_LABELS,
-  INVOICE_PAYMENT_TERM_LABELS,
   STOCK_UNIT_LABELS,
 } from "@/lib/labels";
 
 type InvoiceLinesProps = {
   rows: OrderInvoiceLineRow[];
-};
-
-type FinancesProps = {
-  order: OrderDetail;
 };
 
 const formatTimestamp = (value: Date | null): string =>
@@ -93,7 +86,9 @@ export const OrderInvoiceLinesPanel = ({ rows }: InvoiceLinesProps) => (
           rows.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="font-medium">
-                {row.orderLineNumber ?? row.lineNumber ?? "—"}
+                {row.orderLineNumber !== null
+                  ? row.orderLineNumber * 10
+                  : (row.lineNumber ?? "—")}
               </TableCell>
               <TableCell>
                 {row.invoiceUuid && row.invoiceNumber !== null ? (
@@ -157,62 +152,5 @@ export const OrderInvoiceLinesPanel = ({ rows }: InvoiceLinesProps) => (
         )}
       </TableBody>
     </Table>
-  </CollapsibleSection>
-);
-
-/**
- * `Finances` — the payment terms and the switches that shape the invoice.
- *
- * Every control on the captured panel already had a column here, including the
- * two blockages sharing one reason. This renders what was already modelled
- * rather than adding to it.
- */
-export const OrderFinancesPanel = ({ order }: FinancesProps) => (
-  <CollapsibleSection
-    title="Finances"
-    summary={
-      order.financialBlockage || order.invoiceBlockage
-        ? "Blocked"
-        : order.paymentTerms
-          ? INVOICE_PAYMENT_TERM_LABELS[order.paymentTerms]
-          : "No payment terms set"
-    }
-  >
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-      <DetailField
-        label="Payment terms"
-        value={
-          order.paymentTerms
-            ? INVOICE_PAYMENT_TERM_LABELS[order.paymentTerms]
-            : null
-        }
-      />
-      <DetailField label="Blocking reason" value={order.blockingReason} />
-      <DetailField
-        label="Financial blockage"
-        value={yesNo(order.financialBlockage)}
-      />
-      <DetailField
-        label="Invoice blockage"
-        value={yesNo(order.invoiceBlockage)}
-      />
-      <DetailField label="Show net price" value={yesNo(order.showNetPrice)} />
-      <DetailField
-        label="Scrap surcharge separately"
-        value={yesNo(order.scrapSurchargeSeparate)}
-      />
-      <DetailField
-        label="Calculate VAT if applicable"
-        value={yesNo(order.calculateVatIfApplicable)}
-      />
-      <DetailField
-        label="Only total amount on invoice"
-        value={yesNo(order.onlyTotalAmountOnInvoice)}
-      />
-      <DetailField
-        label="Include option prices in material prices"
-        value={yesNo(order.includeOptionPricesInMaterialPrices)}
-      />
-    </div>
   </CollapsibleSection>
 );

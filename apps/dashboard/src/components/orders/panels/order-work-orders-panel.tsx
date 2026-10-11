@@ -177,7 +177,11 @@ const WarehouseWorkOrderTable = ({ rows }: WarehouseTableProps) => {
                   )}
                 >
                   <TableCell className="text-right font-medium tabular-nums">
-                    {orDash(row.orderLineNumber)}
+                    {orDash(
+                      row.orderLineNumber === null
+                        ? null
+                        : row.orderLineNumber * 10,
+                    )}
                   </TableCell>
                   <TableCell>
                     <Link
@@ -304,7 +308,11 @@ const ProductionWorkOrderTable = ({ rows }: ProductionTableProps) => {
                   )}
                 >
                   <TableCell className="text-right font-medium tabular-nums">
-                    {orDash(row.orderLineNumber)}
+                    {orDash(
+                      row.orderLineNumber === null
+                        ? null
+                        : row.orderLineNumber * 10,
+                    )}
                   </TableCell>
                   <TableCell>
                     <Link
@@ -416,7 +424,7 @@ export const TransportWorkOrderTable = ({ rows }: TransportTableProps) => (
         rows.map((row) => (
           <TableRow key={row.uuid}>
             <TableCell className="font-medium">
-              {row.orderLineNumber ?? "—"}
+              {row.orderLineNumber === null ? "—" : row.orderLineNumber * 10}
             </TableCell>
             <TableCell>
               {row.productCodeResolved ?? row.productCode ?? "—"}
@@ -463,8 +471,7 @@ export const TransportWorkOrderTable = ({ rows }: TransportTableProps) => (
  * its order line in `Item`, which is what ties a pick back to what was sold.
  */
 export const OrderWorkOrdersPanel = ({ workOrders }: Props) => (
-  <section className="space-y-2">
-    <h2 className="border-b pb-2 text-base font-semibold">Workorders</h2>
+  <div className="space-y-2">
     <CollapsibleSection
       title="Warehouse workorders"
       summary={`${workOrders.warehouse.length} ${pluralize(workOrders.warehouse.length, "line")}`}
@@ -483,5 +490,5 @@ export const OrderWorkOrdersPanel = ({ workOrders }: Props) => (
     >
       <TransportWorkOrderTable rows={workOrders.transport} />
     </CollapsibleSection>
-  </section>
+  </div>
 );

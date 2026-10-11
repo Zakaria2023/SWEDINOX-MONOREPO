@@ -13,10 +13,6 @@ import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
-import {
-  AvailableStockOption,
-  getAvailableStockForSelect,
-} from "@/app/(dashboard)/warehouse-work-orders/actions";
 import { SelectOption } from "@/components/shadcn/select";
 import {
   DeliveryTerm,
@@ -40,20 +36,36 @@ import {
 } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import {
+  startTransition,
+  useActionState,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import {
   ContractOption,
-  createOrder,
   getContractsByCompanyUuid,
   getOrderCustomerDefaults,
-  OrderActionResult,
   OrderExtras,
+  OrderFields,
+  OrderItemInput,
+  submitOrder,
 } from "./actions";
 import { DEFAULT_ORDER, OrderFormValues, orderSchema } from "./validation";
 
 type UseOrderSubmitParams = {
   companies: CompanyOption[];
+  /** Set on a saved order: its own page is this same screen, prefilled. */
+  orderUuid?: string;
+  defaultValues?: OrderFormValues;
+  /** The saved order's contracts, so the form can name the ones it holds. */
+  initialContracts?: ContractOption[];
+  /** The saved order's customer, when it is no longer a customer or prospect. */
+  currentCompany?: CompanyOption | null;
+  /** Who is signed in — a new order's seller, as the reference fills it. */
+  currentUserId?: string;
 };
 
 const emptyOpt = { value: "", label: "Empty" };
@@ -70,22 +82,28 @@ const addressLabel = (a: AddressOption) =>
   [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
   a.uuid;
 
-export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
+export const useOrderSubmit = ({
+  companies,
+  orderUuid,
+  defaultValues,
+  initialContracts = [],
+  currentCompany = null,
+  currentUserId,
+}: UseOrderSubmitParams) => {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [state, setState] = useState<OrderActionResult>({});
+  const [state, dispatch, isPending] = useActionState(submitOrder, {});
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [addresses, setAddresses] = useState<AddressOption[]>([]);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
-  const [contracts, setContracts] = useState<ContractOption[]>([]);
+  const [contracts, setContracts] = useState<ContractOption[]>(initialContracts);
   const [isLoadingCompanyData, setIsLoadingCompanyData] = useState(false);
-  const [availableStock, setAvailableStock] = useState<AvailableStockOption[]>(
-    [],
-  );
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderSchema),
-    defaultValues: DEFAULT_ORDER,
+    defaultValues: defaultValues ?? {
+      ...DEFAULT_ORDER,
+      seller: currentUserId ?? "",
+    },
   });
 
   const {
@@ -94,32 +112,34 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     remove: removeItem,
   } = useFieldArray({ control: form.control, name: "items" });
 
-  useEffect(() => {
-    getAvailableStockForSelect().then(setAvailableStock);
-  }, []);
-
-  const stockOptions: SelectOption[] = [
-    emptyOpt,
-    ...availableStock.map((s) => ({
-      value: s.uuid,
-      label: `${[s.productCode, s.productName].filter(Boolean).join(" — ")} (${s.quantity} available)`,
-    })),
-  ];
-
   const isPickup = form.watch("isPickup");
   const isConsignment = form.watch("isConsignment");
   const deliveryType = form.watch("deliveryType");
 
-  // Only show customer/prospect companies
-  const customerCompanies = companies.filter(
-    (c) => c.roles?.includes("customer") || c.roles?.includes("prospect"),
-  );
+  // Only customers and prospects are sold to — plus, on a saved order, the
+  // company it was sold to, whatever it is now.
+  const customerCompanies = [
+    ...(currentCompany &&
+    !companies.some(
+      (c) =>
+        c.uuid === currentCompany.uuid &&
+        (c.roles?.includes("customer") || c.roles?.includes("prospect")),
+    )
+      ? [currentCompany]
+      : []),
+    ...companies.filter(
+      (c) => c.roles?.includes("customer") || c.roles?.includes("prospect"),
+    ),
+  ];
 
   const companyOptions: SelectOption[] = [
     emptyOpt,
     ...customerCompanies.map((c) => ({
       value: c.uuid,
-      label: c.companyName ?? c.searchCode1 ?? c.uuid,
+      // `11686 — Holland Dak Accessoires B.V.`: the code beside the name, as
+      // the reference prints it next to the field.
+      label:
+        [c.searchCode1, c.companyName].filter(Boolean).join(" — ") || c.uuid,
     })),
   ];
 
@@ -159,18 +179,56 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     ORDER_WEIGHT_TYPE_LABELS as Record<OrderWeightType, string>,
   );
 
-  // Normal, Call-off or Rush — the reference's own dropdown at the top of its
+  // Normal, Call-off, Rush or Ex works — the reference's own dropdown in its
   // order-type block, and not the same field as the `Order type` column on its
   // revenue screens. That one is the line's sourcing.
   const orderTypeOptions = makeOptions(
     orderTypes,
     ORDER_TYPE_LABELS as Record<OrderType, string>,
-  );
+  ).filter((option) => option.value !== "");
 
   const paymentTermOptions = makeOptions(
     invoicePaymentTerms,
     INVOICE_PAYMENT_TERM_LABELS as Record<InvoicePaymentTerm, string>,
   );
+
+  // The customer's contacts, projects, addresses and contracts — what the
+  // header's dropdowns choose from.
+  const loadCompanyData = useCallback(async (uuid: string) => {
+    setContacts([]);
+    setProjects([]);
+    setAddresses([]);
+    if (!uuid) {
+      setContracts([]);
+      return;
+    }
+    setIsLoadingCompanyData(true);
+    // One after another: the shared MySQL instance caps connections.
+    setContacts(await getContactsForCompany(uuid));
+    setProjects(await getProjectsForCompany(uuid));
+    setAddresses(await getAddressesForCompany(uuid));
+    const companyContracts = await getContractsByCompanyUuid(uuid);
+    // A contract the order already names stays offered even when it is not
+    // the customer's own any more.
+    setContracts((current) => [
+      ...companyContracts,
+      ...current.filter(
+        (held) =>
+          !companyContracts.some((contract) => contract.uuid === held.uuid),
+      ),
+    ]);
+    setIsLoadingCompanyData(false);
+  }, []);
+
+  // A saved order already names a customer, so its contacts and addresses are
+  // fetched before the form can show which ones are selected.
+  const savedCompanyUuid = orderUuid ? defaultValues?.companyUuid : undefined;
+  useEffect(() => {
+    if (!savedCompanyUuid) {
+      return;
+    }
+    void loadCompanyData(savedCompanyUuid);
+  }, [savedCompanyUuid, loadCompanyData]);
 
   const handleCompanyChange = (uuid: string) => {
     form.setValue("companyUuid", uuid);
@@ -179,61 +237,46 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     form.setValue("deliveryAddressUuid", "");
     form.setValue("billingAddressUuid", "");
     form.setValue("contractUuids", []);
-    setContacts([]);
-    setProjects([]);
-    setAddresses([]);
     setContracts([]);
     if (!uuid) {
+      void loadCompanyData(uuid);
       return;
     }
-    setIsLoadingCompanyData(true);
-    Promise.all([
-      getContactsForCompany(uuid),
-      getProjectsForCompany(uuid),
-      getAddressesForCompany(uuid),
-      getContractsByCompanyUuid(uuid),
-      getOrderCustomerDefaults(uuid),
-    ]).then(
-      ([newContacts, newProjects, newAddresses, newContracts, defaults]) => {
-        setContacts(newContacts);
-        setProjects(newProjects);
-        setAddresses(newAddresses);
-        setContracts(newContracts);
-
-        // The customer brings the terms with it. Watched on 21-9-2026: typing a
-        // customer into a blank order filled the contact, both addresses, the
-        // payment terms, the delivery terms and the weight type before a line
-        // existed.
-        //
-        // 🔴 The weight type is the one that matters — it decides which of the
-        // product's densities the line is billed on, so leaving it empty prices
-        // the order on the wrong steel.
-        if (defaults) {
-          if (defaults.paymentTerms) {
-            form.setValue("paymentTerms", defaults.paymentTerms);
-          }
-          if (defaults.deliveryTerms) {
-            form.setValue("deliveryTerms", defaults.deliveryTerms);
-          }
-          if (defaults.weightType) {
-            form.setValue("weightType", defaults.weightType);
-          }
-          if (defaults.contactUuid) {
-            form.setValue("contactUuid", defaults.contactUuid);
-          }
-          if (defaults.deliveryAddressUuid) {
-            form.setValue("deliveryAddressUuid", defaults.deliveryAddressUuid);
-          }
-          if (defaults.billingAddressUuid) {
-            form.setValue("billingAddressUuid", defaults.billingAddressUuid);
-          }
-        }
-
-        setIsLoadingCompanyData(false);
-      },
-    );
+    void loadCompanyData(uuid).then(async () => {
+      // The customer brings the terms with it. Watched on 21-9-2026: typing a
+      // customer into a blank order filled the contact, both addresses, the
+      // payment terms, the delivery terms and the weight type before a line
+      // existed.
+      //
+      // 🔴 The weight type is the one that matters — it decides which of the
+      // product's densities the line is billed on, so leaving it empty prices
+      // the order on the wrong steel.
+      const defaults = await getOrderCustomerDefaults(uuid);
+      if (!defaults || form.getValues("companyUuid") !== uuid) {
+        return;
+      }
+      if (defaults.paymentTerms) {
+        form.setValue("paymentTerms", defaults.paymentTerms);
+      }
+      if (defaults.deliveryTerms) {
+        form.setValue("deliveryTerms", defaults.deliveryTerms);
+      }
+      if (defaults.weightType) {
+        form.setValue("weightType", defaults.weightType);
+      }
+      if (defaults.contactUuid) {
+        form.setValue("contactUuid", defaults.contactUuid);
+      }
+      if (defaults.deliveryAddressUuid) {
+        form.setValue("deliveryAddressUuid", defaults.deliveryAddressUuid);
+      }
+      if (defaults.billingAddressUuid) {
+        form.setValue("billingAddressUuid", defaults.billingAddressUuid);
+      }
+    });
   };
 
+  // A saved order is edited on its own page, so leaving goes to the list.
   const handleCancel = () => router.push("/orders");
 
   const onSubmit = form.handleSubmit((values) => {
@@ -253,6 +296,7 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
         companyCode: surcharge.companyCode || null,
       })),
       texts: values.texts.map((text) => ({
+        uuid: text.uuid || undefined,
         title: text.title,
         textBlock: text.textBlock,
         textCategoryUuid: text.textCategoryUuid || null,
@@ -260,95 +304,99 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
       contractUuids: values.contractUuids,
     };
 
-    startTransition(async () => {
-      const result = await createOrder(
-        {
-          companyUuid: values.companyUuid,
-          contactUuid: values.contactUuid || null,
-          orderMethod: values.orderMethod || null,
-          customerRef: values.customerRef || null,
-          leaveCustomer: values.leaveCustomer,
-          ourReference: values.ourReference || null,
-          seller: values.seller || null,
-          projectUuid: values.projectUuid || null,
-          priceDate: values.priceDate ? new Date(values.priceDate) : null,
-          orderCategory: values.orderCategory || null,
-          handlingBlocked: values.handlingBlocked,
+    const fields: OrderFields = {
+      companyUuid: values.companyUuid,
+      contactUuid: values.contactUuid || null,
+      orderMethod: values.orderMethod || null,
+      customerRef: values.customerRef || null,
+      leaveCustomer: values.leaveCustomer,
+      ourReference: values.ourReference || null,
+      seller: values.seller || null,
+      projectUuid: values.projectUuid || null,
+      priceDate: values.priceDate ? new Date(values.priceDate) : null,
+      orderCategory: values.orderCategory || null,
+      handlingBlocked: values.handlingBlocked,
 
-          isPickup: values.isPickup,
-          isIncidental: values.isIncidental,
-          isConsignment: values.isConsignment,
-          consignmentDuration: values.consignmentDuration,
-          isInternalProduction: values.isInternalProduction,
-          isCustomerMaterial: values.isCustomerMaterial,
-          orderType: values.orderType,
-          callOffPeriodFrom:
-            values.orderType === "call_off" && values.callOffPeriodFrom
-              ? new Date(values.callOffPeriodFrom)
-              : null,
-          callOffPeriodTo:
-            values.orderType === "call_off" && values.callOffPeriodTo
-              ? new Date(values.callOffPeriodTo)
-              : null,
-          weightType: values.weightType || null,
-          isOverlength: values.isOverlength,
-          isPrinted: values.isPrinted,
-          isMailed: values.isMailed,
-          isFaxed: values.isFaxed,
+      isPickup: values.isPickup,
+      isIncidental: values.isIncidental,
+      isConsignment: values.isConsignment,
+      consignmentDuration: values.consignmentDuration,
+      isInternalProduction: values.isInternalProduction,
+      isCustomerMaterial: values.isCustomerMaterial,
+      orderType: values.orderType,
+      callOffPeriodFrom:
+        values.orderType === "call_off" && values.callOffPeriodFrom
+          ? new Date(values.callOffPeriodFrom)
+          : null,
+      callOffPeriodTo:
+        values.orderType === "call_off" && values.callOffPeriodTo
+          ? new Date(values.callOffPeriodTo)
+          : null,
+      weightType: values.weightType || null,
+      isOverlength: values.isOverlength,
+      isPrinted: values.isPrinted,
+      isMailed: values.isMailed,
+      isFaxed: values.isFaxed,
 
-          deliveryTerms: values.isPickup ? null : values.deliveryTerms || null,
-          deliveryAddressUuid: values.isPickup
-            ? null
-            : values.deliveryAddressUuid || null,
-          deliveryType: values.deliveryType,
-          deliveryDate: values.deliveryDate
-            ? new Date(values.deliveryDate)
-            : null,
-          deliveryWeek: values.deliveryWeek ?? null,
-          deliveryYear: values.deliveryYear ?? null,
-          deliveryRemark: values.deliveryRemark || null,
+      deliveryTerms: values.isPickup ? null : values.deliveryTerms || null,
+      deliveryAddressUuid: values.isPickup
+        ? null
+        : values.deliveryAddressUuid || null,
+      deliveryType: values.deliveryType,
+      deliveryDate: values.deliveryDate ? new Date(values.deliveryDate) : null,
+      deliveryWeek: values.deliveryWeek ?? null,
+      deliveryYear: values.deliveryYear ?? null,
+      deliveryRemark: values.deliveryRemark || null,
 
-          completeDelivery: values.completeDelivery,
-          transportBlockage: values.transportBlockage,
-          vehicleWithCrane: values.vehicleWithCrane,
-          vehicleWithCanopy: values.vehicleWithCanopy,
-          bundlingSeparate: values.bundlingSeparate,
-          transportRegion: values.transportRegion || null,
-          maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : null,
-          maxBundleWeightKg: values.maxBundleWeightKg || null,
-          deliveryAfterTime: values.deliveryAfterTime || null,
-          deliverForTime: values.deliverForTime || null,
-          transportMode: values.transportMode || null,
+      completeDelivery: values.completeDelivery,
+      transportBlockage: values.transportBlockage,
+      vehicleWithCrane: values.vehicleWithCrane,
+      vehicleWithCanopy: values.vehicleWithCanopy,
+      bundlingSeparate: values.bundlingSeparate,
+      transportRegion: values.transportRegion || null,
+      maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : null,
+      maxBundleWeightKg: values.maxBundleWeightKg || null,
+      deliveryAfterTime: values.deliveryAfterTime || null,
+      deliverForTime: values.deliverForTime || null,
+      transportMode: values.transportMode || null,
 
-          showNetPrice: values.showNetPrice,
-          scrapSurchargeSeparate: values.scrapSurchargeSeparate,
-          calculateVatIfApplicable: values.calculateVatIfApplicable,
-          financialBlockage: values.financialBlockage,
-          invoiceBlockage: values.invoiceBlockage,
-          onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
-          includeOptionPricesInMaterialPrices:
-            values.includeOptionPricesInMaterialPrices,
-          paymentTerms: values.paymentTerms || null,
-          billingAddressUuid: values.billingAddressUuid || null,
-          blockingReason: values.blockingReason || null,
+      showNetPrice: values.showNetPrice,
+      scrapSurchargeSeparate: values.scrapSurchargeSeparate,
+      calculateVatIfApplicable: values.calculateVatIfApplicable,
+      financialBlockage: values.financialBlockage,
+      invoiceBlockage: values.invoiceBlockage,
+      onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
+      includeOptionPricesInMaterialPrices:
+        values.includeOptionPricesInMaterialPrices,
+      paymentTerms: values.paymentTerms || null,
+      billingAddressUuid: values.billingAddressUuid || null,
+      blockingReason: values.blockingReason || null,
 
-          remarks: values.remarks || null,
-          documents: values.documents.length > 0 ? values.documents : null,
-        },
-        values.items ?? [],
-        extras,
-      );
+      remarks: values.remarks || null,
+      documents: values.documents.length > 0 ? values.documents : null,
+    };
 
-      setState(result);
-      if (result.success) {
-        router.push("/orders");
-      }
+    // A new order takes the lines typed under `Order lines → New` with it; a
+    // saved one writes its lines from its own grid.
+    const items: OrderItemInput[] = orderUuid
+      ? []
+      : (values.items ?? []).map((item) => ({
+          stockUuid: item.stockUuid || null,
+          productUuid: item.productUuid || null,
+          // `1,5` typed the Dutch way is the same quantity as `1.5`.
+          quantity: item.quantity.trim().replace(",", "."),
+          sourceType: item.sourceType,
+        }));
+
+    startTransition(() => {
+      dispatch({ orderUuid, fields, items, extras });
     });
   });
 
   return {
     form,
     isPending,
+    isEditing: Boolean(orderUuid),
     onSubmit,
     state,
     isPickup,
@@ -367,7 +415,6 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     isLoadingCompanyData,
     handleCompanyChange,
     handleCancel,
-    stockOptions,
     itemFields,
     appendItem,
     removeItem,

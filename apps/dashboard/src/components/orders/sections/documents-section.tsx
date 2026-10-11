@@ -11,14 +11,13 @@ export const DocumentsSection = () => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-base font-semibold">Documents</h2>
       <div className="space-y-2 rounded-2xl border border-border bg-muted/20 p-4">
         {documents.map((doc, index) => (
           <div
             key={doc.id}
             className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-sm"
           >
-            <span className="flex-1 truncate">{doc.fileName}</span>
+            <span className="line-clamp-1 flex-1">{doc.fileName}</span>
             <button
               type="button"
               onClick={async () => {

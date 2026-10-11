@@ -27,7 +27,6 @@ export const ContractsSection = ({ contracts }: Props) => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-base font-semibold">Contracts</h2>
       <div className="space-y-3 rounded-2xl border border-border bg-muted/20 p-4">
         {selected.length > 0 && (
           <div className="space-y-2">
@@ -39,7 +38,7 @@ export const ContractsSection = ({ contracts }: Props) => {
                   className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 >
                   <FileText className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="flex-1 truncate">
+                  <span className="line-clamp-1 flex-1">
                     {contract ? contractOptionLabel(contract) : uuid}
                   </span>
                   <button

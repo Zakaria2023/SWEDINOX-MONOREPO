@@ -44,7 +44,14 @@ import {
 } from "@/db/schema/order-call-offs";
 import { Invoices, SelectInvoices } from "@/db/schema/invoices";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
-import { Orders, SelectOrders } from "@/db/schema/orders";
+import {
+  Orders,
+  OrderSurcharges,
+  SelectOrders,
+  SelectOrderSurcharges,
+} from "@/db/schema/orders";
+import { Contracts } from "@/db/schema/contracts";
+import { ContractOption } from "@/app/(dashboard)/orders/actions";
 import {
   ProductionWorkOrderLines,
   ProductionWorkOrders,
@@ -303,6 +310,16 @@ export type OrderTextRow = Pick<
   SelectTexts,
   "uuid" | "title" | "textBlock" | "sequenceNumber"
 >;
+
+/**
+ * What a saved order's screen edits besides its own columns: the surcharges,
+ * the texts with their category, and the contracts it names.
+ */
+export type OrderFormExtras = {
+  surcharges: SelectOrderSurcharges[];
+  texts: Pick<SelectTexts, "uuid" | "title" | "textBlock" | "textCategoryUuid">[];
+  contracts: ContractOption[];
+};
 
 const toNumber = (value: string | number | null): number =>
   value === null ? 0 : Number(value);
@@ -1030,4 +1047,44 @@ export const getOrderTexts = async (
     .from(Texts)
     .where(eq(Texts.orderUuid, orderUuid))
     .orderBy(asc(Texts.sequenceNumber), asc(Texts.id));
+};
+
+/**
+ * The surcharges, texts and contracts a saved order's form opens with. One
+ * query after another: the shared MySQL instance caps connections.
+ */
+export const getOrderFormExtras = async (
+  orderUuid: string,
+): Promise<OrderFormExtras> => {
+  await requireAuth();
+
+  const surcharges = await db
+    .select()
+    .from(OrderSurcharges)
+    .where(eq(OrderSurcharges.orderUuid, orderUuid))
+    .orderBy(asc(OrderSurcharges.order), asc(OrderSurcharges.id));
+
+  const texts = await db
+    .select({
+      uuid: Texts.uuid,
+      title: Texts.title,
+      textBlock: Texts.textBlock,
+      textCategoryUuid: Texts.textCategoryUuid,
+    })
+    .from(Texts)
+    .where(eq(Texts.orderUuid, orderUuid))
+    .orderBy(asc(Texts.sequenceNumber), asc(Texts.id));
+
+  const contracts = await db
+    .select({
+      uuid: Contracts.uuid,
+      code: Contracts.code,
+      description: Contracts.description,
+      contractType: Contracts.contractType,
+    })
+    .from(Contracts)
+    .where(eq(Contracts.orderUuid, orderUuid))
+    .orderBy(asc(Contracts.code));
+
+  return { surcharges, texts, contracts };
 };

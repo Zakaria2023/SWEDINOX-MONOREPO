@@ -21,7 +21,15 @@ export const orderItemSchema = z
     productUuid: z.string().optional(),
     // What the chosen article reads as, for the form only.
     productLabel: z.string().optional(),
-    quantity: z.string().min(1, "Quantity is required"),
+    // `New` adds a line at Qty(p) 0, as the reference does; it is saved once
+    // somebody types how many.
+    quantity: z
+      .string()
+      .min(1, "Quantity is required")
+      .refine(
+        (value) => Number(value.replace(",", ".")) > 0,
+        "Qty(p) must be more than 0",
+      ),
     // The reference's line `Type` — `Stk` unless the line is cross-docked or
     // sold ex works. It picks the margin floor the line is held to.
     sourceType: z.enum(orderSourceTypes).optional(),
@@ -54,6 +62,9 @@ export const orderSurchargeSchema = z.object({
 });
 
 export const orderTextSchema = z.object({
+  // A text the saved order already has, so saving keeps it rather than
+  // writing it again.
+  uuid: z.string().optional(),
   title: z.string().min(1, "Title is required"),
   textCategoryUuid: z.string().optional(),
   textBlock: z.string().min(1, "Text is required"),

@@ -54,7 +54,6 @@ export const SurchargesSection = ({ companyOptions }: Props) => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-base font-semibold">Surcharges</h2>
       <div className="space-y-3 rounded-2xl border border-border bg-muted/20 p-4">
         {fields.map((item, index) => (
           <div
