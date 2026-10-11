@@ -41,7 +41,7 @@ import {
   WorkOrderTree,
 } from "@/components/work-orders/work-order-tree";
 import { WorkOrderStatus } from "@/lib/enums";
-import { orDash } from "@/lib/helpers";
+import { formatNumber, orDash } from "@/lib/helpers";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { TableFilterControl } from "@/lib/table-query";
 import { PrepareLineDialog } from "./prepare-line-dialog";
@@ -90,28 +90,32 @@ const COLUMNS: TreeColumn<WarehouseTreeRow>[] = [
     key: "qtyPlanned",
     header: "Qty(p)",
     align: "right",
-    cell: (row) => orDash(row.qtyPlanned),
+    cell: (row) =>
+      row.qtyPlanned === null ? "—" : formatNumber(num(row.qtyPlanned)),
     sum: (row) => num(row.qtyPlanned),
   },
   {
     key: "qtyActual",
     header: "Qty(a)",
     align: "right",
-    cell: (row) => orDash(row.qtyActual),
+    cell: (row) =>
+      row.qtyActual === null ? "—" : formatNumber(num(row.qtyActual)),
     sum: (row) => num(row.qtyActual),
   },
   {
     key: "kgPlanned",
     header: "Kg(p)",
     align: "right",
-    cell: (row) => orDash(row.kgPlanned),
+    cell: (row) =>
+      row.kgPlanned === null ? "—" : formatNumber(num(row.kgPlanned)),
     sum: (row) => num(row.kgPlanned),
   },
   {
     key: "kgActual",
     header: "Kg(a)",
     align: "right",
-    cell: (row) => orDash(row.kgActual),
+    cell: (row) =>
+      row.kgActual === null ? "—" : formatNumber(num(row.kgActual)),
     sum: (row) => num(row.kgActual),
   },
   { key: "charge", header: "Charge", cell: (row) => orDash(row.charge) },

@@ -385,9 +385,9 @@ export const ReportCompletionDialog = ({
 
   return (
     <Dialog open={!!line} onOpenChange={onOpenChange}>
-      {/* Wide enough for all fifteen of the reference's columns, Charge
-          included, without scrolling sideways to reach it. */}
-      <DialogContent className="max-w-none">
+      {/* As wide as the reference's window; the grid scrolls sideways past
+          Charge only on a narrow screen. */}
+      <DialogContent className="max-w-7xl">
         <DialogHeader>
           <DialogTitle>
             Report completion{" "}
@@ -536,21 +536,21 @@ export const ReportCompletionDialog = ({
                        Naar · Interne charge · Interne partij · Charge · Partij
                        · Plaatnummer. */
                     <TableRow>
-                      <TableHead>For order</TableHead>
+                      <TableHead className="whitespace-normal">For order</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
                       <TableHead className="text-right">Length</TableHead>
                       <TableHead className="text-right">Width</TableHead>
                       <TableHead className="text-right">Thickness</TableHead>
                       <TableHead className="text-right">Weight</TableHead>
-                      <TableHead className="text-right">Gross weight</TableHead>
-                      <TableHead className="text-right">Weighed weight</TableHead>
+                      <TableHead className="text-right whitespace-normal">Gross weight</TableHead>
+                      <TableHead className="text-right whitespace-normal">Weighed weight</TableHead>
                       <TableHead className="text-right">Metres</TableHead>
                       <TableHead>To</TableHead>
-                      <TableHead>Internal charge</TableHead>
-                      <TableHead>Internal batch</TableHead>
+                      <TableHead className="whitespace-normal">Internal charge</TableHead>
+                      <TableHead className="whitespace-normal">Internal batch</TableHead>
                       <TableHead>Charge</TableHead>
                       <TableHead>Batch</TableHead>
-                      <TableHead>Plate number</TableHead>
+                      <TableHead className="whitespace-normal">Plate number</TableHead>
                     </TableRow>
                   ) : (
                   <TableRow>
@@ -627,7 +627,7 @@ export const ReportCompletionDialog = ({
                           <Input
                             type="text"
                             inputMode="decimal"
-                            className="w-20 text-right"
+                            className="w-16 text-right"
                             {...register(`picks.${index}.qtyActual`, {
                               onChange: (event) =>
                                 restateWeight(index, event.target.value),
@@ -667,7 +667,7 @@ export const ReportCompletionDialog = ({
                           <Input
                             type="text"
                             inputMode="decimal"
-                            className="w-24 text-right"
+                            className="w-20 text-right"
                             {...register(`picks.${index}.kgActual`)}
                             disabled={isPending}
                           />
@@ -690,14 +690,14 @@ export const ReportCompletionDialog = ({
                             </TableCell>
                             <TableCell>
                               <Input
-                                className="w-24"
+                                className="w-20"
                                 {...register(`picks.${index}.internalCharge`)}
                                 disabled={isPending}
                               />
                             </TableCell>
                             <TableCell>
                               <Input
-                                className="w-24"
+                                className="w-20"
                                 {...register(`picks.${index}.internalBatch`)}
                                 disabled={isPending}
                               />
@@ -714,7 +714,7 @@ export const ReportCompletionDialog = ({
                             disabled={isPending}
                             readOnly={isDrawnFromStock}
                             className={cn(
-                              isReceipt && "w-28",
+                              isReceipt && "w-24",
                               isReceipt &&
                                 Number(
                                   String(
