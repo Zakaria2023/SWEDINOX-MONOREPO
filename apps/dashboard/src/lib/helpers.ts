@@ -644,6 +644,12 @@ export const isEmptySelection = (value: string | null | undefined): boolean =>
  */
 const ABSENT_CHARGE_SENTINELS = ["nvt", "ntv", "n.v.t.", "-", "--", "n/a"];
 
+// The last internal charge and bundle easy2trade gave out — lot `26AQWF` /
+// `404766`, received on purchase order 404355 on 11-10-2026. Our series carry
+// on from there, so a label printed here never repeats one printed there.
+const LAST_REFERENCE_INTERNAL_CHARGE = "26AQWF";
+const LAST_REFERENCE_INTERNAL_BATCH = 404766;
+
 export const normaliseCharge = (
   value: string | null | undefined,
 ): string | null => {
@@ -669,16 +675,23 @@ export const nextInternalCharge = (
   lastCharge: string | null,
 ): string => {
   const prefix = String(year % 100).padStart(2, "0");
+  const isCharge = (value: string | null): value is string =>
+    !!value && value.startsWith(prefix) && /^\d{2}[A-Z]{4}$/.test(value);
+  const floor = LAST_REFERENCE_INTERNAL_CHARGE.startsWith(prefix)
+    ? LAST_REFERENCE_INTERNAL_CHARGE
+    : null;
+  const last =
+    floor && (!isCharge(lastCharge) || lastCharge < floor) ? floor : lastCharge;
   if (
-    !lastCharge ||
-    !lastCharge.startsWith(prefix) ||
-    !/^\d{2}[A-Z]{4}$/.test(lastCharge)
+    !last ||
+    !last.startsWith(prefix) ||
+    !/^\d{2}[A-Z]{4}$/.test(last)
   ) {
     return `${prefix}AAAA`;
   }
 
   // Base-26 over A–Z: add one to the last letter and carry leftwards past Z.
-  const { letters, carry } = lastCharge
+  const { letters, carry } = last
     .slice(2)
     .split("")
     .reduceRight<{ letters: string[]; carry: boolean }>(
@@ -699,7 +712,7 @@ export const nextInternalCharge = (
       { letters: [], carry: true },
     );
   if (carry) {
-    throw new Error(`No internal charge left after ${lastCharge} in ${year}`);
+    throw new Error(`No internal charge left after ${last} in ${year}`);
   }
   return `${prefix}${letters.join("")}`;
 };
@@ -724,7 +737,10 @@ export const nextInternalCharge = (
  * is allowed to outgrow it rather than wrap.
  */
 export const nextInternalBatch = (lastBatch: string | null): string => {
-  const previous = Number(lastBatch ?? 0);
+  const previous = Math.max(
+    Number(lastBatch ?? 0),
+    LAST_REFERENCE_INTERNAL_BATCH,
+  );
   const next = Number.isFinite(previous) && previous > 0 ? previous + 1 : 1;
   return String(next).padStart(6, "0");
 };
