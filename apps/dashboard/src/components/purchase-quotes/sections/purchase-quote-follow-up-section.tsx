@@ -56,6 +56,14 @@ export const PurchaseQuoteFollowUpSection = ({ existing }: Props) => {
   return (
     <section className="space-y-3">
       <h2 className="text-sm font-semibold">Follow-up</h2>
+      {/* `Converted to: Purchase order 404357` once the quote became an
+          order, as on 900001 (12-10-2026). */}
+      {existing && existing.orderId !== null && (
+        <div className="space-y-1 text-sm">
+          <p>Converted to:</p>
+          <p>Purchase order {existing.orderId}</p>
+        </div>
+      )}
       <div className="flex items-end gap-2">
         <div className="flex-1">
           <FormLabel htmlFor="expiredBecause">Expired because:</FormLabel>

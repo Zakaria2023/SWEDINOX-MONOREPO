@@ -174,6 +174,8 @@ export type PurchaseQuoteDetail = SelectPurchaseQuotes & {
   companyName: SelectCompanies["companyName"] | null;
   /** The purchase order this quote was awarded as, once it has been. */
   orderUuid: SelectPurchaseOrders["uuid"] | null;
+  /** Its number, for `Converted to: Purchase order 404357`. */
+  orderId: SelectPurchaseOrders["id"] | null;
   items: PurchaseQuoteItemDetail[];
 };
 
@@ -642,6 +644,11 @@ export const getPurchaseQuoteDetail = async (
         WHERE ${PurchaseOrders.purchaseQuoteUuid} = ${PurchaseQuotes.uuid}
         ORDER BY ${PurchaseOrders.id} DESC LIMIT 1
       )`,
+      orderId: sql<number | null>`(
+        SELECT ${PurchaseOrders.id} FROM ${PurchaseOrders}
+        WHERE ${PurchaseOrders.purchaseQuoteUuid} = ${PurchaseQuotes.uuid}
+        ORDER BY ${PurchaseOrders.id} DESC LIMIT 1
+      )`.mapWith((value) => (value === null ? null : Number(value))),
     })
     .from(PurchaseQuotes)
     .leftJoin(Companies, eq(PurchaseQuotes.companyUuid, Companies.uuid))

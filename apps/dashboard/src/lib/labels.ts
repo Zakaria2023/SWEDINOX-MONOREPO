@@ -1581,9 +1581,10 @@ export const PURCHASE_REQUEST_STATUS_LABELS: Record<
   // and `- Released` once `Make final` has sent it out (800010, 12-10-2026).
   draft: "Provisional",
   sent: "Released",
-  // A request turned into a quote reads `Converted` in the reference.
+  // A request turned into a quote reads `Converted` in the reference, and
+  // stays so once that quote becomes an order.
   quoted: "Converted",
-  awarded: "Awarded",
+  awarded: "Converted",
   cancelled: "Cancelled",
 };
 
@@ -1602,7 +1603,8 @@ export const PURCHASE_QUOTE_STATUS_LABELS: Record<PurchaseQuoteStatus, string> =
     // 12-10-2026); `received` only records internally that it is priced.
     open: "Released",
     received: "Released",
-    awarded: "Awarded",
+    // Turned into a purchase order: 900001 read `Converted`.
+    awarded: "Converted",
     lost: "Lost",
     expired: "Expired",
   };
