@@ -1577,9 +1577,10 @@ export const PURCHASE_REQUEST_STATUS_LABELS: Record<
   PurchaseRequestStatus,
   string
 > = {
-  // The reference's banner reads `- Provisional` on a request not yet final.
+  // The reference's banner reads `- Provisional` on a request not yet final
+  // and `- Released` once `Make final` has sent it out (800010, 12-10-2026).
   draft: "Provisional",
-  sent: "Sent",
+  sent: "Released",
   quoted: "Quoted",
   awarded: "Awarded",
   cancelled: "Cancelled",

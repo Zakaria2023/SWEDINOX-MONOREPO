@@ -19,9 +19,10 @@ import { FormError } from "@/components/ui/form-error";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import {
-  canEditPurchaseRequestLines,
+  cn,
   formatDateValue,
   isPurchaseRequestEditable,
+  isPurchaseRequestOpenForChanges,
   orDash,
   pluralize,
   todayDateString,
@@ -56,6 +57,8 @@ type Props = {
   /** The saved request; omitted when creating one. */
   existing?: PurchaseRequestDetail | null;
   defaultValues?: PurchaseRequestFormValues;
+  /** Opens the `Send` dialog, held above the form so it outlives a reload. */
+  onSend?: () => void;
 };
 
 /**
@@ -64,15 +67,18 @@ type Props = {
  * deadline on the right — then `Lines`, `Texts`, `Documents` and `PDF Files`.
  *
  * One screen, new or saved: a saved request is the form it was typed on, with
- * the quotes it was answered with under its lines. Once it leaves draft —
- * made final, or asked out — its header and lines are the question asked and
- * grey; once it is awarded or cancelled nothing more is raised from it.
+ * the quotes it was answered with under its lines. Saving locks the supplier,
+ * the agent, the order type block and the planned date. `Make final` releases
+ * it and leaves the rest white, lines included, as on 800010 (12-10-2026);
+ * once a supplier is asked, or it is quoted, awarded or cancelled, its header
+ * and lines are the question asked and grey.
  */
 export const PurchaseRequestForm = ({
   companies,
   clerkUsers,
   existing = null,
   defaultValues,
+  onSend,
 }: Props) => {
   const [dialog, setDialog] = useState<RequestDialog | null>(null);
 
@@ -113,6 +119,8 @@ export const PurchaseRequestForm = ({
 
   // The reference's banner, as on a purchase order: `Purchase request, {supplier},
   // Tel: …, Fax:` — no fax prints as nothing.
+  // Then `- Released, Printed` once made final, the stamps after the status
+  // as on a purchase return.
   const banner = [
     existing ? `Purchase request ${existing.id}` : "Purchase request",
     supplierDefaults?.companyName,
@@ -123,9 +131,15 @@ export const PurchaseRequestForm = ({
     .filter(Boolean)
     .join(", ");
 
-  // Draft is the only state in which the request can still be changed.
+  // Draft, or released with no supplier asked yet: still open to changes.
   const isReadOnly =
-    existing !== null && !canEditPurchaseRequestLines(existing.status);
+    existing !== null &&
+    !isPurchaseRequestOpenForChanges(existing.status, existing.quotes.length);
+  const statusLabel = PURCHASE_REQUEST_STATUS_LABELS[existing?.status ?? "draft"];
+  const stamps = [
+    existing?.isPrinted ? "Printed" : null,
+    existing?.isMailed ? "Mailed" : null,
+  ].filter(Boolean);
   // Greyed on a provisional request in the reference, on both toolbars: a
   // request goes to suppliers only once it is final.
   const canAnswer =
@@ -136,6 +150,15 @@ export const PurchaseRequestForm = ({
   // order type block and the planned date — as the reference greyed them on
   // request 800010.
   const isSaved = existing !== null;
+  // The agent locks with the supplier. The purchase order's section greys
+  // only the supplier, so here the agent is held to its saved value instead.
+  const lockedAgentOptions = isSaved
+    ? agentOptions.map((option) => ({
+        ...option,
+        disabled: option.value !== defaultValues?.agentUuid,
+      }))
+    : agentOptions;
+  const ignoreAgentChange = () => undefined;
   const openQuote = canAnswer ? () => setDialog("quote") : null;
   const openOrder = canAnswer ? () => setDialog("order") : null;
   const closeDialog = (open: boolean) => {
@@ -169,15 +192,16 @@ export const PurchaseRequestForm = ({
           isDirty={form.formState.isDirty}
           onPurchaseQuote={() => setDialog("quote")}
           onPurchaseOrder={() => setDialog("order")}
+          onSend={onSend}
         />
 
         <section className="space-y-4 rounded-lg border p-4">
           <h1 className="text-lg font-semibold">
             {banner}
-            {` - ${PURCHASE_REQUEST_STATUS_LABELS[existing?.status ?? "draft"]}`}
+            {` - ${[statusLabel, ...stamps].join(", ")}`}
           </h1>
 
-          {/* Every header field greys once the request has left draft. */}
+          {/* Every header field greys once a supplier has been asked. */}
           <fieldset
             disabled={isReadOnly}
             className="grid gap-x-10 gap-y-6 lg:grid-cols-[3fr_2fr]"
@@ -190,16 +214,25 @@ export const PurchaseRequestForm = ({
 
               {/* Supplier · Agent · Contact + Reference · Purchaser · Order
                   category — the purchase order's own block, field for field. */}
-              <PurchaseOrderInformationSection
-                supplierOptions={supplierOptions}
-                agentOptions={agentOptions}
-                contactOptions={contactOptions}
-                purchaserOptions={purchaserOptions}
-                isLoadingSupplierData={isLoadingSupplierData}
-                handleSupplierChange={handleSupplierChange}
-                handleAgentChange={handleAgentChange}
-                locked={isSaved}
-              />
+              <div
+                className={cn(
+                  isSaved &&
+                    "[&_div:has(>#agentUuid)]:pointer-events-none [&_div:has(>#agentUuid)]:opacity-50",
+                )}
+              >
+                <PurchaseOrderInformationSection
+                  supplierOptions={supplierOptions}
+                  agentOptions={lockedAgentOptions}
+                  contactOptions={contactOptions}
+                  purchaserOptions={purchaserOptions}
+                  isLoadingSupplierData={isLoadingSupplierData}
+                  handleSupplierChange={handleSupplierChange}
+                  handleAgentChange={
+                    isSaved ? ignoreAgentChange : handleAgentChange
+                  }
+                  locked={isSaved}
+                />
+              </div>
 
               {/* Greyed until a supplier is chosen, which then fills it. */}
               <section className="space-y-4">
@@ -242,6 +275,7 @@ export const PurchaseRequestForm = ({
             appendItem={appendItem}
             removeItem={removeItem}
             readOnly={isReadOnly}
+            statusLabel={statusLabel}
             isPending={isPending}
             forLines={forLines}
             onPurchaseOrder={openOrder}
@@ -305,7 +339,7 @@ export const PurchaseRequestForm = ({
               ? "This request is cancelled."
               : existing?.status === "awarded"
                 ? "This request has been awarded — a purchase order was raised from it."
-                : "This request is final. Ask suppliers to quote, or order it outright, from the toolbar."}
+                : "Suppliers have been asked to quote on this request. Award a quote, or order it outright, from the toolbar."}
           </p>
         ) : (
           <FormActions

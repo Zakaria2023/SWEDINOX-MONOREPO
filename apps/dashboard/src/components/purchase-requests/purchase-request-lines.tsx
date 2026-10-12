@@ -75,8 +75,10 @@ type Props = {
   itemFields: FieldArrayWithId<PurchaseRequestFormValues, "items", "id">[];
   appendItem: () => void;
   removeItem: UseFieldArrayRemove;
-  /** Once the request has gone out its lines are the question asked. */
+  /** Once a supplier is asked its lines are the question asked. */
   readOnly: boolean;
+  /** The request's status as each line's `Status` reads it. */
+  statusLabel: string;
   isPending: boolean;
   /** `For line` of the saved lines, resolved to the sales order. */
   forLines: PurchaseRequestForLines;
@@ -91,6 +93,7 @@ type LineProps = {
   showWidth: boolean;
   selected: boolean;
   readOnly: boolean;
+  statusLabel: string;
   forLines: PurchaseRequestForLines;
   onSelect: () => void;
   onPick: () => void;
@@ -106,6 +109,7 @@ const PurchaseRequestLineRow = ({
   showWidth,
   selected,
   readOnly,
+  statusLabel,
   forLines,
   onSelect,
   onPick,
@@ -153,7 +157,8 @@ const PurchaseRequestLineRow = ({
       <TableCell className="whitespace-nowrap">
         {formatDateValue(line?.requiredDate || headerDeliveryDate || null, "")}
       </TableCell>
-      <TableCell>Provisional</TableCell>
+      {/* `Provisional` on a draft, `Released` once made final (800010). */}
+      <TableCell>{statusLabel}</TableCell>
       <TableCell className="whitespace-nowrap">
         <div className="flex items-center gap-1">
           <span>{line?.productCode ?? ""}</span>
@@ -231,6 +236,7 @@ export const PurchaseRequestLines = ({
   appendItem,
   removeItem,
   readOnly,
+  statusLabel,
   isPending,
   forLines,
   onPurchaseOrder,
@@ -402,6 +408,7 @@ export const PurchaseRequestLines = ({
                   showWidth={showWidth}
                   selected={selectedLine === index}
                   readOnly={readOnly}
+                  statusLabel={statusLabel}
                   forLines={forLines}
                   onSelect={() => setSelectedLine(index)}
                   onPick={() => setPickingLine(index)}

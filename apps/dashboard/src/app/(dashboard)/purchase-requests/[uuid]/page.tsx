@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getPurchaseRequestDetail } from "@/app/(dashboard)/purchase-requests/actions";
 import { purchaseRequestToFormValues } from "@/app/(dashboard)/purchase-requests/mappers";
-import { PurchaseRequestForm } from "@/components/purchase-requests/purchase-request-form";
+import { PurchaseRequestScreen } from "@/components/purchase-requests/purchase-request-screen";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
 
 type Props = {
@@ -48,11 +48,11 @@ const PurchaseRequestDetailPage = async ({ params }: Props) => {
           Purchase requests
         </Link>
       </div>
-      <PurchaseRequestForm
-        key={version}
+      <PurchaseRequestScreen
+        version={version}
         companies={companies}
         clerkUsers={clerkUsers}
-        existing={request}
+        request={request}
         defaultValues={purchaseRequestToFormValues(request)}
       />
     </div>

@@ -11138,3 +11138,21 @@ export const isReturnOrderEditable = (
   status: string | null | undefined,
 ): boolean =>
   status !== "received" && status !== "credited" && status !== "cancelled";
+
+/**
+ * Whether a saved purchase request can still be changed and saved — its open
+ * header fields and its lines (`New`, `Delete`, `Qty(p)`).
+ *
+ * `Make final` releases a request (`sent`) without freezing it: on 800010
+ * (12-10-2026) the reference kept the contact, purchaser, terms, delivery
+ * address, deadline and the Lines toolbar white after release. What freezes it
+ * is a supplier being asked — once a quote is on file its lines are the
+ * question that quote answers — and being quoted, awarded or cancelled.
+ */
+export const isPurchaseRequestOpenForChanges = (
+  status: PurchaseRequestStatus | null,
+  quoteCount: number,
+): boolean =>
+  status === null ||
+  status === "draft" ||
+  (status === "sent" && quoteCount === 0);

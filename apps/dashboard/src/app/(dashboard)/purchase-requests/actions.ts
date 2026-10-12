@@ -39,16 +39,21 @@ import {
 } from "@/app/(dashboard)/purchase-requests/validation";
 import {
   amountForWeight,
-  canEditPurchaseRequestLines,
   describeError,
   generateUuid,
   purchaseSourceTypeFor,
   isPurchaseRequestEditable,
+  isPurchaseRequestOpenForChanges,
   todayDateString,
 } from "@/lib/helpers";
-import { and, desc, eq, getTableColumns, inArray, ne } from "drizzle-orm";
+import { and, count, desc, eq, getTableColumns, inArray, ne } from "drizzle-orm";
+import { alias } from "drizzle-orm/mysql-core";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
+// The supplier's own address, beside the delivery address the request also
+// joins from CompanyAddresses.
+const SupplierAddresses = alias(CompanyAddresses, "supplier_address");
 
 export type PurchaseRequestFields = Omit<
   InsertPurchaseRequests,
@@ -111,9 +116,20 @@ export type PurchaseRequestQuoteSummary = {
 
 export type PurchaseRequestDetail = SelectPurchaseRequests & {
   companyName: SelectCompanies["companyName"] | null;
+  // The contact the request is addressed to — `t.a.v.` on the document, and
+  // where `Send…` e-mails it.
+  contactFirstName: SelectContacts["firstName"] | null;
+  contactLastName: SelectContacts["lastName"] | null;
+  contactEmail: SelectContacts["email"] | null;
+  contactFax: SelectContacts["fax"] | null;
   deliveryStreetAndNo: SelectCompanyAddresses["streetAndNo"] | null;
   deliveryPostalCode: SelectCompanyAddresses["postalCode"] | null;
   deliveryCity: SelectCompanyAddresses["city"] | null;
+  deliveryCountry: SelectCompanyAddresses["country"] | null;
+  supplierStreetAndNo: SelectCompanyAddresses["streetAndNo"] | null;
+  supplierPostalCode: SelectCompanyAddresses["postalCode"] | null;
+  supplierCity: SelectCompanyAddresses["city"] | null;
+  supplierCountry: SelectCompanyAddresses["country"] | null;
   items: PurchaseRequestItemDetail[];
   quotes: PurchaseRequestQuoteSummary[];
   texts: SelectTexts[];
@@ -199,9 +215,17 @@ export const updatePurchaseRequest = async (
     }
 
     const companyType = await resolveCompanyType(fields.companyUuid);
-    // Lines are only rewritten while the request is still a draft. Once it has
-    // been sent, its lines are the question the quotes on file are answering.
-    const rewriteLines = canEditPurchaseRequestLines(request.status);
+    // Lines are rewritten while the request is a draft or released with no
+    // supplier asked yet. Once a quote is on file, its lines are the question
+    // that quote is answering.
+    const [quotesOnFile] = await db
+      .select({ total: count() })
+      .from(PurchaseQuotes)
+      .where(eq(PurchaseQuotes.purchaseRequestUuid, uuid));
+    const rewriteLines = isPurchaseRequestOpenForChanges(
+      request.status,
+      quotesOnFile?.total ?? 0,
+    );
 
     // The form carries no documents, so a null here means "not touched", not
     // "remove them": saving the header must not wipe what was attached.
@@ -250,15 +274,29 @@ export const getPurchaseRequestDetail = async (
     .select({
       ...getTableColumns(PurchaseRequests),
       companyName: Companies.companyName,
+      contactFirstName: Contacts.firstName,
+      contactLastName: Contacts.lastName,
+      contactEmail: Contacts.email,
+      contactFax: Contacts.fax,
       deliveryStreetAndNo: CompanyAddresses.streetAndNo,
       deliveryPostalCode: CompanyAddresses.postalCode,
       deliveryCity: CompanyAddresses.city,
+      deliveryCountry: CompanyAddresses.country,
+      supplierStreetAndNo: SupplierAddresses.streetAndNo,
+      supplierPostalCode: SupplierAddresses.postalCode,
+      supplierCity: SupplierAddresses.city,
+      supplierCountry: SupplierAddresses.country,
     })
     .from(PurchaseRequests)
     .leftJoin(Companies, eq(PurchaseRequests.companyUuid, Companies.uuid))
+    .leftJoin(Contacts, eq(PurchaseRequests.contactUuid, Contacts.uuid))
     .leftJoin(
       CompanyAddresses,
       eq(PurchaseRequests.deliveryAddressUuid, CompanyAddresses.uuid),
+    )
+    .leftJoin(
+      SupplierAddresses,
+      eq(PurchaseRequests.supplierAddressUuid, SupplierAddresses.uuid),
     )
     .where(eq(PurchaseRequests.uuid, uuid))
     .limit(1);
@@ -707,10 +745,12 @@ export const convertPurchaseRequestToQuotes = async (
 };
 
 /**
- * `Make final` on a saved request. The request leaves draft, which is what
- * freezes its lines and header — the same point at which asking a supplier
- * freezes them — so it can go out as the question it is. A request's status
- * has no `final` value, so it moves on to `sent`, the first status past draft.
+ * `Make final` on a saved request (800010, 12-10-2026). The request leaves
+ * draft and reads `Released`; a request's status has no `final` value, so it
+ * moves on to `sent`, the first status past draft. It is `Printed` too: the
+ * screen opens the INKOOPAANVRAAG in its print preview and then asks whether
+ * to send it. Its supplier, type and planned date stay locked; its lines and
+ * open header fields stay editable until a supplier is asked to quote.
  */
 export const makePurchaseRequestFinal = async (
   uuid: string,
@@ -743,7 +783,7 @@ export const makePurchaseRequestFinal = async (
 
     await db
       .update(PurchaseRequests)
-      .set({ status: "sent" })
+      .set({ status: "sent", isPrinted: true })
       .where(
         and(
           eq(PurchaseRequests.uuid, uuid),
@@ -752,6 +792,44 @@ export const makePurchaseRequestFinal = async (
       );
   } catch (error) {
     return { error: describeError(error, "Failed to make this request final") };
+  }
+
+  revalidatePath("/purchase-requests");
+  revalidatePath(`/purchase-requests/${uuid}`);
+  return { success: true, purchaseRequestUuid: uuid };
+};
+
+/**
+ * `Send…` — the request goes to the supplier's contact. Nothing is mailed from
+ * here yet, exactly as on a purchase return: the request is marked `Mailed`,
+ * as the reference's header reads once it has gone.
+ */
+export const sendPurchaseRequest = async (
+  uuid: string,
+): Promise<PurchaseRequestActionResult> => {
+  try {
+    const [request] = await db
+      .select({ status: PurchaseRequests.status })
+      .from(PurchaseRequests)
+      .where(eq(PurchaseRequests.uuid, uuid))
+      .limit(1);
+
+    if (!request) {
+      return { error: "Purchase request not found." };
+    }
+    if (request.status === "draft") {
+      return { error: "Make the request final before sending it." };
+    }
+    if (request.status === "cancelled") {
+      return { error: "This request is cancelled." };
+    }
+
+    await db
+      .update(PurchaseRequests)
+      .set({ isMailed: true })
+      .where(eq(PurchaseRequests.uuid, uuid));
+  } catch (error) {
+    return { error: describeError(error, "Failed to send the purchase request") };
   }
 
   revalidatePath("/purchase-requests");

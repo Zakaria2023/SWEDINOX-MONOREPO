@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Copy,
   FileQuestion,
+  Files,
   LucideIcon,
   Mail,
   Printer,
@@ -35,6 +36,8 @@ type Props = {
   isDirty: boolean;
   onPurchaseQuote: () => void;
   onPurchaseOrder: () => void;
+  /** Opens the `Send` dialog. */
+  onSend?: () => void;
 };
 
 type GreyedButtonProps = {
@@ -57,10 +60,13 @@ const GreyedButton = ({ label, title, icon: Icon }: GreyedButtonProps) => (
  *
  * On a new request only `Make final`, `Order lines` and `Stock on location`
  * are awake, and `Make final` saves the request, the way the reference's does
- * on a blank one. On a saved draft `Make final` takes it out of draft and is
- * then gone from the toolbar, as on a return. `Purchase quote` asks suppliers
- * and `Purchase order` orders outright, each in its own window, until the
- * request is awarded or cancelled.
+ * on a blank one. On a saved draft `Make final` releases it, opens the
+ * printed INKOOPAANVRAAG and asks whether to send it, then is gone from the
+ * toolbar, as on a return (800010, 12-10-2026). `Print…` prints a saved
+ * request; `Send…` wakes once it is released, and `Orders and Quotes` joins
+ * `Order lines`. `Purchase quote` asks suppliers and `Purchase order` orders
+ * outright, each in its own window, until the request is awarded or
+ * cancelled.
  */
 export const PurchaseRequestToolbar = ({
   existing,
@@ -68,6 +74,7 @@ export const PurchaseRequestToolbar = ({
   isDirty,
   onPurchaseQuote,
   onPurchaseOrder,
+  onSend,
 }: Props) => {
   const [isFinalising, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
@@ -76,6 +83,10 @@ export const PurchaseRequestToolbar = ({
     ? `/companies/${existing.companyUuid}`
     : null;
   const isDraft = existing?.status === "draft";
+  // Released and still live: what `Send…` and `Orders and Quotes` wait for.
+  const isReleased =
+    existing !== null && !isDraft && existing.status !== "cancelled";
+  const printHref = existing ? `/purchase-requests/${existing.uuid}/print` : null;
   const canAnswer =
     existing !== null &&
     !isDraft &&
@@ -95,7 +106,14 @@ export const PurchaseRequestToolbar = ({
       const result = await makePurchaseRequestFinal(existing.uuid);
       if (result.error) {
         setError(result.error);
+        return;
       }
+      // The reference opens the printed request and then asks whether to
+      // send it (800010, 12-10-2026).
+      if (printHref) {
+        window.open(printHref, "_blank");
+      }
+      onSend?.();
     });
   };
 
@@ -119,16 +137,36 @@ export const PurchaseRequestToolbar = ({
             {isFinalising ? "Making final…" : "Make final"}
           </Button>
         )}
-        <GreyedButton
-          label="Print…"
-          title={existing ? NOT_BUILT : SAVE_FIRST}
-          icon={Printer}
-        />
-        <GreyedButton
-          label="Send…"
-          title={existing ? NOT_BUILT : SAVE_FIRST}
-          icon={Mail}
-        />
+        {printHref ? (
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href={printHref} target="_blank" />}
+          >
+            <Printer className="me-1.5 size-4" />
+            Print…
+          </Button>
+        ) : (
+          <GreyedButton label="Print…" title={SAVE_FIRST} icon={Printer} />
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onSend}
+          disabled={!isReleased || !onSend || isPending || isFinalising}
+          title={
+            existing
+              ? isReleased
+                ? undefined
+                : existing.status === "cancelled"
+                  ? "This request is cancelled"
+                  : "Make the request final first"
+              : SAVE_FIRST
+          }
+        >
+          <Mail className="me-1.5 size-4" />
+          Send…
+        </Button>
         <Button
           type="button"
           variant="outline"
@@ -183,14 +221,25 @@ export const PurchaseRequestToolbar = ({
           <ClipboardList className="me-1.5 size-4" />
           Order lines
         </Button>
-        <Button
-          variant="outline"
-          nativeButton={false}
-          render={<Link href="/stock-on-location" />}
-        >
-          <Warehouse className="me-1.5 size-4" />
-          Stock on location
-        </Button>
+        {isReleased ? (
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/purchase-orders-and-quotes" />}
+          >
+            <Files className="me-1.5 size-4" />
+            Orders and Quotes
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/stock-on-location" />}
+          >
+            <Warehouse className="me-1.5 size-4" />
+            Stock on location
+          </Button>
+        )}
       </div>
       <FormError>{error}</FormError>
     </div>
