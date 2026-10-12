@@ -1596,9 +1596,11 @@ export const PURCHASE_QUOTE_EXPIRATION_REASON_LABELS: Record<
 
 export const PURCHASE_QUOTE_STATUS_LABELS: Record<PurchaseQuoteStatus, string> =
   {
-    // A quote raised from a request opens `Released` in the reference.
+    // A quote raised from a request opens `Released` in the reference, and
+    // stays `Released` once the supplier's prices are saved on it (900001,
+    // 12-10-2026); `received` only records internally that it is priced.
     open: "Released",
-    received: "Received",
+    received: "Released",
     awarded: "Awarded",
     lost: "Lost",
     expired: "Expired",
