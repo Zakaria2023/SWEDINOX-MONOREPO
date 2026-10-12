@@ -1,12 +1,16 @@
 import { PurchaseOrderQuoteRow } from "@/app/(dashboard)/purchase-orders-and-quotes/actions";
 import {
+  convertedDocumentsLabel,
+  purchaseDocumentNumber,
+  purchaseDocumentStatusLabel,
+} from "@/app/(dashboard)/purchase-orders-and-quotes/documents";
+import {
   dateCell,
   ExportColumn,
   numberCell,
   textCell,
   yesNoCell,
 } from "@/lib/excel";
-import { documentStatusLabel } from "@/lib/helpers";
 import {
   PURCHASE_ORDER_TYPE_LABELS,
   PURCHASE_QUOTE_EXPIRATION_REASON_LABELS,
@@ -31,7 +35,7 @@ export type PurchaseOrderQuoteColumnKey =
   | "purchaserInitials"
   | "purchaser"
   | "status"
-  | "convertedNumber"
+  | "converted"
   | "lines"
   | "weightKg"
   | "revenue"
@@ -84,14 +88,10 @@ export const PURCHASE_ORDER_QUOTE_COLUMNS: Array<
   },
   {
     key: "number",
-    label: "Purchase order",
+    // The reference's header — the column carries requests too.
+    label: "Purchase order/Requests",
     defaultVisible: true,
-    value: (row) =>
-      row.kind === "Return"
-        ? `IR${row.number}`
-        : row.kind === "Order"
-          ? `IO${row.number}`
-          : numberCell(row.number),
+    value: (row) => purchaseDocumentNumber(row.kind, row.number),
   },
   {
     key: "purchaserInitials",
@@ -109,13 +109,13 @@ export const PURCHASE_ORDER_QUOTE_COLUMNS: Array<
     key: "status",
     label: "Status",
     defaultVisible: false,
-    value: (row) => textCell(documentStatusLabel(row.kind, row.status)),
+    value: (row) => textCell(purchaseDocumentStatusLabel(row.kind, row.status)),
   },
   {
-    key: "convertedNumber",
+    key: "converted",
     label: "Converted from/to",
     defaultVisible: true,
-    value: (row) => numberCell(row.convertedNumber),
+    value: (row) => textCell(convertedDocumentsLabel(row.converted)),
   },
   {
     key: "lines",

@@ -1,14 +1,17 @@
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { REQUEST_STATUS_FILTER_PREFIX } from "@/app/(dashboard)/purchase-orders-and-quotes/documents";
 import {
   purchaseOrderStatuses,
   purchaseOrderTypes,
   purchaseQuoteStatuses,
+  purchaseRequestStatuses,
 } from "@/lib/enums";
 import { companyOptionLabel } from "@/lib/helpers";
 import {
   PURCHASE_ORDER_STATUS_LABELS,
   PURCHASE_ORDER_TYPE_LABELS,
   PURCHASE_QUOTE_STATUS_LABELS,
+  PURCHASE_REQUEST_STATUS_LABELS,
 } from "@/lib/labels";
 import { TableFilterControl } from "@/lib/table-query";
 
@@ -26,12 +29,14 @@ export const purchaseOrderQuoteFilters = (
       { value: "Order", label: "Orders only" },
       { value: "Quote", label: "Quotes only" },
       { value: "Return", label: "Returns only" },
+      { value: "Request", label: "Requests only" },
     ],
   },
   {
-    // Two ladders in one control, each labelled by the document it belongs to:
-    // a quote is never "pre-notified" and an order is never "lost", so the
-    // values cannot collide.
+    // Three ladders in one control, each labelled by the document it belongs
+    // to: a quote is never "pre-notified" and an order is never "lost", so
+    // those values cannot collide. A request's can — it shares `awarded` with
+    // a quote and `cancelled` with an order — so its values carry a prefix.
     key: "status",
     kind: "select",
     label: "Status",
@@ -44,6 +49,10 @@ export const purchaseOrderQuoteFilters = (
       ...purchaseQuoteStatuses.map((status) => ({
         value: status,
         label: `Quote — ${PURCHASE_QUOTE_STATUS_LABELS[status]}`,
+      })),
+      ...purchaseRequestStatuses.map((status) => ({
+        value: `${REQUEST_STATUS_FILTER_PREFIX}${status}`,
+        label: `Request — ${PURCHASE_REQUEST_STATUS_LABELS[status]}`,
       })),
     ],
   },

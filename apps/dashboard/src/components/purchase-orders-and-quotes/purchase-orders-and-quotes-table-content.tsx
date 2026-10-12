@@ -10,6 +10,11 @@ import {
   PurchaseOrderQuoteColumnKey,
 } from "@/app/(dashboard)/purchase-orders-and-quotes/columns";
 import {
+  purchaseDocumentHref,
+  purchaseDocumentNumber,
+  purchaseDocumentStatusLabel,
+} from "@/app/(dashboard)/purchase-orders-and-quotes/documents";
+import {
   Table,
   TableBody,
   TableCell,
@@ -33,7 +38,6 @@ import { selectorColumns } from "@/lib/excel";
 import {
   buildColumnVisibility,
   cn,
-  documentStatusLabel,
   formatDateColumn,
   formatMoney,
   formatNumber,
@@ -70,31 +74,14 @@ const SORTABLE: Partial<Record<ColumnKey, string>> = {
   deliveryDate: "deliveryDate",
 };
 
-// Where a row lives: the two kinds are separate records with separate screens,
-// which is exactly what this list exists to hide until you click.
-const documentHref = (row: PurchaseOrderQuoteRow) => {
-  if (row.kind === "Quote") {
-    return `/purchase-quotes/${row.uuid}`;
-  }
-  return row.kind === "Return"
-    ? `/purchase-return-orders/${row.uuid}`
-    : `/purchase-orders/${row.uuid}`;
-};
-
 // What the toolbar's open button says for the selected row, as on the
 // reference: `Show Purchase return` on a return.
 const SHOW_DOCUMENT_LABELS: Record<PurchaseOrderQuoteRow["kind"], string> = {
   Order: "Show Purchase order",
   Quote: "Show Purchase quote",
   Return: "Show Purchase return",
+  Request: "Show Purchase request",
 };
-
-const documentNumber = (row: PurchaseOrderQuoteRow) =>
-  row.kind === "Return"
-    ? `IR${row.number}`
-    : row.kind === "Order"
-      ? `IO${row.number}`
-      : String(row.number);
 
 export const PurchaseOrdersAndQuotesTable = ({ page, filters }: Props) => {
   const [columnVisibility, setColumnVisibility] = useState<
@@ -116,13 +103,15 @@ export const PurchaseOrdersAndQuotesTable = ({ page, filters }: Props) => {
     {
       label: SHOW_DOCUMENT_LABELS[selected?.kind ?? "Order"],
       icon: <FileText className="size-4" />,
-      href: selected ? documentHref(selected) : null,
+      href: selected
+        ? purchaseDocumentHref(selected.kind, selected.uuid)
+        : null,
     },
   ];
 
   // The reference groups this screen by Status.
   const groups = groupRowsBy(page.rows, (row) =>
-    documentStatusLabel(row.kind, row.status),
+    purchaseDocumentStatusLabel(row.kind, row.status),
   );
 
   const toggleColumn = (key: string) =>
@@ -163,10 +152,10 @@ export const PurchaseOrdersAndQuotesTable = ({ page, filters }: Props) => {
         return (
           <TableCell key={key} className="font-medium whitespace-nowrap">
             <Link
-              href={documentHref(row)}
+              href={purchaseDocumentHref(row.kind, row.uuid)}
               className="text-primary hover:underline"
             >
-              {documentNumber(row)}
+              {purchaseDocumentNumber(row.kind, row.number)}
             </Link>
           </TableCell>
         );
@@ -179,28 +168,26 @@ export const PurchaseOrdersAndQuotesTable = ({ page, filters }: Props) => {
           <TableCell key={key}>
             <StatusBadge
               value={row.status}
-              label={documentStatusLabel(row.kind, row.status)}
+              label={purchaseDocumentStatusLabel(row.kind, row.status)}
             />
           </TableCell>
         );
-      case "convertedNumber":
+      case "converted":
         return (
           <TableCell key={key} className="whitespace-nowrap">
-            {row.convertedUuid && row.convertedNumber !== null ? (
-              <Link
-                href={
-                  row.kind === "Quote"
-                    ? `/purchase-orders/${row.convertedUuid}`
-                    : `/purchase-quotes/${row.convertedUuid}`
-                }
-                className="text-primary hover:underline"
-              >
-                {row.kind === "Quote" ? "Order " : "Quote "}
-                {row.convertedNumber}
-              </Link>
-            ) : (
-              "—"
-            )}
+            {row.converted.length > 0
+              ? row.converted.map((document, index) => (
+                  <Fragment key={`${document.kind}-${document.uuid}`}>
+                    {index > 0 && ", "}
+                    <Link
+                      href={purchaseDocumentHref(document.kind, document.uuid)}
+                      className="text-primary hover:underline"
+                    >
+                      {purchaseDocumentNumber(document.kind, document.number)}
+                    </Link>
+                  </Fragment>
+                ))
+              : "—"}
           </TableCell>
         );
       case "lines":
@@ -358,7 +345,9 @@ export const PurchaseOrdersAndQuotesTable = ({ page, filters }: Props) => {
       <TableRowToolbar
         actions={rowActions}
         selectedLabel={
-          selected ? `${selected.kind} ${documentNumber(selected)}` : null
+          selected
+            ? `${selected.kind} ${purchaseDocumentNumber(selected.kind, selected.number)}`
+            : null
         }
       />
 

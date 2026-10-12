@@ -1,6 +1,11 @@
 "use server";
 
 import { PURCHASE_ORDER_QUOTE_COLUMNS } from "@/app/(dashboard)/purchase-orders-and-quotes/columns";
+import {
+  parseConvertedDocuments,
+  purchaseDocumentStatusLabel,
+  REQUEST_STATUS_FILTER_PREFIX,
+} from "@/app/(dashboard)/purchase-orders-and-quotes/documents";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
@@ -14,19 +19,18 @@ import {
   PurchaseQuotes,
   SelectPurchaseQuotes,
 } from "@/db/schema/purchase-quotes";
+import { PurchaseRequestItems } from "@/db/schema/purchase-request-items";
+import { PurchaseRequests } from "@/db/schema/purchase-requests";
 import { PurchaseReturnOrderItems } from "@/db/schema/purchase-return-order-items";
 import { PurchaseReturnOrders } from "@/db/schema/purchase-return-orders";
 import {
   purchaseOrderStatuses,
   purchaseOrderTypes,
   purchaseQuoteStatuses,
+  purchaseRequestStatuses,
   openPurchaseOrderStatuses,
 } from "@/lib/enums";
-import {
-  describeError,
-  documentStatusLabel,
-  personInitials,
-} from "@/lib/helpers";
+import { describeError, personInitials } from "@/lib/helpers";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
 import { exportRows } from "@/lib/server/excel";
 import {
@@ -35,7 +39,7 @@ import {
   SearchParams,
   TableQuery,
 } from "@/lib/table-query";
-import { and, eq, like, or, SQL, sql } from "drizzle-orm";
+import { and, Column, eq, like, or, SQL, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 
 // The two document kinds this screen puts in one list. A row is one or the
@@ -48,6 +52,9 @@ const QUOTE = "Quote";
 // `IR950030`, `IR950033` under `Delivered`), its weight and money signed
 // negative because the goods go back.
 const RETURN = "Return";
+// A purchase request sits in it too (`IA800010`, `Converted` to `IQ900001`,
+// 12-10-2026): the question put to a supplier, before any quote answers it.
+const REQUEST = "Request";
 
 // The money on a line is the net price times the line's weight in the unit the
 // price is struck in — a tonne price divides by a thousand. Rolled up from the
@@ -111,6 +118,19 @@ const returnLineCountSql = sql<number>`(
   WHERE ${PurchaseReturnOrderItems.purchaseReturnOrderUuid} = ${PurchaseReturnOrders.uuid}
 )`;
 
+// A request carries no price — it is the question a quote answers — so it
+// rolls up only lines and kilos; its revenue reads € 0,00, as on 800010.
+const requestWeightSql = sql<number>`(
+  SELECT COALESCE(SUM(${PurchaseRequestItems.kg}), 0)
+  FROM ${PurchaseRequestItems}
+  WHERE ${PurchaseRequestItems.purchaseRequestUuid} = ${PurchaseRequests.uuid}
+)`;
+
+const requestLineCountSql = sql<number>`(
+  SELECT COUNT(*) FROM ${PurchaseRequestItems}
+  WHERE ${PurchaseRequestItems.purchaseRequestUuid} = ${PurchaseRequests.uuid}
+)`;
+
 // The document's own date, not the day the row was inserted. Every order in the
 // database was imported inside two months while the orders themselves span
 // twenty, so reading createdAt here made the whole screen report one date.
@@ -126,8 +146,24 @@ const returnDateSql = sql<
   string | null
 >`DATE(${PurchaseReturnOrders.createdAt})`;
 
+// A request keeps no document date of its own; the day it was raised is it.
+const requestDateSql = sql<string | null>`DATE(${PurchaseRequests.createdAt})`;
+
+export type PurchaseDocumentKind =
+  | typeof ORDER
+  | typeof QUOTE
+  | typeof RETURN
+  | typeof REQUEST;
+
+/** One document on the other end of a conversion. */
+export type ConvertedDocument = {
+  kind: PurchaseDocumentKind;
+  uuid: SelectPurchaseOrders["uuid"];
+  number: SelectPurchaseOrders["id"];
+};
+
 export type PurchaseOrderQuoteRow = {
-  kind: typeof ORDER | typeof QUOTE | typeof RETURN;
+  kind: PurchaseDocumentKind;
   uuid: SelectPurchaseOrders["uuid"];
   /** "Purchase order/Requests" — the document's own number. */
   number: SelectPurchaseOrders["id"];
@@ -143,9 +179,11 @@ export type PurchaseOrderQuoteRow = {
   purchaserInitials: string | null;
   status: string | null;
 
-  /** 9: the quote this order came from, or the order a quote became. */
-  convertedUuid: string | null;
-  convertedNumber: number | null;
+  /**
+   * 9: the quote this order came from, the order a quote became (or else the
+   * request it answered), or the quotes a request was turned into.
+   */
+  converted: ConvertedDocument[];
 
   /** 10-12: the rollups, taken from the lines. */
   lines: number;
@@ -183,6 +221,7 @@ export type PurchaseOrderQuoteRow = {
 
 type RawRow = Omit<
   PurchaseOrderQuoteRow,
+  | "converted"
   | "purchaser"
   | "purchaserInitials"
   | "sent"
@@ -194,6 +233,8 @@ type RawRow = Omit<
   | "month"
   | "timeFrame"
 > & {
+  /** `Kind:number:uuid`, comma-separated — see parseConvertedDocuments. */
+  convertedRefs: string | null;
   purchaserId: string | null;
   isPrinted: boolean | null;
   isMailed: boolean | null;
@@ -213,20 +254,33 @@ const SourcePurchaseOrders = alias(PurchaseOrders, "source_purchase_order");
 // "still to be sent" — it is still being written.
 const UNSENT_ORDER_STATUSES = openPurchaseOrderStatuses;
 const UNSENT_QUOTE_STATUSES = ["open", "received"] as const;
+// A request is owed to its supplier once `Make final` has released it.
+const UNSENT_REQUEST_STATUSES = ["sent"] as const;
 
 const searchCondition = (
   query: TableQuery,
   columns: readonly SQL[],
 ): SQL | undefined => {
   // `IO404355` is how the number is printed and read out; the stored number is
-  // `404355`, so the prefix is dropped before searching.
-  const term = (query.q ?? "").trim().replace(/^I[OR](?=\d)/i, "");
+  // `404355`, so the prefix — IO, IQ, IR or IA — is dropped before searching.
+  const term = (query.q ?? "").trim().replace(/^I[AOQR](?=\d)/i, "");
   if (term === "") {
     return undefined;
   }
   const escaped = term.replace(/[\\%_]/g, (character) => `\\${character}`);
   return or(...columns.map((column) => like(column, `%${escaped}%`)));
 };
+
+// The status filter carries every ladder at once. The values that belong to
+// this one select from it; when none do, it selects nothing — never `IN ()`,
+// which MySQL refuses.
+const statusIn = (column: Column, values: readonly string[]): SQL =>
+  values.length > 0
+    ? sql`${column} IN (${sql.join(
+        values.map((value) => sql`${value}`),
+        sql`, `,
+      )})`
+    : sql`1 = 0`;
 
 const rangeOf = (values: string[] | undefined): [string?, string?] => {
   const [from, to] = (values?.[0] ?? "").split("..");
@@ -250,14 +304,12 @@ const orderConditions = (query: TableQuery): Array<SQL | undefined> => {
     // The status filter carries both ladders; a value belonging to the other
     // kind simply selects nothing here, which is what it should do.
     query.filters.status && query.filters.status.length > 0
-      ? sql`${PurchaseOrders.status} IN (${sql.join(
-          query.filters.status
-            .filter((value) =>
-              (purchaseOrderStatuses as readonly string[]).includes(value),
-            )
-            .map((value) => sql`${value}`),
-          sql`, `,
-        )})`
+      ? statusIn(
+          PurchaseOrders.status,
+          query.filters.status.filter((value) =>
+            (purchaseOrderStatuses as readonly string[]).includes(value),
+          ),
+        )
       : // An expired order is off this screen unless asked for by name.
         sql`${PurchaseOrders.status} <> 'expired'`,
     query.filters.orderType?.[0] &&
@@ -285,14 +337,12 @@ const quoteConditions = (query: TableQuery): Array<SQL | undefined> => {
       ? eq(PurchaseQuotes.companyUuid, query.filters.supplier[0])
       : undefined,
     query.filters.status && query.filters.status.length > 0
-      ? sql`${PurchaseQuotes.status} IN (${sql.join(
-          query.filters.status
-            .filter((value) =>
-              (purchaseQuoteStatuses as readonly string[]).includes(value),
-            )
-            .map((value) => sql`${value}`),
-          sql`, `,
-        )})`
+      ? statusIn(
+          PurchaseQuotes.status,
+          query.filters.status.filter((value) =>
+            (purchaseQuoteStatuses as readonly string[]).includes(value),
+          ),
+        )
       : undefined,
     query.filters.orderType?.[0] &&
     (purchaseOrderTypes as readonly string[]).includes(
@@ -320,14 +370,12 @@ const returnConditions = (query: TableQuery): Array<SQL | undefined> => {
       : undefined,
     // A return walks the purchase order's own ladder.
     query.filters.status && query.filters.status.length > 0
-      ? sql`${PurchaseReturnOrders.status} IN (${sql.join(
-          query.filters.status
-            .filter((value) =>
-              (purchaseOrderStatuses as readonly string[]).includes(value),
-            )
-            .map((value) => sql`${value}`),
-          sql`, `,
-        )})`
+      ? statusIn(
+          PurchaseReturnOrders.status,
+          query.filters.status.filter((value) =>
+            (purchaseOrderStatuses as readonly string[]).includes(value),
+          ),
+        )
       : sql`${PurchaseReturnOrders.status} NOT IN ('expired', 'cancelled')`,
     query.filters.orderType?.[0] &&
     (purchaseOrderTypes as readonly string[]).includes(
@@ -343,6 +391,41 @@ const returnConditions = (query: TableQuery): Array<SQL | undefined> => {
   ];
 };
 
+const requestConditions = (query: TableQuery): Array<SQL | undefined> => {
+  const [from, to] = rangeOf(query.filters.creationDate);
+  // A request's ladder shares `awarded` with a quote's and `cancelled` with an
+  // order's, so its values travel prefixed in the status filter.
+  const statuses = (query.filters.status ?? [])
+    .filter((value) => value.startsWith(REQUEST_STATUS_FILTER_PREFIX))
+    .map((value) => value.slice(REQUEST_STATUS_FILTER_PREFIX.length))
+    .filter((value) =>
+      (purchaseRequestStatuses as readonly string[]).includes(value),
+    );
+  return [
+    kindWanted(query, REQUEST) ? undefined : sql`1 = 0`,
+    from ? sql`${requestDateSql} >= ${from}` : undefined,
+    to ? sql`${requestDateSql} <= ${to}` : undefined,
+    query.filters.supplier?.[0]
+      ? eq(PurchaseRequests.companyUuid, query.filters.supplier[0])
+      : undefined,
+    query.filters.status && query.filters.status.length > 0
+      ? statusIn(PurchaseRequests.status, statuses)
+      : undefined,
+    query.filters.orderType?.[0] &&
+    (purchaseOrderTypes as readonly string[]).includes(
+      query.filters.orderType[0],
+    )
+      ? sql`${PurchaseRequests.purchaseOrderType} = ${query.filters.orderType[0]}`
+      : undefined,
+    searchCondition(query, [
+      sql`CAST(${PurchaseRequests.id} AS CHAR)`,
+      sql`COALESCE(${Companies.companyName}, '')`,
+      sql`COALESCE(${PurchaseRequests.reference}, '')`,
+      sql`COALESCE(${PurchaseRequests.ourReference}, '')`,
+    ]),
+  ];
+};
+
 const orderQuery = (query: TableQuery) =>
   db
     .select({
@@ -352,9 +435,9 @@ const orderQuery = (query: TableQuery) =>
       creationDate: orderDateSql,
       purchaserId: PurchaseOrders.purchaser,
       status: sql<string | null>`${PurchaseOrders.status}`,
-      convertedUuid: PurchaseOrders.purchaseQuoteUuid,
-      convertedNumber: sql<number | null>`(
-        SELECT ${PurchaseQuotes.id} FROM ${PurchaseQuotes}
+      convertedRefs: sql<string | null>`(
+        SELECT CONCAT(${QUOTE}, ':', ${PurchaseQuotes.id}, ':', ${PurchaseQuotes.uuid})
+        FROM ${PurchaseQuotes}
         WHERE ${PurchaseQuotes.uuid} = ${PurchaseOrders.purchaseQuoteUuid}
       )`,
       lines: orderLineCountSql,
@@ -413,16 +496,20 @@ const quoteQuery = (query: TableQuery) =>
       creationDate: quoteDateSql,
       purchaserId: PurchaseQuotes.purchaser,
       status: sql<string | null>`${PurchaseQuotes.status}`,
-      // The other half of the same link: the order this quote turned into.
-      convertedUuid: sql<string | null>`(
-        SELECT ${PurchaseOrders.uuid} FROM ${PurchaseOrders}
-        WHERE ${PurchaseOrders.purchaseQuoteUuid} = ${PurchaseQuotes.uuid}
-        LIMIT 1
-      )`,
-      convertedNumber: sql<number | null>`(
-        SELECT ${PurchaseOrders.id} FROM ${PurchaseOrders}
-        WHERE ${PurchaseOrders.purchaseQuoteUuid} = ${PurchaseQuotes.uuid}
-        LIMIT 1
+      // The other half of the same link: the order this quote turned into —
+      // or, until it has turned into one, the request it answered.
+      convertedRefs: sql<string | null>`COALESCE(
+        (
+          SELECT CONCAT(${ORDER}, ':', ${PurchaseOrders.id}, ':', ${PurchaseOrders.uuid})
+          FROM ${PurchaseOrders}
+          WHERE ${PurchaseOrders.purchaseQuoteUuid} = ${PurchaseQuotes.uuid}
+          LIMIT 1
+        ),
+        (
+          SELECT CONCAT(${REQUEST}, ':', ${PurchaseRequests.id}, ':', ${PurchaseRequests.uuid})
+          FROM ${PurchaseRequests}
+          WHERE ${PurchaseRequests.uuid} = ${PurchaseQuotes.purchaseRequestUuid}
+        )
       )`,
       lines: quoteLineCountSql,
       weightKg: quoteWeightSql,
@@ -480,8 +567,7 @@ const returnQuery = (query: TableQuery) =>
       creationDate: returnDateSql,
       purchaserId: PurchaseReturnOrders.purchaser,
       status: sql<string | null>`${PurchaseReturnOrders.status}`,
-      convertedUuid: sql<string | null>`NULL`,
-      convertedNumber: sql<number | null>`NULL`,
+      convertedRefs: sql<string | null>`NULL`,
       lines: returnLineCountSql,
       weightKg: returnWeightSql,
       revenue: returnRevenueSql,
@@ -524,6 +610,62 @@ const returnQuery = (query: TableQuery) =>
     )
     .leftJoin(AgentCompany, eq(SourcePurchaseOrders.agentUuid, AgentCompany.uuid))
     .where(and(...returnConditions(query)));
+
+const requestQuery = (query: TableQuery) =>
+  db
+    .select({
+      kind: sql<typeof REQUEST>`${REQUEST}`,
+      uuid: PurchaseRequests.uuid,
+      number: PurchaseRequests.id,
+      creationDate: requestDateSql,
+      purchaserId: PurchaseRequests.purchaser,
+      status: sql<string | null>`${PurchaseRequests.status}`,
+      // The quotes this request was turned into — 800010 reads `IQ900001`.
+      convertedRefs: sql<string | null>`(
+        SELECT GROUP_CONCAT(
+          CONCAT(${QUOTE}, ':', ${PurchaseQuotes.id}, ':', ${PurchaseQuotes.uuid})
+          ORDER BY ${PurchaseQuotes.id} SEPARATOR ','
+        )
+        FROM ${PurchaseQuotes}
+        WHERE ${PurchaseQuotes.purchaseRequestUuid} = ${PurchaseRequests.uuid}
+      )`,
+      lines: requestLineCountSql,
+      weightKg: requestWeightSql,
+      revenue: sql<number>`0`,
+      supplierUuid: PurchaseRequests.companyUuid,
+      supplierName: Companies.companyName,
+      supplierCode: Companies.searchCode1,
+      // On a request the reference's Customer code is the supplier's own
+      // search code — `11692` beside Holland Stainless Int on 800010.
+      customerCode: Companies.searchCode1,
+      deliveryDate: PurchaseRequests.deliveryDate,
+      orderType: PurchaseRequests.purchaseOrderType,
+      expirationReason: sql<null>`NULL`,
+      quoteDate: sql<null>`NULL`,
+      validUntil: sql<null>`NULL`,
+      internalText: sql<null>`NULL`,
+      consignment: sql<boolean | null>`NULL`,
+      isPrinted: PurchaseRequests.isPrinted,
+      isMailed: PurchaseRequests.isMailed,
+      isFaxed: PurchaseRequests.isFaxed,
+      sentViaStaalWeb: PurchaseRequests.messageSentViaStaalWeb,
+      deliberatelyNotSent: sql<boolean | null>`NULL`,
+      isLive: sql<boolean>`${PurchaseRequests.status} IN (${sql.join(
+        UNSENT_REQUEST_STATUSES.map((status) => sql`${status}`),
+        sql`, `,
+      )})`,
+      // Raised through an agent, the agent is the request's company — the
+      // same reading as on a quote.
+      affiliateCompany: sql<
+        string | null
+      >`CASE WHEN ${PurchaseRequests.companyType} = 'agent' THEN ${Companies.companyName} ELSE NULL END`,
+      classificationCode: PurchaseRequests.orderCategory,
+      reference: PurchaseRequests.reference,
+      ourReference: PurchaseRequests.ourReference,
+    })
+    .from(PurchaseRequests)
+    .leftJoin(Companies, eq(PurchaseRequests.companyUuid, Companies.uuid))
+    .where(and(...requestConditions(query)));
 
 // How the document reached the supplier. The reference keeps a method column
 // beside the sent flags; ours reads the flags themselves, which is the same
@@ -589,6 +731,7 @@ const purchaseOrderQuoteRows = async (
   const orders = (await orderQuery(query)) as RawRow[];
   const quotes = (await quoteQuery(query)) as RawRow[];
   const returns = (await returnQuery(query)) as RawRow[];
+  const requests = (await requestQuery(query)) as RawRow[];
 
   const users = await getClerkUsersForSelect();
   const nameById = new Map(users.map((user) => [user.value, user.label]));
@@ -597,6 +740,7 @@ const purchaseOrderQuoteRows = async (
     ...orders,
     ...quotes,
     ...returns,
+    ...requests,
   ].map((row) => {
     const purchaser = row.purchaserId
       ? (nameById.get(row.purchaserId) ?? row.purchaserId)
@@ -607,6 +751,7 @@ const purchaseOrderQuoteRows = async (
     );
 
     const {
+      convertedRefs,
       purchaserId: _purchaserId,
       isPrinted: _isPrinted,
       isMailed: _isMailed,
@@ -623,6 +768,7 @@ const purchaseOrderQuoteRows = async (
 
     return {
       ...rest,
+      converted: parseConvertedDocuments(convertedRefs),
       purchaser,
       purchaserInitials: personInitials(purchaser),
       year: date ? date.getFullYear() : null,
@@ -652,9 +798,10 @@ const purchaseOrderQuoteRows = async (
   return rows.sort((left, right) => {
     // The reference groups this screen by Status, so a page holds whole
     // groups, alphabetically, before it is ordered within them.
-    const group = documentStatusLabel(left.kind, left.status).localeCompare(
-      documentStatusLabel(right.kind, right.status),
-    );
+    const group = purchaseDocumentStatusLabel(
+      left.kind,
+      left.status,
+    ).localeCompare(purchaseDocumentStatusLabel(right.kind, right.status));
     if (group !== 0) {
       return group;
     }
