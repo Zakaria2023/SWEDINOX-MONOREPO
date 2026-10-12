@@ -671,6 +671,11 @@ export const convertPurchaseRequestToQuotes = async (
         quoteUuids.push(quoteUuid);
 
         const companyType = await resolveCompanyType(supplierUuid);
+        // The request's own supplier keeps its contact and address; the
+        // reference's quote 900001 read `Ron Bongers` and the Rotterdam
+        // address straight off request 800010.
+        const isRequestSupplier = supplierUuid === request.companyUuid;
+        const quoteDate = new Date(todayDateString());
 
         await tx.insert(PurchaseQuotes).values({
           uuid: quoteUuid,
@@ -678,10 +683,16 @@ export const convertPurchaseRequestToQuotes = async (
           status: "open",
           companyUuid: supplierUuid,
           companyType,
-          quoteDate: new Date(todayDateString()),
+          quoteDate,
+          // `Valid u/i` opened on the quote date itself (12-10-2026 on both).
+          validUntil: quoteDate,
           // The contact and supplier address on the request belong to whoever
           // it was raised against, so they are not carried onto a quote for a
           // different supplier.
+          contactUuid: isRequestSupplier ? request.contactUuid : null,
+          supplierAddressUuid: isRequestSupplier
+            ? request.supplierAddressUuid
+            : null,
           purchaser: request.purchaser,
           orderCategory: request.orderCategory,
           reference: request.reference,
@@ -742,6 +753,33 @@ export const convertPurchaseRequestToQuotes = async (
           : "Failed to create quotes from this request",
     };
   }
+};
+
+/**
+ * The request toolbar's `Purchase quote` (800010 → 900001, 12-10-2026):
+ * "This converts the entire purchase request into a purchase quote", for the
+ * request's own supplier, and opens the quote it made — `Released`, every
+ * line at € 0,00 for the supplier to price.
+ */
+export const convertPurchaseRequestToQuote = async (
+  requestUuid: string,
+): Promise<PurchaseRequestActionResult> => {
+  const [request] = await db
+    .select({ companyUuid: PurchaseRequests.companyUuid })
+    .from(PurchaseRequests)
+    .where(eq(PurchaseRequests.uuid, requestUuid))
+    .limit(1);
+  if (!request?.companyUuid) {
+    return { error: "This request has no supplier to quote." };
+  }
+  const result = await convertPurchaseRequestToQuotes(requestUuid, [
+    request.companyUuid,
+  ]);
+  const [quoteUuid] = result.quoteUuids ?? [];
+  if (result.error || !quoteUuid) {
+    return { error: result.error ?? "Failed to create the purchase quote." };
+  }
+  redirect(`/purchase-quotes/${quoteUuid}`);
 };
 
 /**

@@ -33,6 +33,7 @@ import {
   PurchaseRequestLines,
 } from "./purchase-request-lines";
 import { PurchaseRequestOrderDialog } from "./purchase-request-order-dialog";
+import { PurchaseRequestConvertDialog } from "./purchase-request-convert-dialog";
 import { PurchaseRequestQuoteDialog } from "./purchase-request-quote-dialog";
 import { PurchaseRequestQuotesPanel } from "./purchase-request-quotes-panel";
 import { PurchaseRequestToolbar } from "./purchase-request-toolbar";
@@ -49,7 +50,9 @@ const REQUEST_DOCUMENTS_PANEL: NewOrderPanel = {
 };
 
 /** The two windows a saved request's toolbar opens. */
-type RequestDialog = "quote" | "order";
+// `convert` is the toolbar's one-step `Purchase quote`; `quote` asks
+// other suppliers from the quotes panel.
+type RequestDialog = "convert" | "quote" | "order";
 
 type Props = {
   companies: CompanyOption[];
@@ -159,7 +162,7 @@ export const PurchaseRequestForm = ({
       }))
     : agentOptions;
   const ignoreAgentChange = () => undefined;
-  const openQuote = canAnswer ? () => setDialog("quote") : null;
+  const openQuote = canAnswer ? () => setDialog("convert") : null;
   const openOrder = canAnswer ? () => setDialog("order") : null;
   const closeDialog = (open: boolean) => {
     if (!open) {
@@ -190,7 +193,7 @@ export const PurchaseRequestForm = ({
           existing={existing}
           isPending={isPending}
           isDirty={form.formState.isDirty}
-          onPurchaseQuote={() => setDialog("quote")}
+          onPurchaseQuote={() => setDialog("convert")}
           onPurchaseOrder={() => setDialog("order")}
           onSend={onSend}
         />
@@ -356,6 +359,11 @@ export const PurchaseRequestForm = ({
       {/* Outside the form, so their own submits never save the request. */}
       {existing && (
         <>
+          <PurchaseRequestConvertDialog
+            requestUuid={existing.uuid}
+            open={dialog === "convert"}
+            onOpenChange={closeDialog}
+          />
           <PurchaseRequestQuoteDialog
             request={existing}
             companies={companies}

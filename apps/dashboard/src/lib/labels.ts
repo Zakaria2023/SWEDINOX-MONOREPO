@@ -1596,7 +1596,8 @@ export const PURCHASE_QUOTE_EXPIRATION_REASON_LABELS: Record<
 
 export const PURCHASE_QUOTE_STATUS_LABELS: Record<PurchaseQuoteStatus, string> =
   {
-    open: "Open",
+    // A quote raised from a request opens `Released` in the reference.
+    open: "Released",
     received: "Received",
     awarded: "Awarded",
     lost: "Lost",
