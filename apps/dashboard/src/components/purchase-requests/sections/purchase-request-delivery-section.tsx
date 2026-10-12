@@ -16,6 +16,8 @@ type Props = {
   deliveryAddressOptions: SelectOption[];
   supplierAddressOptions: SelectOption[];
   handleDeliveryDateChange: (date: string) => void;
+  /** The ⦿ Date / ○ Week block greys once the request is saved. */
+  planLocked: boolean;
 };
 
 /**
@@ -36,6 +38,7 @@ export const PurchaseRequestDeliverySection = ({
   deliveryAddressOptions,
   supplierAddressOptions,
   handleDeliveryDateChange,
+  planLocked,
 }: Props) => {
   const { register, control } = useFormContext<PurchaseRequestFormValues>();
 
@@ -134,6 +137,7 @@ export const PurchaseRequestDeliverySection = ({
                   <input
                     type="radio"
                     value="date"
+                    disabled={planLocked}
                     checked={field.value === "date"}
                     onChange={() => field.onChange("date")}
                   />
@@ -149,7 +153,7 @@ export const PurchaseRequestDeliverySection = ({
                         id="deliveryDate"
                         value={dateField.value ?? ""}
                         onChange={handleDeliveryDateChange}
-                        disabled={field.value !== "date"}
+                        disabled={planLocked || field.value !== "date"}
                         className="w-48"
                       />
                     )}
@@ -159,7 +163,11 @@ export const PurchaseRequestDeliverySection = ({
                   <FormLabel htmlFor="deliveryRemark">Rem</FormLabel>
                   <Input
                     id="deliveryRemark"
-                    className="w-40"
+                    readOnly={planLocked}
+                    className={cn(
+                      "w-40",
+                      planLocked && "bg-muted text-muted-foreground",
+                    )}
                     {...register("deliveryRemark")}
                   />
                 </div>
@@ -172,6 +180,7 @@ export const PurchaseRequestDeliverySection = ({
                   <input
                     type="radio"
                     value="week"
+                    disabled={planLocked}
                     checked={field.value === "week"}
                     onChange={() => field.onChange("week")}
                   />
@@ -184,10 +193,11 @@ export const PurchaseRequestDeliverySection = ({
                     type="number"
                     min={1}
                     max={53}
-                    readOnly={field.value !== "week"}
+                    readOnly={planLocked || field.value !== "week"}
                     className={cn(
                       "w-20",
-                      field.value !== "week" && "bg-muted text-muted-foreground",
+                      (planLocked || field.value !== "week") &&
+                        "bg-muted text-muted-foreground",
                     )}
                     {...register("deliveryWeek")}
                   />
@@ -197,10 +207,11 @@ export const PurchaseRequestDeliverySection = ({
                   <Input
                     id="deliveryYear"
                     type="number"
-                    readOnly={field.value !== "week"}
+                    readOnly={planLocked || field.value !== "week"}
                     className={cn(
                       "w-28",
-                      field.value !== "week" && "bg-muted text-muted-foreground",
+                      (planLocked || field.value !== "week") &&
+                        "bg-muted text-muted-foreground",
                     )}
                     {...register("deliveryYear")}
                   />

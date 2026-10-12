@@ -17,6 +17,8 @@ const SENT_FLAGS = [
 type Props = {
   purchaseOrderTypeOptions: SelectOption[];
   weightTypeOptions: SelectOption[];
+  /** Greyed once the request is saved, as the reference's are. */
+  locked: boolean;
 };
 
 /**
@@ -29,6 +31,7 @@ type Props = {
 export const PurchaseRequestTypeSection = ({
   purchaseOrderTypeOptions,
   weightTypeOptions,
+  locked,
 }: Props) => {
   const { control } = useFormContext<PurchaseRequestFormValues>();
 
@@ -44,6 +47,7 @@ export const PurchaseRequestTypeSection = ({
           label="Type"
           options={purchaseOrderTypeOptions}
           emptyValue=""
+          disabled={locked}
         />
 
         <FormSelectField
@@ -53,6 +57,7 @@ export const PurchaseRequestTypeSection = ({
           label="Weight type"
           options={weightTypeOptions}
           emptyValue=""
+          disabled={locked}
         />
 
         <Controller
@@ -63,6 +68,7 @@ export const PurchaseRequestTypeSection = ({
               <input
                 type="checkbox"
                 checked={field.value}
+                disabled={locked}
                 onChange={(e) => field.onChange(e.target.checked)}
               />
               Overlength

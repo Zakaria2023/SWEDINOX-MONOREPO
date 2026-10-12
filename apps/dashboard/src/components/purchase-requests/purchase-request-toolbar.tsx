@@ -76,9 +76,13 @@ export const PurchaseRequestToolbar = ({
     ? `/companies/${existing.companyUuid}`
     : null;
   const isDraft = existing?.status === "draft";
-  const canAnswer = existing !== null && isPurchaseRequestEditable(existing.status);
-  const closedTitle =
-    existing?.status === "cancelled"
+  const canAnswer =
+    existing !== null &&
+    !isDraft &&
+    isPurchaseRequestEditable(existing.status);
+  const closedTitle = isDraft
+    ? "Make the request final first"
+    : existing?.status === "cancelled"
       ? "This request is cancelled"
       : "This request has already been awarded";
 

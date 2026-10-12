@@ -30,7 +30,7 @@ import { stockUnits } from "@/lib/enums";
 import { cn, formatDateValue, formatNumber, runningMeters } from "@/lib/helpers";
 import { STOCK_UNIT_LABELS } from "@/lib/labels";
 
-const SAVE_FIRST = "Save the purchase request first";
+const SAVE_FIRST = "Save and make the purchase request final first";
 const CLOSED = "This request has been awarded or cancelled";
 
 // The reference's Lines grid on a request (11-10-2026).
@@ -46,6 +46,7 @@ const REQUEST_LINE_COLUMNS = [
   "Qty(p)",
   "U",
   "Length",
+  "Width",
   "Thickness",
   "Kg(p)",
   "M1(p)",
@@ -55,6 +56,7 @@ const NUMERIC_COLUMNS = new Set([
   "Code",
   "Qty(p)",
   "Length",
+  "Width",
   "Thickness",
   "Kg(p)",
   "M1(p)",
@@ -86,6 +88,7 @@ type Props = {
 
 type LineProps = {
   index: number;
+  showWidth: boolean;
   selected: boolean;
   readOnly: boolean;
   forLines: PurchaseRequestForLines;
@@ -100,6 +103,7 @@ type LineProps = {
  */
 const PurchaseRequestLineRow = ({
   index,
+  showWidth,
   selected,
   readOnly,
   forLines,
@@ -114,6 +118,7 @@ const PurchaseRequestLineRow = ({
   const quantity = Number(line?.quantity ?? 0);
   const pieceWeightKg = Number(line?.pieceWeightKg ?? 0);
   const lengthMm = Number(line?.lengthMm ?? 0);
+  const widthMm = Number(line?.widthMm ?? 0);
   const thicknessMm = Number(line?.thicknessMm ?? 0);
   const weightKg =
     pieceWeightKg > 0 ? pieceWeightKg * quantity : Number(line?.kg ?? 0);
@@ -194,6 +199,11 @@ const PurchaseRequestLineRow = ({
       <TableCell className="text-right whitespace-nowrap tabular-nums">
         {formatNumber(lengthMm)} mm
       </TableCell>
+      {showWidth && (
+        <TableCell className="text-right whitespace-nowrap tabular-nums">
+          {widthMm > 0 ? `${formatNumber(widthMm)} mm` : ""}
+        </TableCell>
+      )}
       <TableCell className="text-right whitespace-nowrap tabular-nums">
         {formatNumber(thicknessMm)} mm
       </TableCell>
@@ -233,6 +243,12 @@ export const PurchaseRequestLines = ({
   const [selectedLine, setSelectedLine] = useState<number | null>(null);
 
   const lineCount = itemFields.length;
+  // `Width` joins the grid once a line has an article with one, as the
+  // reference's did after `PK304L20021` was chosen (12-10-2026).
+  const showWidth = (items ?? []).some((item) => Number(item.widthMm) > 0);
+  const columns = showWidth
+    ? REQUEST_LINE_COLUMNS
+    : REQUEST_LINE_COLUMNS.filter((column) => column !== "Width");
   const hasLineWithoutProduct = (items ?? []).some(
     (item) => !item.productUuid,
   );
@@ -276,6 +292,7 @@ export const PurchaseRequestLines = ({
       stockUnits.find((unit) => unit === articleUnit) ?? "st",
     );
     setValue(`items.${index}.lengthMm`, mm(row.lengthMm));
+    setValue(`items.${index}.widthMm`, mm(row.widthMm));
     setValue(`items.${index}.thicknessMm`, mm(row.thicknessMm));
     setValue(
       `items.${index}.pieceWeightKg`,
@@ -367,7 +384,7 @@ export const PurchaseRequestLines = ({
           <Table>
             <TableHeader>
               <TableRow>
-                {REQUEST_LINE_COLUMNS.map((column) => (
+                {columns.map((column) => (
                   <TableHead
                     key={column}
                     className={cn(NUMERIC_COLUMNS.has(column) && "text-right")}
@@ -382,6 +399,7 @@ export const PurchaseRequestLines = ({
                 <PurchaseRequestLineRow
                   key={field.id}
                   index={index}
+                  showWidth={showWidth}
                   selected={selectedLine === index}
                   readOnly={readOnly}
                   forLines={forLines}
@@ -392,7 +410,7 @@ export const PurchaseRequestLines = ({
               {lineCount === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={REQUEST_LINE_COLUMNS.length}
+                    colSpan={columns.length}
                     className="text-muted-foreground"
                   >
                     No lines. Press New to add one.

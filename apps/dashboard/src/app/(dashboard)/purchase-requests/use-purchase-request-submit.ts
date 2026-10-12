@@ -212,6 +212,16 @@ export const usePurchaseRequestSubmit = ({
     void loadSupplierData(editingCompanyUuid);
   }, [editingCompanyUuid, loadSupplierData]);
 
+  // Saving filled the reference's greyed `Supplier address` with the
+  // supplier's own (`Brigadier Aad de Jonghof 2, 3069 RR, ROTTERDAM` on
+  // 11692, 12-10-2026): its first address stands in until one is chosen.
+  useEffect(() => {
+    const [first] = supplierAddresses;
+    if (first && !form.getValues("supplierAddressUuid")) {
+      form.setValue("supplierAddressUuid", first.uuid);
+    }
+  }, [supplierAddresses, form]);
+
   useEffect(() => {
     const subscription = { cancelled: false };
     void getInternalAddressesForSelect().then((rows) => {
@@ -304,6 +314,7 @@ export const usePurchaseRequestSubmit = ({
               ? (pieceWeightKg * quantity).toFixed(2)
               : item.kg || "0.00",
           lengthMm: optionalNumber(item.lengthMm),
+          widthMm: optionalNumber(item.widthMm),
           thicknessMm: item.thicknessMm || null,
           requiredDate: item.requiredDate || null,
           remark: item.remark || null,

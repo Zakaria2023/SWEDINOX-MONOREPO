@@ -126,8 +126,16 @@ export const PurchaseRequestForm = ({
   // Draft is the only state in which the request can still be changed.
   const isReadOnly =
     existing !== null && !canEditPurchaseRequestLines(existing.status);
+  // Greyed on a provisional request in the reference, on both toolbars: a
+  // request goes to suppliers only once it is final.
   const canAnswer =
-    existing !== null && isPurchaseRequestEditable(existing.status);
+    existing !== null &&
+    existing.status !== "draft" &&
+    isPurchaseRequestEditable(existing.status);
+  // Saving locks what the lines were drawn up against — the supplier, the
+  // order type block and the planned date — as the reference greyed them on
+  // request 800010.
+  const isSaved = existing !== null;
   const openQuote = canAnswer ? () => setDialog("quote") : null;
   const openOrder = canAnswer ? () => setDialog("order") : null;
   const closeDialog = (open: boolean) => {
@@ -190,7 +198,7 @@ export const PurchaseRequestForm = ({
                 isLoadingSupplierData={isLoadingSupplierData}
                 handleSupplierChange={handleSupplierChange}
                 handleAgentChange={handleAgentChange}
-                locked={false}
+                locked={isSaved}
               />
 
               {/* Greyed until a supplier is chosen, which then fills it. */}
@@ -216,12 +224,14 @@ export const PurchaseRequestForm = ({
                 deliveryAddressOptions={deliveryAddressOptions}
                 supplierAddressOptions={supplierAddressOptions}
                 handleDeliveryDateChange={handleDeliveryDateChange}
+                planLocked={isSaved}
               />
             </div>
 
             <PurchaseRequestTypeSection
               purchaseOrderTypeOptions={purchaseOrderTypeOptions}
               weightTypeOptions={weightTypeOptions}
+              locked={isSaved}
             />
           </fieldset>
         </section>

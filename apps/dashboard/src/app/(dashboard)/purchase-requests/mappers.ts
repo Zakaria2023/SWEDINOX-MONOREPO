@@ -60,6 +60,7 @@ export const purchaseRequestToFormValues = (
     quantity: item.quantity ?? "",
     unit: item.unit ?? "st",
     lengthMm: item.lengthMm === null ? "" : String(item.lengthMm),
+    widthMm: item.widthMm === null ? "" : String(item.widthMm),
     thicknessMm: item.thicknessMm ?? "",
     kg: item.kg ?? "",
     requiredDate: toDateInput(item.requiredDate),
