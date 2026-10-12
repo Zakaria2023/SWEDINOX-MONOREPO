@@ -2895,3 +2895,20 @@ export const stockOptionStatuses = [
 ] as const satisfies readonly string[];
 
 export type StockOptionStatus = (typeof stockOptionStatuses)[number];
+
+/**
+ * The seven saved views of the reference's `Stock on location`, by its own
+ * names: each one is a column set and a filter, picked from the `View`
+ * dropdown above the grid.
+ */
+export const stockLotViews = [
+  "standaard",
+  "gip",
+  "verkocht",
+  "beschikbare_voorraad",
+  "controle",
+  "cuvelje",
+  "available_in_house",
+] as const satisfies readonly string[];
+
+export type StockLotView = (typeof stockLotViews)[number];

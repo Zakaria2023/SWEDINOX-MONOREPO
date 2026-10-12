@@ -5,6 +5,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -46,6 +47,17 @@ type Props<T, K extends string> = {
    * rows selectable by clicking them.
    */
   selectionToolbar?: (selected: T | null) => ReactNode;
+  /**
+   * The columns a saved view opens with, over the declaration's defaults. The
+   * selector still offers the rest. Remount the table (`key`) to apply a new
+   * view.
+   */
+  initialVisibility?: Partial<Record<K, boolean>>;
+  /**
+   * The grid's footer: a total under each column that has one, over every row
+   * the filters select rather than this page.
+   */
+  totals?: Partial<Record<K, ReactNode>>;
 };
 
 /**
@@ -72,14 +84,17 @@ export const OverviewTable = <T, K extends string>({
   plural,
   toolbar,
   selectionToolbar,
+  initialVisibility,
+  totals,
 }: Props<T, K>) => {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const selected =
     page.rows.find((row) => rowKey(row) === selectedKey) ?? null;
   const selectable = selectorColumns(columns);
-  const [visibility, setVisibility] = useState<Record<K, boolean>>(
-    buildColumnVisibility(selectable),
-  );
+  const [visibility, setVisibility] = useState<Record<K, boolean>>({
+    ...buildColumnVisibility(selectable),
+    ...initialVisibility,
+  });
 
   const toggle = (key: string) =>
     setVisibility((prev) => ({ ...prev, [key]: !prev[key as K] }));
@@ -160,6 +175,20 @@ export const OverviewTable = <T, K extends string>({
               })
             )}
           </TableBody>
+          {totals && page.rows.length > 0 && (
+            <TableFooter>
+              <TableRow>
+                {visible.map((col) => (
+                  <TableCell
+                    key={col.key}
+                    className="whitespace-nowrap font-semibold tabular-nums"
+                  >
+                    {totals[col.key] ?? null}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableFooter>
+          )}
         </Table>
       </div>
       <TablePagination page={page} singular={singular} plural={plural} />

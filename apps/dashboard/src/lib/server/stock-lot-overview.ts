@@ -19,9 +19,11 @@ import {
   relationFilter,
   tableOrderBy,
   tableWhere,
+  textRangeFilter,
   valueFilter,
 } from "@/lib/server/table-query";
 import { TableQuery } from "@/lib/table-query";
+import { StockLotView, stockLotViews } from "@/lib/enums";
 import { count, desc, eq, getTableColumns, SQL, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 
@@ -76,6 +78,12 @@ export type StockLotOverviewRow = SelectStock & {
 
 export type StockLotOverviewScope = "all" | "customer";
 
+/** The grid's footer, over every lot the view selects. */
+export type StockLotOverviewTotals = {
+  quantityKg: number;
+  stockValue: number;
+};
+
 const LOT_SEARCH = [
   Products.productCode,
   Products.name,
@@ -83,6 +91,40 @@ const LOT_SEARCH = [
   Stock.internalCharge,
   Stock.internalBatch,
 ] as const;
+
+// The reference's one location with a view of its own.
+const CUVELJE = "CUVELJE";
+
+const RESERVED = sql`COALESCE(${Stock.reservedQuantity}, 0) > 0.01`;
+const FREE = sql`COALESCE(${Stock.reservedQuantity}, 0) <= 0.01`;
+
+const atCuvelje = sql`${Stock.locationUuid} IN (
+  SELECT ${Warehouses.uuid} FROM ${Warehouses}
+  WHERE UPPER(${Warehouses.name}) = ${CUVELJE}
+)`;
+
+// Each saved view's filter, as the reference spells it in its view editor.
+const VIEW_WHERE: Record<StockLotView, SQL | undefined> = {
+  standaard: undefined,
+  gip: undefined,
+  verkocht: RESERVED,
+  beschikbare_voorraad: FREE,
+  // `Bundle = 0 And Not Product code Contains SC`
+  controle: sql`COALESCE(${Stock.internalBatch}, '') IN ('', '0')
+    AND COALESCE(${Products.productCode}, '') NOT LIKE '%SC%'`,
+  cuvelje: atCuvelje,
+  // `Location ≠ CUVELJE And Stock category In [2nd choice, Remaining] Or
+  // Stock category Is null or empty And Available (StkU) from 1,00 to
+  // 3.996,00 And Stock (Kg) from 1…` — the category test takes both spellings
+  // our lots have carried.
+  available_in_house: sql`NOT (${atCuvelje})
+    AND (COALESCE(${Stock.stockCategory}, '') IN ('', '2nd choice', 'Remaining', 'second_choice', 'remaining'))
+    AND GREATEST(0, COALESCE(${Stock.quantity}, 0) - COALESCE(${Stock.reservedQuantity}, 0)) BETWEEN 1 AND 3996
+    AND COALESCE(${Stock.quantityKg}, 0) >= 1`,
+};
+
+const namedView = (value: string | undefined): StockLotView | undefined =>
+  stockLotViews.find((view) => view === value);
 
 const LOT_SORTABLE = {
   productCode: Products.productCode,
@@ -106,12 +148,21 @@ const LOT_FILTERS: FilterBindings = {
   stockCategory: valueFilter(Stock.stockCategory),
   reserved: (values) => {
     if (values[0] === "reserved") {
-      return sql`COALESCE(${Stock.reservedQuantity}, 0) > 0.01`;
+      return RESERVED;
     }
     if (values[0] === "free") {
-      return sql`COALESCE(${Stock.reservedQuantity}, 0) <= 0.01`;
+      return FREE;
     }
     return undefined;
+  },
+  // The reference's only filter on this screen: `Product code` from / u/i.
+  productCode: textRangeFilter(Products.productCode),
+  // A list of bundle numbers, pasted — what the reference does by filtering
+  // the `Bundle` column to `In [ … ]`.
+  bundles: valueFilter(Stock.internalBatch),
+  view: (values) => {
+    const view = namedView(values[0]);
+    return view ? VIEW_WHERE[view] : undefined;
   },
 };
 
@@ -213,7 +264,8 @@ export const stockLotOverviewRows =
         ...tableOrderBy(
           LOT_SORTABLE,
           query,
-          [desc(Stock.createdAt)],
+          // `GIP` opens on the newest change, as the reference's does.
+          [namedView(query.filters.view?.[0]) === "gip" ? desc(Stock.updatedAt) : desc(Stock.createdAt)],
           Stock.id,
         ),
       )
@@ -230,4 +282,31 @@ export const countStockLotOverview = async (
     .leftJoin(Products, eq(Stock.productUuid, Products.uuid))
     .where(whereOf(query, scope));
   return Number(row?.value ?? 0);
+};
+
+/**
+ * The footer's totals — `Stock (Kg)` and `Stock (€)` over every lot the view
+ * selects, not just the page: 2 428 474 kg and € 5 070 915,59 on the
+ * reference's `Standaard`.
+ */
+export const stockLotOverviewTotals = async (
+  query: TableQuery,
+  scope: StockLotOverviewScope,
+): Promise<StockLotOverviewTotals> => {
+  const [row] = await db
+    .select({
+      quantityKg: sql<number>`COALESCE(SUM(${Stock.quantityKg}), 0)`.mapWith(
+        Number,
+      ),
+      stockValue: sql<number>`COALESCE(SUM(${Stock.valuationEuro}), 0)`.mapWith(
+        Number,
+      ),
+    })
+    .from(Stock)
+    .leftJoin(Products, eq(Stock.productUuid, Products.uuid))
+    .where(whereOf(query, scope));
+  return {
+    quantityKg: row?.quantityKg ?? 0,
+    stockValue: row?.stockValue ?? 0,
+  };
 };

@@ -7,6 +7,8 @@ import {
   countStockLotOverview,
   StockLotOverviewRow,
   stockLotOverviewRows,
+  StockLotOverviewTotals,
+  stockLotOverviewTotals,
 } from "@/lib/server/stock-lot-overview";
 import { runPaged } from "@/lib/server/table-query";
 import {
@@ -27,6 +29,17 @@ export const getStockOnLocation = async (
     });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch stock on location"));
+  }
+};
+
+/** The footer: total kg and value over everything the view selects. */
+export const getStockOnLocationTotals = async (
+  query: TableQuery,
+): Promise<StockLotOverviewTotals> => {
+  try {
+    return await stockLotOverviewTotals(query, "all");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to total stock on location"));
   }
 };
 

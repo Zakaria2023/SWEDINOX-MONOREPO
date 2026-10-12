@@ -13,13 +13,23 @@ import {
 import { Button } from "@/components/shadcn/button";
 import { StockReservationsDialog } from "@/components/stock/stock-reservations-dialog";
 import { OverviewTable } from "@/components/ui/overview-table";
+import {
+  stockLotViewOf,
+  stockLotViewVisibility,
+} from "@/app/(dashboard)/stock-on-location/views";
 import { RelatedRecordsBar } from "@/components/ui/related-records-bar";
-import type { StockLotOverviewRow } from "@/lib/server/stock-lot-overview";
+import { formatMoney, formatNumber } from "@/lib/helpers";
+import type {
+  StockLotOverviewRow,
+  StockLotOverviewTotals,
+} from "@/lib/server/stock-lot-overview";
 import { Paged, TableFilterControl } from "@/lib/table-query";
+import { useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 
 type Props = {
   page: Paged<StockLotOverviewRow>;
+  totals: StockLotOverviewTotals;
   filters: TableFilterControl[];
 };
 
@@ -78,7 +88,10 @@ export const renderStockLotSelection = (selected: StockLotOverviewRow | null) =>
  * same dialog the lot screen and the stock search open, with `Order` and
  * `Verwijder` on each reservation.
  */
-export const StockOnLocationTable = ({ page, filters }: Props) => {
+export const StockOnLocationTable = ({ page, totals, filters }: Props) => {
+  // The `View` dropdown picks the columns too, so a new view remounts the grid
+  // on its own column set.
+  const view = stockLotViewOf(useSearchParams().get("view") ?? undefined);
   const [reservations, setReservations] = useState<StockLotDialogData | null>(
     null,
   );
@@ -93,7 +106,14 @@ export const StockOnLocationTable = ({ page, filters }: Props) => {
   return (
     <>
       <OverviewTable
+        key={view}
         page={page}
+        initialVisibility={stockLotViewVisibility(view)}
+        totals={{
+          productCode: "Total",
+          quantityKg: formatNumber(totals.quantityKg),
+          stockValue: formatMoney(totals.stockValue),
+        }}
         filters={filters}
         columns={STOCK_LOT_COLUMNS}
         sortable={STOCK_LOT_SORTABLE}

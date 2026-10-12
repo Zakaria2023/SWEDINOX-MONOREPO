@@ -73,7 +73,11 @@ export type TableFilterControl =
   | { key: string; kind: "dateRange"; label: string }
   | { key: string; kind: "numberRange"; label: string }
   // A yes-or-nothing switch: ticked writes "true", unticked clears the key.
-  | { key: string; kind: "checkbox"; label: string };
+  | { key: string; kind: "checkbox"; label: string }
+  // A text `from` / `u/i` pair, as the reference's `Product code` filter.
+  | { key: string; kind: "textRange"; label: string }
+  // Several values typed or pasted at once — `404766, 404767` — any of them.
+  | { key: string; kind: "list"; label: string; placeholder?: string };
 
 /** The two ends of a range filter, which the URL carries as "from..to". */
 export const parseRangeValue = (

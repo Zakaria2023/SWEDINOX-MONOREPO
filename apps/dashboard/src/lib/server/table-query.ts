@@ -272,6 +272,22 @@ export const numberRangeFilter =
   };
 
 /**
+ * A text range — the reference's `Product code` `from` / `u/i` — carried the
+ * same way. The upper end includes everything that starts with it, so
+ * `u/i PK304L` keeps `PK304L20021`: a plain `<=` would stop at the bare prefix,
+ * which is never what a reader typing a code family means.
+ */
+export const textRangeFilter =
+  (column: MySqlColumn): FilterBinding =>
+  (values) => {
+    const [from, to] = (values[0] ?? "").split("..");
+    return and(
+      from ? gte(column, from) : undefined,
+      to ? or(lte(column, to), like(column, `${to}%`)) : undefined,
+    );
+  };
+
+/**
  * A filter on a column holding a JSON array of values — a company's roles, an
  * address's categories. Several values mean any of them.
  *

@@ -10,10 +10,20 @@ import {
   rangeValue,
   TableFilterControl,
 } from "@/lib/table-query";
-import { ReactNode } from "react";
+import { KeyboardEvent, ReactNode, useState } from "react";
 
 type FilterProps = {
   control: TableFilterControl;
+};
+
+type DraftInputProps = {
+  id?: string;
+  value: string;
+  placeholder: string;
+  ariaLabel: string;
+  className: string;
+  disabled: boolean;
+  onCommit: (next: string) => void;
 };
 
 type LabelledProps = {
@@ -154,6 +164,112 @@ const CheckboxFilter = ({ control }: FilterProps) => {
   );
 };
 
+// Text is committed on Enter or on leaving the box, not per keystroke: half a
+// product code or half a list of bundles is not a view anyone asked for. Keyed
+// by the URL's value at the call site, so `Clear` empties the draft too.
+const DraftInput = ({
+  id,
+  value,
+  placeholder,
+  ariaLabel,
+  className,
+  disabled,
+  onCommit,
+}: DraftInputProps) => {
+  const [draft, setDraft] = useState(value);
+
+  const commit = () => {
+    if (draft.trim() !== value) {
+      onCommit(draft.trim());
+    }
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commit();
+    }
+  };
+
+  return (
+    <Input
+      id={id}
+      value={draft}
+      disabled={disabled}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={onKeyDown}
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      className={className}
+    />
+  );
+};
+
+const TextRangeFilter = ({ control }: FilterProps) => {
+  const { value, setParams, isPending } = useTableQuery();
+  const { from, to } = parseRangeValue(value(control.key));
+
+  const write = (nextFrom: string, nextTo: string) =>
+    setParams({ [control.key]: rangeValue(nextFrom, nextTo) });
+
+  return (
+    <Labelled label={control.label} htmlFor={`filter-${control.key}-from`}>
+      <div className="flex items-center gap-1">
+        <DraftInput
+          key={`from-${from}`}
+          id={`filter-${control.key}-from`}
+          value={from}
+          disabled={isPending}
+          onCommit={(next) => write(next, to)}
+          placeholder="From"
+          ariaLabel={`${control.label} from`}
+          className="h-8 w-36"
+        />
+        <span className="text-xs text-muted-foreground">u/i</span>
+        <DraftInput
+          key={`to-${to}`}
+          value={to}
+          disabled={isPending}
+          onCommit={(next) => write(from, next)}
+          placeholder="To"
+          ariaLabel={`${control.label} up to and including`}
+          className="h-8 w-36"
+        />
+      </div>
+    </Labelled>
+  );
+};
+
+// A pasted list may be split by commas, spaces, semicolons or new lines; each
+// value becomes its own URL param, which every list action already reads as
+// "any of these".
+const ListFilter = ({ control }: FilterProps) => {
+  const { values, setParams, isPending } = useTableQuery();
+  if (control.kind !== "list") {
+    return null;
+  }
+  const current = values(control.key).join(", ");
+
+  return (
+    <Labelled label={control.label} htmlFor={`filter-${control.key}`}>
+      <DraftInput
+        key={current}
+        id={`filter-${control.key}`}
+        value={current}
+        disabled={isPending}
+        onCommit={(next) => {
+          const list = next.split(/[\s,;]+/).filter((entry) => entry !== "");
+          setParams({ [control.key]: list.length > 0 ? list : null });
+        }}
+        placeholder={control.placeholder ?? "Paste a list…"}
+        ariaLabel={control.label}
+        className="h-8 w-64"
+      />
+    </Labelled>
+  );
+};
+
 export const TableFilter = ({ control }: FilterProps) => {
   if (control.kind === "select") {
     return <SelectFilter control={control} />;
@@ -163,6 +279,12 @@ export const TableFilter = ({ control }: FilterProps) => {
   }
   if (control.kind === "checkbox") {
     return <CheckboxFilter control={control} />;
+  }
+  if (control.kind === "textRange") {
+    return <TextRangeFilter control={control} />;
+  }
+  if (control.kind === "list") {
+    return <ListFilter control={control} />;
   }
   return <NumberRangeFilter control={control} />;
 };

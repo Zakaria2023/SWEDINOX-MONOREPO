@@ -157,6 +157,7 @@ import {
   TransferReason,
   StockOption,
   StockOptionStatus,
+  StockLotView,
 } from "@/lib/enums";
 
 export const ADDRESS_CATEGORY_LABELS: Record<AddressCategory, string> = {
@@ -2260,4 +2261,15 @@ export const RETURN_ORDER_DOCUMENT_STATUS_LABELS: Record<
   received: "Received",
   credited: "Invoiced",
   cancelled: "Cancelled",
+};
+
+// The reference's own view names, kept as it spells them.
+export const STOCK_LOT_VIEW_LABELS: Record<StockLotView, string> = {
+  standaard: "Standaard",
+  gip: "GIP",
+  verkocht: "Verkocht",
+  beschikbare_voorraad: "Beschikbare voorraad",
+  controle: "Controle",
+  cuvelje: "Cuvelje",
+  available_in_house: "availeble stock in house",
 };
