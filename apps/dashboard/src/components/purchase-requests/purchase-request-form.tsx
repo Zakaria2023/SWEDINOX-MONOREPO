@@ -153,9 +153,11 @@ export const PurchaseRequestForm = ({
   // order type block and the planned date — as the reference greyed them on
   // request 800010.
   const isSaved = existing !== null;
-  // The agent locks with the supplier. The purchase order's section greys
+  // The agent stays open on a saved provisional request and locks at Make
+  // final (800010 and 800011, 12-10-2026). The purchase order's section greys
   // only the supplier, so here the agent is held to its saved value instead.
-  const lockedAgentOptions = isSaved
+  const isAgentLocked = existing !== null && existing.status !== "draft";
+  const lockedAgentOptions = isAgentLocked
     ? agentOptions.map((option) => ({
         ...option,
         disabled: option.value !== defaultValues?.agentUuid,
@@ -219,7 +221,7 @@ export const PurchaseRequestForm = ({
                   category — the purchase order's own block, field for field. */}
               <div
                 className={cn(
-                  isSaved &&
+                  isAgentLocked &&
                     "[&_div:has(>#agentUuid)]:pointer-events-none [&_div:has(>#agentUuid)]:opacity-50",
                 )}
               >
@@ -231,7 +233,7 @@ export const PurchaseRequestForm = ({
                   isLoadingSupplierData={isLoadingSupplierData}
                   handleSupplierChange={handleSupplierChange}
                   handleAgentChange={
-                    isSaved ? ignoreAgentChange : handleAgentChange
+                    isAgentLocked ? ignoreAgentChange : handleAgentChange
                   }
                   locked={isSaved}
                 />
