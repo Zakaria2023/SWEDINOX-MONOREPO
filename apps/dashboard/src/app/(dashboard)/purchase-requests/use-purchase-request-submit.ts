@@ -26,7 +26,7 @@ import {
   purchaseOrderTypes,
 } from "@/lib/enums";
 import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_WEIGHT_TYPE_LABELS, PURCHASE_ORDER_TYPE_LABELS } from "@/lib/labels";
-import { isoWeekOf } from "@/lib/helpers";
+import { dateStringInDays, isoWeekOf, onWorkingDay } from "@/lib/helpers";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -228,6 +228,12 @@ export const usePurchaseRequestSubmit = ({
     form.setValue("supplierUuid", uuid);
     form.setValue("contactUuid", "");
     form.setValue("supplierAddressUuid", "");
+    // Choosing the supplier dates the request: the reference's Date went from
+    // blank to the next working day (13-10-2026, opened 12-10-2026), which
+    // every new line then reads.
+    if (!form.getValues("deliveryDate")) {
+      handleDeliveryDateChange(onWorkingDay(dateStringInDays(1)));
+    }
     // The supplier brings its terms with it, as on a purchase order: its only
     // contact, its payment and delivery terms and its weight type.
     void loadSupplierData(uuid).then((defaults) => {

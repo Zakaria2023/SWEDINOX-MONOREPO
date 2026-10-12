@@ -187,7 +187,10 @@ const PurchaseRequestLineRow = ({
           {...register(`items.${index}.quantity`)}
         />
       </TableCell>
-      <TableCell>{line?.unit ? STOCK_UNIT_LABELS[line.unit] : ""}</TableCell>
+      {/* A blank line has no unit or weight until it has an article. */}
+      <TableCell>
+        {line?.productUuid && line.unit ? STOCK_UNIT_LABELS[line.unit] : ""}
+      </TableCell>
       <TableCell className="text-right whitespace-nowrap tabular-nums">
         {formatNumber(lengthMm)} mm
       </TableCell>
@@ -195,7 +198,7 @@ const PurchaseRequestLineRow = ({
         {formatNumber(thicknessMm)} mm
       </TableCell>
       <TableCell className="text-right tabular-nums">
-        {formatNumber(weightKg)}
+        {line?.productUuid ? formatNumber(weightKg) : ""}
       </TableCell>
       <TableCell className="text-right tabular-nums">
         {formatNumber(metres)}

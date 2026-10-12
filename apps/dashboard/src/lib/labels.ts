@@ -1577,7 +1577,8 @@ export const PURCHASE_REQUEST_STATUS_LABELS: Record<
   PurchaseRequestStatus,
   string
 > = {
-  draft: "Draft",
+  // The reference's banner reads `- Provisional` on a request not yet final.
+  draft: "Provisional",
   sent: "Sent",
   quoted: "Quoted",
   awarded: "Awarded",

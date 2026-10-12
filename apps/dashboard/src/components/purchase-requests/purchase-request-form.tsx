@@ -166,9 +166,7 @@ export const PurchaseRequestForm = ({
         <section className="space-y-4 rounded-lg border p-4">
           <h1 className="text-lg font-semibold">
             {banner}
-            {existing
-              ? ` - ${PURCHASE_REQUEST_STATUS_LABELS[existing.status ?? "draft"]}`
-              : ""}
+            {` - ${PURCHASE_REQUEST_STATUS_LABELS[existing?.status ?? "draft"]}`}
           </h1>
 
           {/* Every header field greys once the request has left draft. */}
