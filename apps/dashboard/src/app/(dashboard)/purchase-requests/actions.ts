@@ -32,7 +32,11 @@ import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
 import { convertPurchaseQuoteToOrder } from "@/app/(dashboard)/purchase-quotes/actions";
-import { syncPurchaseLineReceiptDates } from "@/lib/server/purchase-lines";
+import {
+  refreshPurchaseOrderTotals,
+  syncPurchaseLineReceiptDates,
+  syncPurchaseLineReceipts,
+} from "@/lib/server/purchase-lines";
 import {
   PurchaseRequestOrderFormValues,
   purchaseRequestOrderSchema,
@@ -577,6 +581,10 @@ export const convertPurchaseRequestToOrder = async (
       }
 
       await syncPurchaseLineReceiptDates(tx, orderUuid);
+      // Ordered outright, the order expects its goods at once: its receptions
+      // exist and its header is totalled, as on any new order.
+      await syncPurchaseLineReceipts(tx, orderUuid);
+      await refreshPurchaseOrderTotals(tx, orderUuid);
     });
 
     // The supplier is told what we ordered, exactly as they are when the order

@@ -30,7 +30,11 @@ import {
 } from "@/lib/enums";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
 import { exportRows } from "@/lib/server/excel";
-import { syncPurchaseLineReceiptDates } from "@/lib/server/purchase-lines";
+import {
+  refreshPurchaseOrderTotals,
+  syncPurchaseLineReceiptDates,
+  syncPurchaseLineReceipts,
+} from "@/lib/server/purchase-lines";
 import {
   dateRangeFilter,
   enumFilter,
@@ -963,6 +967,11 @@ const raisePurchaseOrderFromQuote = async (
       }
 
       await syncPurchaseLineReceiptDates(tx, orderUuid);
+      // The order it raises expects its goods at once, as any new order does:
+      // 404357 opened with its reception already there — New, 13-10-2026,
+      // 10 ST / 314 kg (12-10-2026) — and its header totalled.
+      await syncPurchaseLineReceipts(tx, orderUuid);
+      await refreshPurchaseOrderTotals(tx, orderUuid);
 
       // Everyone else who quoted for this request has lost it.
       if (quote.purchaseRequestUuid) {
