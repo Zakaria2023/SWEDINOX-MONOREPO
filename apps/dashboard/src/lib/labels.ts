@@ -1581,7 +1581,8 @@ export const PURCHASE_REQUEST_STATUS_LABELS: Record<
   // and `- Released` once `Make final` has sent it out (800010, 12-10-2026).
   draft: "Provisional",
   sent: "Released",
-  quoted: "Quoted",
+  // A request turned into a quote reads `Converted` in the reference.
+  quoted: "Converted",
   awarded: "Awarded",
   cancelled: "Cancelled",
 };

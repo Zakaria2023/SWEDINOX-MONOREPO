@@ -147,7 +147,7 @@ export const PurchaseRequestForm = ({
   // request goes to suppliers only once it is final.
   const canAnswer =
     existing !== null &&
-    existing.status !== "draft" &&
+    existing.status === "sent" &&
     isPurchaseRequestEditable(existing.status);
   // Saving locks what the lines were drawn up against — the supplier, the
   // order type block and the planned date — as the reference greyed them on
@@ -268,6 +268,11 @@ export const PurchaseRequestForm = ({
               purchaseOrderTypeOptions={purchaseOrderTypeOptions}
               weightTypeOptions={weightTypeOptions}
               locked={isSaved}
+              convertedTo={
+                existing && existing.status === "quoted"
+                  ? existing.quotes.map((quote) => `Purchase quote ${quote.id}`)
+                  : []
+              }
             />
           </fieldset>
         </section>

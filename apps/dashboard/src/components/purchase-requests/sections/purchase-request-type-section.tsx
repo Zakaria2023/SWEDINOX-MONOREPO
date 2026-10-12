@@ -19,6 +19,8 @@ type Props = {
   weightTypeOptions: SelectOption[];
   /** Greyed once the request is saved, as the reference's are. */
   locked: boolean;
+  /** `Converted to:` in Follow-up, the quotes the request became. */
+  convertedTo: string[];
 };
 
 /**
@@ -32,6 +34,7 @@ export const PurchaseRequestTypeSection = ({
   purchaseOrderTypeOptions,
   weightTypeOptions,
   locked,
+  convertedTo,
 }: Props) => {
   const { control } = useFormContext<PurchaseRequestFormValues>();
 
@@ -101,8 +104,18 @@ export const PurchaseRequestTypeSection = ({
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold">Follow-up</h2>
-        {/* Empty on a blank request in the reference. */}
-        <div className="h-16 rounded-md border bg-muted/30" />
+        {/* Empty on a blank request; `Converted to: Purchase quote 900001`
+            once it has been converted. */}
+        <div className="min-h-16 space-y-1 rounded-md border bg-muted/30 p-2 text-sm">
+          {convertedTo.length > 0 && (
+            <>
+              <p>Converted to:</p>
+              {convertedTo.map((label) => (
+                <p key={label}>{label}</p>
+              ))}
+            </>
+          )}
+        </div>
         <div className="max-w-xs">
           <FormLabel htmlFor="deadline">Deadline</FormLabel>
           <Controller

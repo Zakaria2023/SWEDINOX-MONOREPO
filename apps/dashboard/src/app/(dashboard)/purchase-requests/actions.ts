@@ -735,9 +735,11 @@ export const convertPurchaseRequestToQuotes = async (
         }
       }
 
+      // Converting closes the request: 800010 read `Converted, Printed`, every
+      // field greyed, once quote 900001 was made from it (12-10-2026).
       await tx
         .update(PurchaseRequests)
-        .set({ status: "sent" })
+        .set({ status: "quoted" })
         .where(eq(PurchaseRequests.uuid, requestUuid));
     });
 

@@ -89,7 +89,7 @@ export const PurchaseRequestToolbar = ({
   const printHref = existing ? `/purchase-requests/${existing.uuid}/print` : null;
   const canAnswer =
     existing !== null &&
-    !isDraft &&
+    existing.status === "sent" &&
     isPurchaseRequestEditable(existing.status);
   const closedTitle = isDraft
     ? "Make the request final first"
@@ -153,7 +153,9 @@ export const PurchaseRequestToolbar = ({
           type="button"
           variant="outline"
           onClick={onSend}
-          disabled={!isReleased || !onSend || isPending || isFinalising}
+          disabled={
+            existing?.status !== "sent" || !onSend || isPending || isFinalising
+          }
           title={
             existing
               ? isReleased
