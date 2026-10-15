@@ -63,6 +63,11 @@ type Props<T extends WorkOrderTreeRow> = {
    * Opdracht / Regel` (327402 and 327247, 8/9-10-2026).
    */
   levelsHeader?: string;
+  /**
+   * The column `Status` follows. Left off, it sits beside the tree; the
+   * warehouse panel reads `Order · Opties · Status` (327402, 15-10-2026).
+   */
+  statusAfter?: string;
 };
 
 type Node<T> = {
@@ -99,6 +104,7 @@ export const WorkOrderTree = <T extends WorkOrderTreeRow>({
   workOrderHref,
   emptyMessage,
   levelsHeader = "Day / Option (Machine) / Order / Line",
+  statusAfter,
 }: Props<T>) => {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
@@ -196,6 +202,12 @@ export const WorkOrderTree = <T extends WorkOrderTreeRow>({
         : null,
     );
 
+  const statusCell = (status: WorkOrderStatus) => (
+    <TableCell>
+      <StatusBadge value={status} label={WORK_ORDER_STATUS_LABELS[status]} />
+    </TableCell>
+  );
+
   const groupRow = (
     node: Node<T>,
     depth: number,
@@ -235,22 +247,20 @@ export const WorkOrderTree = <T extends WorkOrderTreeRow>({
             {content}
           </button>
         </TableCell>
-        <TableCell>
-          <StatusBadge
-            value={node.rows[0].status}
-            label={WORK_ORDER_STATUS_LABELS[node.rows[0].status]}
-          />
-        </TableCell>
+        {!statusAfter && statusCell(node.rows[0].status)}
         {totals.map((total, index) => (
-          <TableCell
-            key={columns[index].key}
-            className={cn(
-              "tabular-nums",
-              columns[index].align === "right" && "text-right",
-            )}
-          >
-            {total}
-          </TableCell>
+          <Fragment key={columns[index].key}>
+            <TableCell
+              className={cn(
+                "tabular-nums",
+                columns[index].align === "right" && "text-right",
+              )}
+            >
+              {total}
+            </TableCell>
+            {statusAfter === columns[index].key &&
+              statusCell(node.rows[0].status)}
+          </Fragment>
         ))}
       </TableRow>
     );
@@ -277,14 +287,16 @@ export const WorkOrderTree = <T extends WorkOrderTreeRow>({
           <TableRow>
             <TableHead className="w-8" />
             <TableHead>{levelsHeader}</TableHead>
-            <TableHead>Status</TableHead>
+            {!statusAfter && <TableHead>Status</TableHead>}
             {columns.map((column) => (
-              <TableHead
-                key={column.key}
-                className={cn(column.align === "right" && "text-right")}
-              >
-                {column.header}
-              </TableHead>
+              <Fragment key={column.key}>
+                <TableHead
+                  className={cn(column.align === "right" && "text-right")}
+                >
+                  {column.header}
+                </TableHead>
+                {statusAfter === column.key && <TableHead>Status</TableHead>}
+              </Fragment>
             ))}
           </TableRow>
         </TableHeader>
@@ -341,24 +353,20 @@ export const WorkOrderTree = <T extends WorkOrderTreeRow>({
                                   >
                                     {row.lineLabel}
                                   </TableCell>
-                                  <TableCell>
-                                    <StatusBadge
-                                      value={row.status}
-                                      label={
-                                        WORK_ORDER_STATUS_LABELS[row.status]
-                                      }
-                                    />
-                                  </TableCell>
+                                  {!statusAfter && statusCell(row.status)}
                                   {columns.map((column) => (
-                                    <TableCell
-                                      key={column.key}
-                                      className={cn(
-                                        column.align === "right" &&
-                                          "text-right tabular-nums",
-                                      )}
-                                    >
-                                      {column.cell(row)}
-                                    </TableCell>
+                                    <Fragment key={column.key}>
+                                      <TableCell
+                                        className={cn(
+                                          column.align === "right" &&
+                                            "text-right tabular-nums",
+                                        )}
+                                      >
+                                        {column.cell(row)}
+                                      </TableCell>
+                                      {statusAfter === column.key &&
+                                        statusCell(row.status)}
+                                    </Fragment>
                                   ))}
                                 </TableRow>
                               ))}

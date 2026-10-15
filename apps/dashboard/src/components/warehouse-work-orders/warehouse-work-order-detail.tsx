@@ -31,6 +31,7 @@ import {
   formatDateValue,
   orDash,
   pluralize,
+  warehouseWorkOrderPrintHref,
   warehouseWorkOrderTypeMetaOf,
   yesNo,
 } from "@/lib/helpers";
@@ -94,6 +95,12 @@ export const WarehouseWorkOrderDetailView = ({
         printStockLabels,
       );
       if (result.success) {
+        // Released first, then the print dialog: cancelling the print does
+        // not undo the release (327402, 9-10-2026).
+        window.open(
+          warehouseWorkOrderPrintHref(workOrder.uuid, printStockLabels),
+          "_blank",
+        );
         router.refresh();
         return;
       }

@@ -7747,6 +7747,16 @@ export const representativeInitials = (
 };
 
 /**
+ * Where `Vrijgeven` sends the floor: the work order's slip, with its stock
+ * labels unless it was released without them.
+ */
+export const warehouseWorkOrderPrintHref = (
+  workOrderUuid: string,
+  withStockLabels: boolean,
+): string =>
+  `/warehouse-work-orders/${workOrderUuid}/print${withStockLabels ? "?labels=1" : ""}`;
+
+/**
  * A line's `Category` as the reference prints it: the stock category's label,
  * and `Standard` where none was set — every purchase line it showed read
  * `Standaard` (401154, 404355).

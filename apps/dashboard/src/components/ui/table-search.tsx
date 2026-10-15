@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { useTableQuery } from "@/hooks/use-table-query";
 import { cn } from "@/lib/helpers";
@@ -9,6 +10,11 @@ import { useEffect, useState } from "react";
 type Props = {
   placeholder?: string;
   className?: string;
+  /**
+   * A `Find` button beside the box that searches at once, as the reference's
+   * warehouse panel has it, rather than waiting out the typing pause.
+   */
+  withFind?: boolean;
 };
 
 // How long the box waits after the last keystroke before it queries. Short
@@ -16,7 +22,11 @@ type Props = {
 // request rather than eleven.
 const DEBOUNCE_MS = 300;
 
-export const TableSearch = ({ placeholder = "Search…", className }: Props) => {
+export const TableSearch = ({
+  placeholder = "Search…",
+  className,
+  withFind = false,
+}: Props) => {
   const { value, setParams, isPending } = useTableQuery();
   const urlTerm = value("q");
   const [term, setTerm] = useState(urlTerm);
@@ -40,13 +50,19 @@ export const TableSearch = ({ placeholder = "Search…", className }: Props) => 
     return () => clearTimeout(timer);
   }, [term, urlTerm, setParams]);
 
-  return (
-    <div className={cn("relative", className)}>
+  const field = (
+    <div className={cn("relative", !withFind && className, withFind && "flex-1")}>
       <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         type="search"
         value={term}
         onChange={(event) => setTerm(event.target.value)}
+        onKeyDown={(event) => {
+          if (withFind && event.key === "Enter") {
+            event.preventDefault();
+            setParams({ q: term.trim() || null });
+          }
+        }}
         placeholder={placeholder}
         aria-label={placeholder}
         className={cn("ps-8", term && "pe-8", isPending && "opacity-70")}
@@ -61,6 +77,25 @@ export const TableSearch = ({ placeholder = "Search…", className }: Props) => 
           <span className="sr-only">Clear search</span>
         </button>
       )}
+    </div>
+  );
+
+  if (!withFind) {
+    return field;
+  }
+
+  return (
+    <div className={cn("flex items-center gap-2", className)}>
+      {field}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => setParams({ q: term.trim() || null })}
+        disabled={isPending}
+      >
+        Find
+      </Button>
     </div>
   );
 };

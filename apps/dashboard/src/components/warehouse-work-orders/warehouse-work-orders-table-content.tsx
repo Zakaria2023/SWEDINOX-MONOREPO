@@ -41,11 +41,16 @@ import {
   WorkOrderTree,
 } from "@/components/work-orders/work-order-tree";
 import { WorkOrderStatus } from "@/lib/enums";
-import { formatNumber, orDash } from "@/lib/helpers";
+import {
+  formatNumber,
+  orDash,
+  warehouseWorkOrderPrintHref,
+} from "@/lib/helpers";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { TableFilterControl } from "@/lib/table-query";
 import { PrepareLineDialog } from "./prepare-line-dialog";
 import { ReportCompletionDialog } from "./report-completion-dialog";
+import { WorkOrderSummary } from "./work-order-summary";
 
 type Props = {
   tree: WarehouseWorkOrderTree;
@@ -57,9 +62,10 @@ type Props = {
 const num = (value: string | null) => Number(value ?? 0);
 
 // The columns the reference shows to the right of the tree, in its order
-// (Magazijn opdrachten, 9-10-2026): Order · Opties · Interne charge · Bedrijf
-// · Van · Naar · Artikelcode · Voorraadcategorie · Lengte · Breedte · Dikte ·
-// Hvh(p) · Hvh(w) · Kg(p) · Kg(w) — then the charge.
+// (Magazijn opdrachten, 9/15-10-2026): Order · Opties · Status · Interne
+// charge · Bedrijf · Van · Naar · Artikelcode · Voorraadcategorie · Lengte ·
+// Breedte · Dikte · Hvh(p) · Hvh(w) · Kg(p) · Kg(w) — then the charge. The tree
+// places Status after Opties.
 const COLUMNS: TreeColumn<WarehouseTreeRow>[] = [
   { key: "order", header: "Order", cell: (row) => orDash(row.orderNumber) },
   { key: "options", header: "Options", cell: (row) => orDash(row.options) },
@@ -178,6 +184,8 @@ export const WarehouseWorkOrdersTable = ({
     });
   };
 
+  // `Vrijgeven` releases, then opens the print dialog; cancelling the print
+  // leaves the order released (327402, 9-10-2026).
   const release = (printStockLabels: boolean) =>
     run(async () => {
       for (const uuid of pickedOrders) {
@@ -185,6 +193,10 @@ export const WarehouseWorkOrdersTable = ({
         if (!result.success) {
           return result;
         }
+        window.open(
+          warehouseWorkOrderPrintHref(uuid, printStockLabels),
+          "_blank",
+        );
       }
       return { success: true };
     });
@@ -326,6 +338,7 @@ export const WarehouseWorkOrdersTable = ({
 
       <TableToolbar
         searchPlaceholder="Search number, order or product…"
+        searchWithFind
         filters={filters}
       />
 
@@ -336,6 +349,7 @@ export const WarehouseWorkOrdersTable = ({
         onSelectedChange={setSelected}
         workOrderHref={(row) => `/warehouse-work-orders/${row.workOrderUuid}`}
         levelsHeader="Day / Type / Order / Line"
+        statusAfter="options"
         emptyMessage="No warehouse work orders found."
       />
 
@@ -344,6 +358,20 @@ export const WarehouseWorkOrdersTable = ({
         singular="work order"
         plural="work orders"
       />
+
+      {/* The selected line's work order, planned against done, as the
+          reference sums it under the tree. */}
+      <div className="rounded-lg border p-3">
+        <WorkOrderSummary
+          rows={
+            oneLine
+              ? tree.rows.filter(
+                  (row) => row.workOrderUuid === oneLine.workOrderUuid,
+                )
+              : []
+          }
+        />
+      </div>
 
       {/* The reference's footer: Voorraad · Order · Opties · Teksten for the
           selected line, under the tree rather than in a window. */}

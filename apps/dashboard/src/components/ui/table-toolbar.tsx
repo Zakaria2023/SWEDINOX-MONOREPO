@@ -11,6 +11,8 @@ import { ReactNode } from "react";
 type Props = {
   /** Left off, the overview offers no free-text search. */
   searchPlaceholder?: string;
+  /** A `Find` button beside the search box. */
+  searchWithFind?: boolean;
   filters?: readonly TableFilterControl[];
   /**
    * Table actions such as column selection, export and new-record controls.
@@ -21,6 +23,7 @@ type Props = {
 
 export const TableToolbar = ({
   searchPlaceholder,
+  searchWithFind = false,
   filters = [],
   children,
 }: Props) => {
@@ -42,7 +45,11 @@ export const TableToolbar = ({
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-3">
         {searchPlaceholder && (
-          <TableSearch placeholder={searchPlaceholder} className="w-64" />
+          <TableSearch
+            placeholder={searchPlaceholder}
+            className={searchWithFind ? "w-80" : "w-64"}
+            withFind={searchWithFind}
+          />
         )}
         {filters.map((filter) => (
           <TableFilter key={filter.key} control={filter} />

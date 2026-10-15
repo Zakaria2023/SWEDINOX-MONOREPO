@@ -424,6 +424,21 @@ export const DOMAIN_TERMS: Record<string, DomainTerm> = {
     nl: "suppliers.${i}.preferred",
     ar: "suppliers.${i}.preferred",
   },
+
+  // ── Magazijn opdrachten, verbatim (327402 … 327411, 9–15-10-2026) ────────
+  "Day / Type / Order / Line": {
+    nl: "Dag / Type / Opdracht / Regel",
+    ar: "اليوم / النوع / الأمر / السطر",
+  },
+  "Warehouse work order": { nl: "Magazijn opdracht", ar: "أمر عمل المستودع" },
+  // The panel's own button reads `Find` in the Dutch UI.
+  Find: { nl: "Find", ar: "بحث" },
+  Subsection: { nl: "Subsectie", ar: "القسم الفرعي" },
+  // `Van` · `Naar`: the two places a work order line names.
+  To: { nl: "Naar", ar: "إلى" },
+  Ready: { nl: "Gereed", ar: "جاهز" },
+  "#Lines": { nl: "#Regels", ar: "#الأسطر" },
+  Pieces: { nl: "Stuks", ar: "قطع" },
 };
 
 /**
