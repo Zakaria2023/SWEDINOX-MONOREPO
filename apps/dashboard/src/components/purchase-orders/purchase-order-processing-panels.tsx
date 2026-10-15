@@ -2,7 +2,7 @@
 
 import {
   addPurchaseOrderOption,
-  addPurchaseOrderSupply,
+  addPurchaseOrderSuppliesForLine,
   deletePurchaseOrderOption,
   deletePurchaseOrderSupply,
   PurchaseOrderItemDetail,
@@ -15,6 +15,7 @@ import {
   purchaseOrderOptionSchema,
 } from "@/app/(dashboard)/purchase-orders/validation";
 import { StockSearchDialog } from "@/components/orders/stock-search-dialog";
+import type { StockSearchLot } from "@/lib/server/stock-search";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
@@ -45,25 +46,33 @@ import {
 } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2 } from "lucide-react";
-import { startTransition, useActionState, useEffect, useState } from "react";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { Controller, useForm } from "react-hook-form";
 
 type SuppliesPanelProps = {
   purchaseOrderUuid: string;
   supplies: PurchaseOrderSupplyRow[];
   receipts: PurchaseReceiptDocument[];
+  /** The line whose plates go out — the window opens on its size. */
+  items: PurchaseOrderItemDetail[];
+  /** The stock window, open — the order page opens it after an option. */
+  searching: boolean;
+  onSearchingChange: (open: boolean) => void;
 };
 
 type OptionsPanelProps = {
   purchaseOrderUuid: string;
   options: PurchaseOrderOptionRow[];
   items: PurchaseOrderItemDetail[];
-};
-
-type ChosenLot = {
-  uuid: string;
-  label: string;
-  available: number;
+  /** Called once each time an option is saved. */
+  onAdded?: () => void;
 };
 
 const PER_OPTIONS = ["TN", "KG", "M2", "M1", "ST"].map((unit) => ({
@@ -81,23 +90,33 @@ export const PurchaseOrderSuppliesPanel = ({
   purchaseOrderUuid,
   supplies,
   receipts,
+  items,
+  searching,
+  onSearchingChange,
 }: SuppliesPanelProps) => {
-  const [searching, setSearching] = useState(false);
-  const [chosen, setChosen] = useState<ChosenLot | null>(null);
-  const [quantity, setQuantity] = useState("");
   const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [state, dispatch, isPending] = useActionState(
-    addPurchaseOrderSupply,
-    {},
-  );
+  const [isAdding, startAdding] = useTransition();
 
-  useEffect(() => {
-    if (state.success) {
-      setChosen(null);
-      setQuantity("");
+  // What goes out is the line's own article: the window opens on its code
+  // and size, with technical stock only (404361/10, 15-10-2026).
+  const line = items.find((item) => item.lineStatus !== "cancelled") ?? null;
+
+  const supplyLots = (lots: StockSearchLot[]) => {
+    if (!line) {
+      return;
     }
-  }, [state]);
+    startAdding(async () => {
+      const result = await addPurchaseOrderSuppliesForLine(
+        line.uuid,
+        lots.map((lot) => lot.uuid),
+      );
+      setDeleteError(result.error ?? null);
+      if (!result.error) {
+        onSearchingChange(false);
+      }
+    });
+  };
 
   const kgOut = supplies.reduce(
     (sum, supply) =>
@@ -141,7 +160,8 @@ export const PurchaseOrderSuppliesPanel = ({
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => setSearching(true)}
+            onClick={() => onSearchingChange(true)}
+            disabled={!line || isAdding}
           >
             <Plus className="me-1.5 size-4" />
             New
@@ -158,51 +178,6 @@ export const PurchaseOrderSuppliesPanel = ({
           </Button>
         </div>
         <FormError>{deleteError}</FormError>
-
-        {chosen && (
-          <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-muted/30 p-3">
-            <div>
-              <p className="text-xs text-muted-foreground">Lot</p>
-              <p className="text-sm font-medium">{chosen.label}</p>
-            </div>
-            <div className="w-32">
-              <FormLabel htmlFor="supply-quantity">
-                Qty (of {formatNumber(chosen.available)})
-              </FormLabel>
-              <Input
-                id="supply-quantity"
-                inputMode="decimal"
-                value={quantity}
-                onChange={(event) => setQuantity(event.target.value)}
-              />
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              disabled={isPending || !quantity}
-              onClick={() =>
-                startTransition(() =>
-                  dispatch({
-                    purchaseOrderUuid,
-                    stockUuid: chosen.uuid,
-                    quantity,
-                  }),
-                )
-              }
-            >
-              {isPending ? "Adding…" : "Add supply"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setChosen(null)}
-            >
-              Cancel
-            </Button>
-            <FormError>{state.error}</FormError>
-          </div>
-        )}
 
         <Table>
           <TableHeader>
@@ -313,24 +288,20 @@ export const PurchaseOrderSuppliesPanel = ({
 
       <StockSearchDialog
         open={searching}
-        onOpenChange={setSearching}
-        onChoose={(choice) => {
-          if (choice.lot) {
-            setChosen({
-              uuid: choice.lot.uuid,
-              label: [
-                choice.lot.productCode,
-                choice.lot.internalBatch,
-                choice.lot.locationName,
-              ]
-                .filter(Boolean)
-                .join(" · "),
-              available: choice.lot.available,
-            });
-            setQuantity(String(choice.lot.available));
-          }
-          setSearching(false);
-        }}
+        onOpenChange={onSearchingChange}
+        onChoose={() => onSearchingChange(false)}
+        initialProductCode={line?.productCode ?? null}
+        initialDimensions={
+          line
+            ? {
+                lengthMm: line.lengthMm,
+                widthMm: line.widthMm,
+                thicknessMm:
+                  line.thicknessMm === null ? null : Number(line.thicknessMm),
+              }
+            : null
+        }
+        onChooseLots={supplyLots}
       />
     </CollapsibleSection>
   );
@@ -344,6 +315,7 @@ export const PurchaseOrderOptionsPanel = ({
   purchaseOrderUuid,
   options,
   items,
+  onAdded,
 }: OptionsPanelProps) => {
   const [adding, setAdding] = useState(false);
   const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
@@ -381,12 +353,17 @@ export const PurchaseOrderOptionsPanel = ({
     },
   });
 
+  // The answer already acted on, so a re-render does not act on it twice.
+  const handled = useRef<typeof state | null>(null);
+
   useEffect(() => {
-    if (state.success) {
+    if (state.success && handled.current !== state) {
+      handled.current = state;
       setAdding(false);
       reset();
+      onAdded?.();
     }
-  }, [state, reset]);
+  }, [state, reset, onAdded]);
 
   const lineOf = (uuid: string) => {
     const line = items.find((item) => item.uuid === uuid);

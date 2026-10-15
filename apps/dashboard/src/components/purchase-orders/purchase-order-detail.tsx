@@ -105,6 +105,8 @@ export const PurchaseOrderDetailView = ({
   const [isSendOpen, setIsSendOpen] = useState(false);
   const [isConfirmLinesOpen, setIsConfirmLinesOpen] = useState(false);
   const [isPreNotifyOpen, setIsPreNotifyOpen] = useState(false);
+  // The stock window that chooses what a `Processing` order sends out.
+  const [isSupplySearchOpen, setIsSupplySearchOpen] = useState(false);
   const [raised, setRaised] = useState(false);
   const [error, setError] = useState<string | undefined>();
   // Said after an action went through — the zero-amount lines on Make
@@ -756,12 +758,22 @@ export const PurchaseOrderDetailView = ({
             purchaseOrderUuid={purchaseOrder.uuid}
             supplies={purchaseOrder.supplies}
             receipts={purchaseOrder.receipts}
+            items={purchaseOrder.items}
+            searching={isSupplySearchOpen}
+            onSearchingChange={setIsSupplySearchOpen}
           />
         )}
         <PurchaseOrderOptionsPanel
           purchaseOrderUuid={purchaseOrder.uuid}
           options={purchaseOrder.options}
           items={purchaseOrder.items}
+          // The line now names its step, so the window reopens to choose
+          // the plates it is done to (404361/10, 15-10-2026).
+          onAdded={() => {
+            if (isProcessing && purchaseOrder.supplies.length === 0) {
+              setIsSupplySearchOpen(true);
+            }
+          }}
         />
 
         {/* What has actually arrived. Booked against the order since receivals

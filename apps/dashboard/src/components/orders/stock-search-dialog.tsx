@@ -75,10 +75,29 @@ export type StockSearchChoice =
       lot: StockSearchLot | null;
     };
 
+/** The size a window opens on — a processing line's own plates. */
+export type StockSearchDimensions = {
+  lengthMm: number | null;
+  widthMm: number | null;
+  thicknessMm: number | null;
+};
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onChoose: (choice: StockSearchChoice) => void;
+  /**
+   * Opens on these dimensions with `Only articles with technical stock`
+   * ticked, and searches at once — how the window reopens to choose what a
+   * `Processing` line sends out (404361, 15-10-2026).
+   */
+  initialDimensions?: StockSearchDimensions | null;
+  /**
+   * Ticks lots instead of choosing one, and commits them with `Use selected
+   * lines` (`Gebruik geselecteerde regels`). A lot held for others reads red
+   * with nothing available and cannot be ticked.
+   */
+  onChooseLots?: (lots: StockSearchLot[]) => void;
   /** Seeds the product filter, so the dialog opens where the line already is. */
   initialProductCode?: string | null;
   /**
@@ -217,7 +236,13 @@ export const StockSearchDialog = ({
   onChoose,
   initialProductCode,
   productOnly = false,
+  initialDimensions = null,
+  onChooseLots,
 }: Props) => {
+  const seedLength = initialDimensions?.lengthMm ?? null;
+  const seedWidth = initialDimensions?.widthMm ?? null;
+  const seedThickness = initialDimensions?.thicknessMm ?? null;
+  const seeded = initialDimensions !== null;
   // The lot grid opens on the shelf whatever the document: the reference's
   // purchase order opened on `Voorraad` too (9-10-2026).
   const openingTab: StockWindowTab = "stock";
@@ -226,6 +251,10 @@ export const StockSearchDialog = ({
     ...EMPTY_FILTERS,
     tab: openingTab,
     productCode: initialProductCode ?? "",
+    lengthFrom: seedLength ? String(seedLength) : "",
+    widthFrom: seedWidth ? String(seedWidth) : "",
+    thicknessFrom: seedThickness ? String(seedThickness) : "",
+    onlyWithTechnicalStock: seeded,
   });
 
   const [filters, setFilters] = useState<Filters>(openingFilters);
@@ -242,6 +271,8 @@ export const StockSearchDialog = ({
   const [reservations, setReservations] = useState<StockLotDialogData | null>(
     null,
   );
+  // The lots ticked when the window chooses several.
+  const [checkedLots, setCheckedLots] = useState<string[]>([]);
 
   const runSearch = (next: Filters) => {
     const margin = (value: string) =>
@@ -284,21 +315,26 @@ export const StockSearchDialog = ({
     if (!open) {
       return;
     }
-    const seeded: Filters = {
+    const opening: Filters = {
       ...EMPTY_FILTERS,
       tab: openingTab,
       productCode: initialProductCode ?? "",
+      lengthFrom: seedLength ? String(seedLength) : "",
+      widthFrom: seedWidth ? String(seedWidth) : "",
+      thicknessFrom: seedThickness ? String(seedThickness) : "",
+      onlyWithTechnicalStock: seeded,
     };
-    setFilters(seeded);
+    setFilters(opening);
     setArticles([]);
     setLots([]);
     setSelectedArticle(null);
     setSelectedLot(null);
+    setCheckedLots([]);
     setHasSearched(false);
-    if (initialProductCode) {
-      runSearch(seeded);
+    if (initialProductCode || seeded) {
+      runSearch(opening);
     }
-  }, [open, initialProductCode, openingTab]);
+  }, [open, initialProductCode, openingTab, seeded, seedLength, seedWidth, seedThickness]);
 
   // The `Product group` dropdown is read once, the first time the window opens.
   useEffect(() => {
@@ -724,6 +760,7 @@ export const StockSearchDialog = ({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {onChooseLots && <TableHead />}
                     {/* `Order hvh.` on the reference: what this document
                         has ordered of the lot, which on a new line is 0.
                         On the purchase tab the slot names the line instead. */}
@@ -758,6 +795,24 @@ export const StockSearchDialog = ({
                         lot.available <= 0 && "text-destructive",
                       )}
                     >
+                      {onChooseLots && (
+                        <TableCell>
+                          <Checkbox
+                            aria-label={`Use lot ${lot.internalBatch ?? lot.uuid}`}
+                            checked={checkedLots.includes(lot.uuid)}
+                            disabled={lot.available <= 0}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={(event) => {
+                              const on = event.target.checked;
+                              setCheckedLots((current) =>
+                                on
+                                  ? [...current, lot.uuid]
+                                  : current.filter((uuid) => uuid !== lot.uuid),
+                              );
+                            }}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="text-right tabular-nums">
                         {isIncoming
                           ? `${lot.expectedDate ?? "—"} · IO${lot.purchaseOrderId ?? ""}`
@@ -816,7 +871,10 @@ export const StockSearchDialog = ({
                   ))}
                   {shownLots.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={16} className="text-muted-foreground">
+                      <TableCell
+                        colSpan={onChooseLots ? 17 : 16}
+                        className="text-muted-foreground"
+                      >
                         {filters.tab === "internal_production"
                           ? "Nothing in internal production."
                           : hasSearched && !isPending
@@ -919,8 +977,23 @@ export const StockSearchDialog = ({
           >
             Cancel
           </Button>
+          {onChooseLots && (
+            <Button
+              type="button"
+              disabled={checkedLots.length === 0}
+              onClick={() =>
+                onChooseLots(
+                  lots.filter(
+                    (lot) => checkedLots.includes(lot.uuid) && lot.available > 0,
+                  ),
+                )
+              }
+            >
+              Use selected lines
+            </Button>
+          )}
           {/* A purchase line names an article, not a parcel. */}
-          {!productOnly && (
+          {!productOnly && !onChooseLots && (
             <Button
               type="button"
               disabled={!chosenLot || chosenLot.available <= 0}

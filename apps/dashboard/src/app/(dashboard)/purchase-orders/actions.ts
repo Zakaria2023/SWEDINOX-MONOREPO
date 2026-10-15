@@ -139,6 +139,7 @@ import {
   gt,
   inArray,
   isNotNull,
+  isNull,
   ne,
   sql,
 } from "drizzle-orm";
@@ -519,6 +520,14 @@ export type PurchaseSupplierDefaults = {
 export type YardDeliveryAddress = {
   uuid: SelectCompanyAddresses["uuid"];
   label: string;
+};
+
+/** One lot handed to the processor, and how much of it. */
+type SupplyLotInput = {
+  purchaseOrderUuid: string;
+  lot: SelectStock;
+  quantity: number;
+  deliveryDate: string | null;
 };
 
 export const getPurchaseSupplierDefaults = async (
@@ -2699,6 +2708,47 @@ const raiseSupplyPicking = async (
  * cannot be sold while it waits to go out — the reference's coil on
  * `Bewerkers` read reserved `Definitive` to its processing order.
  */
+/** A lot handed to the processor: the supply row, and the lot held for it. */
+const supplyLot = async (
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  { purchaseOrderUuid, lot, quantity, deliveryDate }: SupplyLotInput,
+): Promise<void> => {
+  const kg =
+    Number(lot.quantity) > 0
+      ? (Number(lot.quantityKg ?? 0) * quantity) / Number(lot.quantity)
+      : 0;
+
+  await tx.insert(PurchaseOrderSupplies).values({
+    uuid: generateUuid(),
+    purchaseOrderUuid,
+    stockUuid: lot.uuid,
+    productUuid: lot.productUuid,
+    deliveryDate,
+    lengthMm: lot.lengthMm,
+    widthMm: lot.widthMm,
+    thicknessMm: lot.thicknessMm,
+    qtyPlanned: quantity.toFixed(3),
+    kgPlanned: kg.toFixed(2),
+    m1Planned: ((Number(lot.lengthMm ?? 0) / 1000) * quantity).toFixed(3),
+    status: "new",
+  });
+
+  const [held] = await tx
+    .update(Stock)
+    .set({
+      reservedQuantity: sql`${Stock.reservedQuantity} + ${quantity.toFixed(3)}`,
+    })
+    .where(
+      and(
+        eq(Stock.uuid, lot.uuid),
+        eq(Stock.reservedQuantity, lot.reservedQuantity ?? "0"),
+      ),
+    );
+  if (held.affectedRows === 0) {
+    throw new Error("The lot changed meanwhile — please try again.");
+  }
+};
+
 export const addPurchaseOrderSupply = async (
   _prevState: PurchaseOrderActionResult,
   data: PurchaseOrderSupplyFormValues,
@@ -2745,40 +2795,13 @@ export const addPurchaseOrderSupply = async (
           `Only ${free} of this lot is free to supply — the rest is reserved.`,
         );
       }
-      const kg =
-        Number(lot.quantity) > 0
-          ? (Number(lot.quantityKg ?? 0) * quantity) / Number(lot.quantity)
-          : 0;
 
-      await tx.insert(PurchaseOrderSupplies).values({
-        uuid: generateUuid(),
+      await supplyLot(tx, {
         purchaseOrderUuid: values.purchaseOrderUuid,
-        stockUuid: lot.uuid,
-        productUuid: lot.productUuid,
+        lot,
+        quantity,
         deliveryDate: values.deliveryDate || null,
-        lengthMm: lot.lengthMm,
-        widthMm: lot.widthMm,
-        thicknessMm: lot.thicknessMm,
-        qtyPlanned: quantity.toFixed(3),
-        kgPlanned: kg.toFixed(2),
-        m1Planned: ((Number(lot.lengthMm ?? 0) / 1000) * quantity).toFixed(3),
-        status: "new",
       });
-
-      const [held] = await tx
-        .update(Stock)
-        .set({
-          reservedQuantity: sql`${Stock.reservedQuantity} + ${quantity.toFixed(3)}`,
-        })
-        .where(
-          and(
-            eq(Stock.uuid, lot.uuid),
-            eq(Stock.reservedQuantity, lot.reservedQuantity ?? "0"),
-          ),
-        );
-      if (held.affectedRows === 0) {
-        throw new Error("The lot changed meanwhile — please try again.");
-      }
     });
 
     revalidatePath(`/purchase-orders/${values.purchaseOrderUuid}`);
@@ -3068,5 +3091,118 @@ export const updatePurchaseLinePrice = async (
     return { success: true, purchaseOrderUuid: line.purchaseOrderUuid };
   } catch (error) {
     return { error: describeError(error, "Failed to change the price") };
+  }
+};
+
+/**
+ * `Use selected lines` on the window a `Processing` line opens (404361,
+ * 15-10-2026): the ticked lots become the order's supplies — the material
+ * going out — each held for the order, up to the line's own quantity (2 ST
+ * of lot 404766's 8). The line's reception is expected on the line's date.
+ */
+export const addPurchaseOrderSuppliesForLine = async (
+  purchaseOrderItemUuid: string,
+  stockUuids: string[],
+): Promise<PurchaseOrderActionResult> => {
+  await requireAuth();
+  if (stockUuids.length === 0) {
+    return { error: "Tick the lots to send out." };
+  }
+
+  try {
+    const purchaseOrderUuid = await db.transaction(async (tx) => {
+      const [line] = await tx
+        .select({
+          purchaseOrderUuid: PurchaseOrderItems.purchaseOrderUuid,
+          quantity: PurchaseOrderItems.quantity,
+          receiptDate: PurchaseOrderItems.receiptDate,
+          purchaseOrderType: PurchaseOrders.purchaseOrderType,
+          orderStatus: PurchaseOrders.status,
+        })
+        .from(PurchaseOrderItems)
+        .innerJoin(
+          PurchaseOrders,
+          eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
+        )
+        .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid))
+        .limit(1);
+      if (!line) {
+        throw new Error("Purchase line not found.");
+      }
+      if (line.purchaseOrderType !== "processing") {
+        throw new Error("Only a processing order supplies material.");
+      }
+      if (line.orderStatus === "cancelled") {
+        throw new Error("A cancelled purchase order supplies nothing.");
+      }
+
+      const [supplied] = await tx
+        .select({
+          quantity: sql<string>`COALESCE(SUM(${PurchaseOrderSupplies.qtyPlanned}), 0)`,
+        })
+        .from(PurchaseOrderSupplies)
+        .where(eq(PurchaseOrderSupplies.purchaseOrderUuid, line.purchaseOrderUuid));
+
+      const stillToSend =
+        Number(line.quantity ?? 0) - Number(supplied?.quantity ?? 0);
+      if (stillToSend <= 0) {
+        throw new Error("Everything this order processes is already supplied.");
+      }
+
+      const lots = await tx
+        .select()
+        .from(Stock)
+        .where(inArray(Stock.uuid, stockUuids));
+      const byUuid = new Map(lots.map((lot) => [lot.uuid, lot]));
+
+      // Ticked order, each lot giving what it has free until the line is
+      // covered.
+      const takes = stockUuids.reduce<{ lot: SelectStock; take: number }[]>(
+        (taken, uuid) => {
+          const lot = byUuid.get(uuid);
+          const covered = taken.reduce((sum, entry) => sum + entry.take, 0);
+          const free = lot
+            ? Number(lot.quantity) - Number(lot.reservedQuantity ?? 0)
+            : 0;
+          const take = Math.min(free, stillToSend - covered);
+          return lot && take > 0 ? [...taken, { lot, take }] : taken;
+        },
+        [],
+      );
+      if (takes.length === 0) {
+        throw new Error(
+          "None of the ticked lots has anything free — they are reserved for others.",
+        );
+      }
+
+      for (const { lot, take } of takes) {
+        await supplyLot(tx, {
+          purchaseOrderUuid: line.purchaseOrderUuid,
+          lot,
+          quantity: take,
+          deliveryDate: todayDateString(),
+        });
+      }
+
+      // `Pre-announced` on the reception reads the line's date.
+      if (line.receiptDate) {
+        await tx
+          .update(PurchaseLineReceivals)
+          .set({ preAnnouncedDeliveryDate: line.receiptDate })
+          .where(
+            and(
+              eq(PurchaseLineReceivals.purchaseOrderItemUuid, purchaseOrderItemUuid),
+              isNull(PurchaseLineReceivals.preAnnouncedDeliveryDate),
+            ),
+          );
+      }
+
+      return line.purchaseOrderUuid;
+    });
+
+    revalidatePath(`/purchase-orders/${purchaseOrderUuid}`);
+    return { success: true, purchaseOrderUuid };
+  } catch (error) {
+    return { error: describeError(error, "Failed to add the supplies") };
   }
 };
