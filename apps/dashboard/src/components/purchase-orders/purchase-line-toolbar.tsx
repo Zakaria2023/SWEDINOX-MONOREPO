@@ -2,8 +2,10 @@
 
 import {
   closePurchaseLine,
+  deletePurchaseOrderLine,
   PurchaseOrderItemDetail,
 } from "@/app/(dashboard)/purchase-orders/actions";
+import { NewPurchaseLineDialog } from "@/components/purchase-orders/new-purchase-line-dialog";
 import { Button } from "@/components/shadcn/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
@@ -25,11 +27,15 @@ import { useState, useTransition } from "react";
 // The reference's Lines toolbar on a saved order: `New · Delete · Sawing
 // specifications · (product) · (stock) · Calculate · PAC · Pre-notify · View`
 // (404355, 9–15-10-2026), then the option shortcuts.
-// Adding and deleting lines on a saved order is not built yet, so those two
-// are greyed with the reason; `Close line` is ours.
+// `New` and `Delete` work while the order is provisional (9-10-2026); `Close
+// line` is ours.
 const OPTION_SHORTCUTS = ["DUPK320", "NG", "K320", "BF", "F", "L", "K", "LSR"];
 
 type Props = {
+  purchaseOrderUuid: string;
+  /** New and Delete change the lines only while the order is a draft. */
+  isProvisional: boolean;
+  isProcessing: boolean;
   selected: PurchaseOrderItemDetail | null;
   /** The order's own `Pre-notify`, which the line toolbar repeats. */
   onPreNotify: () => void;
@@ -47,6 +53,9 @@ type Props = {
  * be pressed lives in `purchaseLineActions`, beside the status rule it mirrors.
  */
 export const PurchaseLineToolbar = ({
+  purchaseOrderUuid,
+  isProvisional,
+  isProcessing,
   selected,
   onPreNotify,
   canPreNotify,
@@ -54,6 +63,8 @@ export const PurchaseLineToolbar = ({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
   const [isCloseOpen, setIsCloseOpen] = useState(false);
+  const [isNewOpen, setIsNewOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   const permitted = purchaseLineActions(selected);
 
@@ -68,6 +79,17 @@ export const PurchaseLineToolbar = ({
     });
   };
 
+  const onDelete = () => {
+    if (!selected) {
+      return;
+    }
+    startTransition(async () => {
+      const result = await deletePurchaseOrderLine(selected.uuid);
+      setError(result.error);
+      setIsDeleteOpen(false);
+    });
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-muted/30 px-2 py-1">
@@ -75,8 +97,8 @@ export const PurchaseLineToolbar = ({
           type="button"
           variant="ghost"
           size="sm"
-          disabled
-          title="Adding a line to a saved order is not built yet"
+          disabled={!isProvisional || isPending}
+          onClick={() => setIsNewOpen(true)}
         >
           <Plus size={16} className="text-primary" />
           New
@@ -85,8 +107,8 @@ export const PurchaseLineToolbar = ({
           type="button"
           variant="ghost"
           size="sm"
-          disabled
-          title="Deleting a line from a saved order is not built yet"
+          disabled={!isProvisional || !selected || isPending}
+          onClick={() => setIsDeleteOpen(true)}
         >
           <X size={16} className="text-destructive" />
           Delete
@@ -183,6 +205,23 @@ export const PurchaseLineToolbar = ({
 
       <FormError>{error}</FormError>
 
+      <NewPurchaseLineDialog
+        purchaseOrderUuid={purchaseOrderUuid}
+        isProcessing={isProcessing}
+        open={isNewOpen}
+        onOpenChange={setIsNewOpen}
+      />
+      {selected && (
+        <ConfirmDialog
+          open={isDeleteOpen}
+          onOpenChange={setIsDeleteOpen}
+          title="Delete this line?"
+          description="The line goes, with its reception and its options. The order stays provisional."
+          confirmLabel="Delete"
+          isPending={isPending}
+          onConfirm={onDelete}
+        />
+      )}
       {selected && (
         <ConfirmDialog
           open={isCloseOpen}

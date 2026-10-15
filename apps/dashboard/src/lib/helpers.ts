@@ -7747,6 +7747,13 @@ export const representativeInitials = (
 };
 
 /**
+ * A dimension as a line's form holds it: `2000`, or blank where the article
+ * has none.
+ */
+export const positiveMmString = (value: number | string | null): string =>
+  value === null || Number(value) <= 0 ? "" : String(Number(value));
+
+/**
  * Where `Vrijgeven` sends the floor: the work order's slip, with its stock
  * labels unless it was released without them.
  */

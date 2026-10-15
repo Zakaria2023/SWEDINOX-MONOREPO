@@ -334,3 +334,13 @@ export const purchaseOrderOptionSchema = z.object({
 export type PurchaseOrderOptionFormValues = z.infer<
   typeof purchaseOrderOptionSchema
 >;
+
+// `New` on a saved provisional order's line grid: one line, its article
+// chosen in the Stock window, as on a new order.
+export const purchaseOrderLineSchema = purchaseOrderItemSchema.extend({
+  purchaseOrderUuid: z.string().min(1),
+});
+
+export type PurchaseOrderLineFormValues = z.infer<
+  typeof purchaseOrderLineSchema
+>;

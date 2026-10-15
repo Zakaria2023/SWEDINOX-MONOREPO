@@ -117,6 +117,8 @@ import {
   confirmPurchaseOrderSchema,
   PreNotifyFormValues,
   preNotifySchema,
+  PurchaseOrderLineFormValues,
+  purchaseOrderLineSchema,
   PurchaseOrderOptionFormValues,
   purchaseOrderOptionSchema,
   PurchaseOrderSupplyFormValues,
@@ -2555,6 +2557,225 @@ export const closePurchaseLine = async (
     return { success: true, purchaseOrderUuid: line.purchaseOrderUuid };
   } catch (error) {
     return { error: describeError(error, "Failed to close the purchase line") };
+  }
+};
+
+/**
+ * `New` on the line grid of a saved, still provisional order (9-10-2026): one
+ * more line, its article chosen in the Stock window, priced and weighed as a
+ * new order's lines are, numbered after the last, with its reception raised.
+ */
+export const addPurchaseOrderLine = async (
+  _prevState: PurchaseOrderActionResult,
+  values: PurchaseOrderLineFormValues,
+): Promise<PurchaseOrderActionResult> => {
+  const parsed = purchaseOrderLineSchema.safeParse(values);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "The line is not valid." };
+  }
+  const input = parsed.data;
+
+  try {
+    const user = await currentUser();
+    if (!user?.id) {
+      return { error: "User not authenticated" };
+    }
+
+    const [order] = await db
+      .select({
+        status: PurchaseOrders.status,
+        purchaseOrderType: PurchaseOrders.purchaseOrderType,
+        pickupDropoffCdPurchases: PurchaseOrders.pickupDropoffCdPurchases,
+      })
+      .from(PurchaseOrders)
+      .where(eq(PurchaseOrders.uuid, input.purchaseOrderUuid))
+      .limit(1);
+
+    if (!order) {
+      return { error: "Purchase order not found." };
+    }
+    if (order.status !== "provisional") {
+      return {
+        error:
+          "Lines are added while the order is provisional. Once it is made final, raise a new order for more.",
+      };
+    }
+
+    const [product] = await db
+      .select({
+        uuid: Products.uuid,
+        dimensionShape: Products.dimensionShape,
+        featuresQuality: Products.featuresQuality,
+        densityKgDm3: Products.densityKgDm3,
+        length: Products.length,
+        widthDiameter: Products.widthDiameter,
+        thickness: Products.thickness,
+        theoreticalThickness: Products.theoreticalThickness,
+        weightTheoretical: Products.weightTheoretical,
+        theoreticalWeight: Products.theoreticalWeight,
+        weightUnit: Products.weightUnit,
+      })
+      .from(Products)
+      .where(eq(Products.uuid, input.productUuid))
+      .limit(1);
+
+    if (!product) {
+      return { error: "That product could not be found." };
+    }
+
+    // A `Processing` line buys a step: € 0,00 per TN, priced on its options.
+    const isProcessing = order.purchaseOrderType === "processing";
+    const netPrice = isProcessing ? 0 : Number(input.netPrice ?? 0);
+    const priceUnit = isProcessing ? "TN" : (input.priceUnit || null);
+    const quantity = Number(input.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return { error: "Give the line a quantity." };
+    }
+    const weightKg = (articlePieceWeightKg(product, input) ?? 0) * quantity;
+
+    if (!isProcessing && isWeightPriceUnit(priceUnit) && weightKg <= 0) {
+      return {
+        error:
+          "This product has no weight, so a price per tonne or per kilo cannot be turned into an amount. Give the product its dimensions and density, or price the line per piece.",
+      };
+    }
+
+    const intOrNull = (value: string | undefined) => {
+      const number = Number(value);
+      return value && Number.isFinite(number) ? Math.round(number) : null;
+    };
+    const lineUnit = (input.unit ?? "").toLowerCase();
+    const unit = stockUnits.find((candidate) => candidate === lineUnit);
+
+    await db.transaction(async (tx) => {
+      const [last] = await tx
+        .select({
+          lineNumber: sql<number | null>`MAX(${PurchaseOrderItems.lineNumber})`,
+        })
+        .from(PurchaseOrderItems)
+        .where(eq(PurchaseOrderItems.purchaseOrderUuid, input.purchaseOrderUuid));
+
+      await tx.insert(PurchaseOrderItems).values({
+        uuid: generateUuid(),
+        purchaseOrderUuid: input.purchaseOrderUuid,
+        productUuid: input.productUuid,
+        quantity: input.quantity,
+        qtyPlanned: input.quantity,
+        unit,
+        status: "provisional",
+        lineNumber: Number(last?.lineNumber ?? 0) + 1,
+        sourceType:
+          input.sourceType ||
+          purchaseSourceTypeFor(order.pickupDropoffCdPurchases),
+        qualityCode: input.qualityCode?.trim() || null,
+        lengthMm: intOrNull(input.lengthMm),
+        widthMm: intOrNull(input.widthMm),
+        thicknessMm: input.thicknessMm?.trim() || null,
+        netPrice: netPrice.toFixed(4),
+        priceUnit,
+        kgPurchased: weightKg.toFixed(2),
+        amount: moneyString(
+          amountForWeight(netPrice, priceUnit, weightKg, { quantity }),
+        ),
+      });
+
+      await syncPurchaseLineReceiptDates(tx, input.purchaseOrderUuid);
+      await syncPurchaseLineReceipts(tx, input.purchaseOrderUuid);
+      await refreshPurchaseOrderTotals(tx, input.purchaseOrderUuid);
+    });
+
+    revalidatePath(`/purchase-orders/${input.purchaseOrderUuid}`);
+    revalidatePath("/purchase-lines");
+    return { success: true, purchaseOrderUuid: input.purchaseOrderUuid };
+  } catch (error) {
+    return { error: describeError(error, "Failed to add the line") };
+  }
+};
+
+/**
+ * `Delete` on the line grid of a saved, still provisional order: the line and
+ * the reception and options it carries go. Refused once anything hangs off
+ * it — a sale it was bought for, a work order, a lot, a reservation, a
+ * certificate or an invoice line.
+ */
+export const deletePurchaseOrderLine = async (
+  purchaseOrderItemUuid: string,
+): Promise<PurchaseOrderActionResult> => {
+  try {
+    const user = await currentUser();
+    if (!user?.id) {
+      return { error: "User not authenticated" };
+    }
+
+    const [line] = await db
+      .select({
+        purchaseOrderUuid: PurchaseOrderItems.purchaseOrderUuid,
+        received: PurchaseOrderItems.qtyReceived,
+        orderStatus: PurchaseOrders.status,
+        inUse: sql<number>`(
+          EXISTS (SELECT 1 FROM OrderItems oi
+                   WHERE oi.purchase_order_item_uuid = ${PurchaseOrderItems.uuid})
+          OR EXISTS (SELECT 1 FROM ${WarehouseWorkOrderLines}
+                   WHERE ${WarehouseWorkOrderLines.purchaseOrderItemUuid} = ${PurchaseOrderItems.uuid})
+          OR EXISTS (SELECT 1 FROM ${Stock}
+                   WHERE ${Stock.purchaseOrderItemUuid} = ${PurchaseOrderItems.uuid})
+          OR EXISTS (SELECT 1 FROM ${BatchCertificates}
+                   WHERE ${BatchCertificates.purchaseOrderItemUuid} = ${PurchaseOrderItems.uuid})
+          OR EXISTS (SELECT 1 FROM Reservations r
+                   WHERE r.purchase_order_item_uuid = ${PurchaseOrderItems.uuid})
+          OR EXISTS (SELECT 1 FROM ${PurchaseInvoiceItems}
+                   WHERE ${PurchaseInvoiceItems.purchaseOrderItemUuid} = ${PurchaseOrderItems.uuid})
+        )`.mapWith(Number),
+      })
+      .from(PurchaseOrderItems)
+      .innerJoin(
+        PurchaseOrders,
+        eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
+      )
+      .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid))
+      .limit(1);
+
+    if (!line) {
+      return { error: "Purchase line not found." };
+    }
+    if (line.orderStatus !== "provisional") {
+      return {
+        error:
+          "Lines are deleted while the order is provisional. A line on a final order is cancelled instead.",
+      };
+    }
+    if (Number(line.received ?? 0) > 0 || line.inUse) {
+      return {
+        error:
+          "Something already hangs off this line — a sale, a work order, a lot, a reservation, a certificate or an invoice — so it cannot be deleted.",
+      };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(PurchaseLineReceivals)
+        .where(
+          eq(PurchaseLineReceivals.purchaseOrderItemUuid, purchaseOrderItemUuid),
+        );
+      await tx
+        .delete(PurchaseOrderItemOptions)
+        .where(
+          eq(
+            PurchaseOrderItemOptions.purchaseOrderItemUuid,
+            purchaseOrderItemUuid,
+          ),
+        );
+      await tx
+        .delete(PurchaseOrderItems)
+        .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid));
+      await refreshPurchaseOrderTotals(tx, line.purchaseOrderUuid);
+    });
+
+    revalidatePath(`/purchase-orders/${line.purchaseOrderUuid}`);
+    revalidatePath("/purchase-lines");
+    return { success: true, purchaseOrderUuid: line.purchaseOrderUuid };
+  } catch (error) {
+    return { error: describeError(error, "Failed to delete the line") };
   }
 };
 

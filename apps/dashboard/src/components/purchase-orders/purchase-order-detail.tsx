@@ -561,6 +561,9 @@ export const PurchaseOrderDetailView = ({
         <h2 className="border-b pb-2 text-base font-semibold">Lines</h2>
         {canCancel && (
           <PurchaseLineToolbar
+            purchaseOrderUuid={purchaseOrder.uuid}
+            isProvisional={isProvisional}
+            isProcessing={isProcessing}
             selected={
               purchaseOrder.items.find(
                 (item) => item.uuid === selectedLineUuid,
