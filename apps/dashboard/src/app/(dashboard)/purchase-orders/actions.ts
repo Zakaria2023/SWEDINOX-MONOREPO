@@ -44,7 +44,10 @@ import {
   SelectPurchaseOrderItemOptions,
 } from "@/db/schema/purchase-order-item-options";
 import { applyReceipt } from "@/lib/server/receipts";
-import { crossDockReleaseRefusal } from "@/lib/server/cross-dock";
+import {
+  crossDockReleaseRefusal,
+  restateCoveredSalesLines,
+} from "@/lib/server/cross-dock";
 import {
   markSuppliesPicking,
   restatePurchaseLineOptions,
@@ -2905,5 +2908,83 @@ export const reportExWorksProcessorReceipt = async (
     return { success: true, purchaseOrderUuid };
   } catch (error) {
     return { error: describeError(error, "Failed to report the order complete") };
+  }
+};
+
+/**
+ * `Net Price` typed on a purchase line: the line's amount follows on the
+ * weight it is billed on — the weighbridge figure where there is one, the
+ * theoretical until then — and so does the header. While the order is
+ * provisional and once it is released alike (404360/10, 14-10-2026).
+ *
+ * 🔑 A `CD` sale bought on this line is costed on it, so its cost, profit and
+ * margin move with the price straight away.
+ */
+export const updatePurchaseLinePrice = async (
+  purchaseOrderItemUuid: string,
+  netPrice: string,
+): Promise<PurchaseOrderActionResult> => {
+  try {
+    await requireAuth();
+    const price = Number(netPrice.trim().replace(",", "."));
+    if (!Number.isFinite(price) || price < 0) {
+      return { error: "Net Price has to be a number of 0 or more." };
+    }
+
+    const [line] = await db
+      .select({
+        purchaseOrderUuid: PurchaseOrderItems.purchaseOrderUuid,
+        status: PurchaseOrderItems.status,
+        quantity: PurchaseOrderItems.quantity,
+        priceUnit: PurchaseOrderItems.priceUnit,
+        kgPurchased: PurchaseOrderItems.kgPurchased,
+        kgActual: PurchaseOrderItems.kgActual,
+        orderStatus: PurchaseOrders.status,
+      })
+      .from(PurchaseOrderItems)
+      .innerJoin(
+        PurchaseOrders,
+        eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
+      )
+      .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid))
+      .limit(1);
+
+    if (!line) {
+      return { error: "Purchase line not found." };
+    }
+    if (line.orderStatus === "cancelled" || line.status === "cancelled") {
+      return { error: "A cancelled line keeps its price." };
+    }
+    if (line.status === "invoiced") {
+      return { error: "This line has been invoiced, so its price is settled." };
+    }
+
+    const billingKg = Number(line.kgActual ?? line.kgPurchased ?? 0);
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(PurchaseOrderItems)
+        .set({
+          netPrice: price.toFixed(4),
+          amount: moneyString(
+            amountForWeight(price, line.priceUnit, billingKg, {
+              quantity: Number(line.quantity ?? 0),
+            }),
+          ),
+        })
+        .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid));
+
+      await refreshPurchaseOrderTotals(tx, line.purchaseOrderUuid);
+      await restatePurchaseOrderAmount(tx, line.purchaseOrderUuid);
+      await restateCoveredSalesLines(tx, purchaseOrderItemUuid);
+    });
+
+    revalidatePath(`/purchase-orders/${line.purchaseOrderUuid}`);
+    revalidatePath("/purchase-orders");
+    revalidatePath("/purchase-lines");
+    revalidatePath("/orders", "layout");
+    return { success: true, purchaseOrderUuid: line.purchaseOrderUuid };
+  } catch (error) {
+    return { error: describeError(error, "Failed to change the price") };
   }
 };

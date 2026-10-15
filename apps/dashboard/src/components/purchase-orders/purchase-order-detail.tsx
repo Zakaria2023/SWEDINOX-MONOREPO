@@ -50,6 +50,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { PurchaseLineToolbar } from "@/components/purchase-orders/purchase-line-toolbar";
+import { PurchaseLinePriceCell } from "@/components/purchase-orders/purchase-line-price-cell";
 import { ReceptionToolbar } from "@/components/purchase-orders/reception-toolbar";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
@@ -670,7 +671,16 @@ export const PurchaseOrderDetailView = ({
                       )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatMoney(Number(item.netPrice ?? 0))}
+                      <PurchaseLinePriceCell
+                        purchaseOrderItemUuid={item.uuid}
+                        netPrice={item.netPrice}
+                        editable={
+                          canCancel &&
+                          item.lineStatus !== "cancelled" &&
+                          item.lineStatus !== "invoiced"
+                        }
+                        onError={setError}
+                      />
                     </TableCell>
                     <TableCell>{orDash(item.priceUnit)}</TableCell>
                     <TableCell className="text-right tabular-nums">

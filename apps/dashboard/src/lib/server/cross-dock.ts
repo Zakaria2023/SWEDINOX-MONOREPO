@@ -703,3 +703,50 @@ export const crossDockReleaseRefusal = async (
 
   return null;
 };
+
+/**
+ * The purchase line's price moved, so the `CD` sales lines it covers are
+ * costed again at once — on a released order too. Watched on 404360/10
+ * (14-10-2026): `Net Price` € 2 500 per TN on 157 kg made O108307/10 cost
+ * € 392,50 and earn € 87,50 (18,2 %) on its € 480, while `Profit w.r.t.
+ * replacement price` stayed where it was. Each line takes its share of the
+ * purchase line's amount, as `coverSalesLineWithPurchase` gives it.
+ */
+export const restateCoveredSalesLines = async (
+  tx: Transaction,
+  purchaseOrderItemUuid: string,
+): Promise<void> => {
+  const [purchaseLine] = await tx
+    .select({
+      amount: PurchaseOrderItems.amount,
+      quantity: PurchaseOrderItems.quantity,
+    })
+    .from(PurchaseOrderItems)
+    .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid))
+    .limit(1);
+
+  const purchaseQuantity = Number(purchaseLine?.quantity ?? 0);
+  if (!purchaseLine || purchaseQuantity <= 0) {
+    return;
+  }
+
+  const covered = await tx
+    .select({ uuid: OrderItems.uuid, quantity: OrderItems.quantity })
+    .from(OrderItems)
+    .where(
+      and(
+        eq(OrderItems.purchaseOrderItemUuid, purchaseOrderItemUuid),
+        eq(OrderItems.sourceType, "cross_dock"),
+        ne(OrderItems.status, "cancelled"),
+      ),
+    );
+
+  for (const line of covered) {
+    const share = Math.min(1, Number(line.quantity ?? 0) / purchaseQuantity);
+    await restateLineCost(
+      tx,
+      line.uuid,
+      Number(purchaseLine.amount ?? 0) * share,
+    );
+  }
+};
