@@ -134,6 +134,10 @@ const PurchaseOrderLineRow = ({
   // before a product is chosen: the code counts in tens, the date is the
   // header's, and a line starts provisional in the standard category.
   const headerDeliveryDate = useWatch({ control, name: "deliveryDate" });
+  // A `Processing` order buys the step, not the metal: its line stays at
+  // € 0,00 per TN and the price is on the options (404361, 15-10-2026).
+  const purchaseOrderType = useWatch({ control, name: "purchaseOrderType" });
+  const priceLocked = readOnly || purchaseOrderType === "processing";
   const lineErrors = errors.items?.[index];
 
   const quantity = Number(line?.quantity ?? 0);
@@ -325,7 +329,7 @@ const PurchaseOrderLineRow = ({
             min="0"
             placeholder="0,00"
             aria-label="Net price"
-            disabled={readOnly}
+            disabled={priceLocked}
             aria-invalid={!!lineErrors?.netPrice}
             className={cn(cell, "w-24")}
             {...register(`items.${index}.netPrice`)}
@@ -342,7 +346,7 @@ const PurchaseOrderLineRow = ({
                 options={priceUnitOptions}
                 onValueChange={unitField.onChange}
                 className="h-8"
-                disabled={readOnly}
+                disabled={priceLocked}
               />
             )}
           />

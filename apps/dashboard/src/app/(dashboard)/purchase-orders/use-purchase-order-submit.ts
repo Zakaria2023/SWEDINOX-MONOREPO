@@ -123,6 +123,7 @@ const valuesOf = (
   }),
 
   purchaseOrderType: order.purchaseOrderType ?? undefined,
+  sawingWorkorderOneDelivery: order.sawingWorkorderOneDelivery ?? false,
   weightType: order.weightType ?? undefined,
   isOverlength: order.isOverlength ?? false,
   isPrinted: order.isPrinted ?? false,
@@ -173,6 +174,10 @@ const fieldsOf = (
   orderCategory: values.orderCategory || null,
 
   purchaseOrderType: values.purchaseOrderType || null,
+  // Only a `Processing` order shows the box, so only one can tick it.
+  sawingWorkorderOneDelivery:
+    values.purchaseOrderType === "processing" &&
+    values.sawingWorkorderOneDelivery,
   weightType: values.weightType || null,
   isOverlength: values.isOverlength,
   isPrinted: values.isPrinted,

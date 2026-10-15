@@ -71,6 +71,7 @@ export const purchaseOrderSchema = z.object({
 
   // Purchase order type
   purchaseOrderType: z.enum(purchaseOrderTypes).optional(),
+  sawingWorkorderOneDelivery: z.boolean(),
   weightType: z.enum(orderWeightTypes).optional(),
   isOverlength: z.boolean(),
   isPrinted: z.boolean(),
@@ -130,6 +131,7 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderFormValues = {
   // `Overlength` ticked (9-10-2026).
   purchaseOrderType: "materials",
   weightType: undefined,
+  sawingWorkorderOneDelivery: false,
   isOverlength: true,
   isPrinted: false,
   isMailed: false,
@@ -321,6 +323,7 @@ export const purchaseOrderOptionSchema = z.object({
   purchaseOrderUuid: z.string().min(1, "Purchase order is required"),
   purchaseOrderItemUuid: z.string().min(1, "Choose the line"),
   option: z.enum(stockOptions),
+  specification: z.string().max(255).optional(),
   quantity: z.string().optional(),
   grossPrice: z.string().min(1, "Enter the price"),
   per: z.string().min(1, "Choose what the price is per"),

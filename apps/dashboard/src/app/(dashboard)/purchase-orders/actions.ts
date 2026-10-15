@@ -400,6 +400,7 @@ export type PurchaseOrderOptionRow = Pick<
   | "referenceFactor"
   | "netPrice"
   | "amount"
+  | "specification"
 >;
 
 // A line of this order the supplier is being asked to take back.
@@ -506,6 +507,8 @@ export type PurchaseSupplierDefaults = {
   paymentTerms: SelectCompanies["paymentTerms"];
   deliveryTerms: SelectCompanies["deliveryTerms"];
   weightType: SelectCompanies["weightType"];
+  /** Whether VAT is calculated for this supplier — the summary's `VAT`. */
+  calculateVat: SelectCompanies["calculateVat"];
   /** The supplier's only contact, when it has exactly one. */
   contactUuid: SelectContacts["uuid"] | null;
   telephone: SelectCompanyAddresses["telephone"] | null;
@@ -527,6 +530,7 @@ export const getPurchaseSupplierDefaults = async (
       paymentTerms: Companies.paymentTerms,
       deliveryTerms: Companies.deliveryTerms,
       weightType: Companies.weightType,
+      calculateVat: Companies.calculateVat,
     })
     .from(Companies)
     .where(eq(Companies.uuid, companyUuid))
@@ -886,8 +890,13 @@ export const createPurchaseOrder = async (
     //
     // Found on 3-10-2026: 5 624 of 5 626 products carry no dimensions at all, so
     // this is the normal case here rather than an edge one.
+    // 🔑 A `Processing` order buys a step, not metal: its line is € 0,00 per
+    // TN whatever was typed, and the price sits on the line's options
+    // (404361, 15-10-2026).
+    const isProcessing = fields.purchaseOrderType === "processing";
+
     const weightless = items.filter((item) => {
-      if (!isWeightPriceUnit(item.priceUnit)) {
+      if (isProcessing || !isWeightPriceUnit(item.priceUnit)) {
         return false;
       }
       const product = productByUuid.get(item.productUuid);
@@ -930,7 +939,8 @@ export const createPurchaseOrder = async (
       // Stock (and the "in" movement) is created later, when the matching
       // purchase invoice arrives and the goods are actually received.
       for (const [index, item] of items.entries()) {
-        const netPrice = Number(item.netPrice ?? 0);
+        const netPrice = isProcessing ? 0 : Number(item.netPrice ?? 0);
+        const priceUnit = isProcessing ? "TN" : (item.priceUnit ?? null);
 
         const quantity = Number(item.quantity);
         const product = productByUuid.get(item.productUuid);
@@ -972,10 +982,10 @@ export const createPurchaseOrder = async (
           widthMm: intOrNull(item.widthMm),
           thicknessMm: item.thicknessMm?.trim() || null,
           netPrice: netPrice.toFixed(4),
-          priceUnit: item.priceUnit ?? null,
+          priceUnit,
           kgPurchased: weightKg.toFixed(2),
           amount: moneyString(
-            amountForWeight(netPrice, item.priceUnit ?? null, weightKg, {
+            amountForWeight(netPrice, priceUnit, weightKg, {
               quantity: Number(item.quantity ?? 0),
             }),
           ),
@@ -1278,6 +1288,7 @@ export const getPurchaseOrderDetail = async (
       referenceFactor: PurchaseOrderItemOptions.referenceFactor,
       netPrice: PurchaseOrderItemOptions.netPrice,
       amount: PurchaseOrderItemOptions.amount,
+      specification: PurchaseOrderItemOptions.specification,
     })
     .from(PurchaseOrderItemOptions)
     .where(eq(PurchaseOrderItemOptions.purchaseOrderUuid, uuid))
@@ -1416,10 +1427,20 @@ export const updatePurchaseOrder = async (
       return { error: "Cannot edit a cancelled purchase order." };
     }
 
+    // Locked once saved (404361, 15-10-2026): the supplier, the type, the
+    // weight type and `Sawing workorder with one delivery`.
+    const {
+      supplierUuid: _supplierUuid,
+      purchaseOrderType: _purchaseOrderType,
+      weightType: _weightType,
+      sawingWorkorderOneDelivery: _sawingWorkorderOneDelivery,
+      ...editable
+    } = fields;
+
     await db.transaction(async (tx) => {
       await tx
         .update(PurchaseOrders)
-        .set(fields)
+        .set(editable)
         .where(eq(PurchaseOrders.uuid, uuid));
 
       // A moved delivery date moves the receipt date of what is still to come.
@@ -1469,6 +1490,28 @@ export const makePurchaseOrderFinal = async (
     }
     if (order.status !== "provisional") {
       return { error: "Only a provisional purchase order can be made final." };
+    }
+
+    // A `Processing` line buys nothing until it names its step: `This line
+    // does not yet have an option` on 404361/10 kept Make final greyed.
+    const [optionless] = await db
+      .select({ uuid: PurchaseOrderItems.uuid })
+      .from(PurchaseOrderItems)
+      .innerJoin(
+        PurchaseOrders,
+        eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
+      )
+      .where(
+        and(
+          eq(PurchaseOrderItems.purchaseOrderUuid, uuid),
+          eq(PurchaseOrders.purchaseOrderType, "processing"),
+          ne(PurchaseOrderItems.status, "cancelled"),
+          sql`NOT EXISTS (SELECT 1 FROM ${PurchaseOrderItemOptions} WHERE ${PurchaseOrderItemOptions.purchaseOrderItemUuid} = ${PurchaseOrderItems.uuid})`,
+        ),
+      )
+      .limit(1);
+    if (optionless) {
+      return { error: "This line does not yet have an option" };
     }
 
     // 🔴 Bought for a customer, released only once the sale is: 404360 was
@@ -2814,6 +2857,8 @@ export const addPurchaseOrderOption = async (
         purchaseOrderItemUuid: values.purchaseOrderItemUuid,
         sortOrder: Number(last?.sortOrder ?? 0) + 10,
         option: values.option,
+        specification: values.specification?.trim() || null,
+        unit: "st",
         quantity: Number(values.quantity || 1).toFixed(3),
         grossPrice: Number(values.grossPrice).toFixed(4),
         per: values.per,
@@ -2970,6 +3015,7 @@ export const updatePurchaseLinePrice = async (
         kgPurchased: PurchaseOrderItems.kgPurchased,
         kgActual: PurchaseOrderItems.kgActual,
         orderStatus: PurchaseOrders.status,
+        purchaseOrderType: PurchaseOrders.purchaseOrderType,
       })
       .from(PurchaseOrderItems)
       .innerJoin(
@@ -2987,6 +3033,12 @@ export const updatePurchaseLinePrice = async (
     }
     if (line.status === "invoiced") {
       return { error: "This line has been invoiced, so its price is settled." };
+    }
+    if (line.purchaseOrderType === "processing") {
+      return {
+        error:
+          "A processing line stays at € 0,00 — its price is on its options.",
+      };
     }
 
     const billingKg = Number(line.kgActual ?? line.kgPurchased ?? 0);

@@ -128,6 +128,18 @@ export const PurchaseOrderDetailView = ({
   // `Make final` exists only on a provisional order; `Confirm` and
   // `Pre-notify` wake once it is final — the order is with the supplier.
   const isProvisional = purchaseOrder.status === "provisional";
+  // A `Processing` line names the step it buys in its options; until it
+  // does, the order cannot be made final (404361/10, 15-10-2026).
+  const isProcessing = purchaseOrder.purchaseOrderType === "processing";
+  const hasOptionlessLine =
+    isProcessing &&
+    purchaseOrder.items.some(
+      (item) =>
+        item.lineStatus !== "cancelled" &&
+        !purchaseOrder.options.some(
+          (option) => option.purchaseOrderItemUuid === item.uuid,
+        ),
+    );
   // `Par. return` wakes as soon as anything on the order has arrived — it was
   // live on `404102` with lines still `Received` and greyed on an order whose
   // every line was invoiced and gone (7-10-2026). The server re-checks that
@@ -228,7 +240,7 @@ export const PurchaseOrderDetailView = ({
                   setIsSendOpen(true);
                 });
               }}
-              disabled={isPending}
+              disabled={isPending || hasOptionlessLine}
             >
               <BadgeCheck className="me-1.5 size-4" />
               Make final
@@ -316,7 +328,7 @@ export const PurchaseOrderDetailView = ({
             <Button
               type="button"
               onClick={handleRaiseUnloading}
-              disabled={isPending}
+              disabled={isPending || isProvisional}
             >
               <Warehouse className="me-1.5 size-4" />
               {isPending ? "Raising…" : "Workorder"}
@@ -335,6 +347,15 @@ export const PurchaseOrderDetailView = ({
             Cancel purchase order
           </Button>
         </div>
+      )}
+
+      {hasOptionlessLine && (
+        <p
+          role="status"
+          className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm"
+        >
+          This line does not yet have an option
+        </p>
       )}
 
       {raised && (
@@ -676,6 +697,7 @@ export const PurchaseOrderDetailView = ({
                         netPrice={item.netPrice}
                         editable={
                           canCancel &&
+                          !isProcessing &&
                           item.lineStatus !== "cancelled" &&
                           item.lineStatus !== "invoiced"
                         }

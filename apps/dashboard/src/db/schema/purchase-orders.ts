@@ -52,6 +52,11 @@ export const PurchaseOrders = mysqlTable(
 
     // ── Purchase order type ───────────────────────────────────────────────────
     purchaseOrderType: mysqlEnum("purchase_order_type", purchaseOrderTypes),
+    // `Sawing workorder with one delivery` — the box a `Processing` order shows
+    // beside its type (404361, 15-10-2026). Locked once the order is saved.
+    sawingWorkorderOneDelivery: boolean("sawing_workorder_one_delivery").default(
+      false,
+    ),
     weightType: mysqlEnum("weight_type", orderWeightTypes),
     isOverlength: boolean("is_overlength").default(false),
     isPrinted: boolean("is_printed").default(false),

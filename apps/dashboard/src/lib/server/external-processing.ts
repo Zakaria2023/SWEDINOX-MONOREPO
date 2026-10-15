@@ -103,6 +103,9 @@ export const restatePurchaseLineOptions = async (
       purchaseOrderUuid: PurchaseOrderItems.purchaseOrderUuid,
       kgPurchased: PurchaseOrderItems.kgPurchased,
       quantity: PurchaseOrderItems.quantity,
+      lengthMm: PurchaseOrderItems.lengthMm,
+      widthMm: PurchaseOrderItems.widthMm,
+      thicknessMm: PurchaseOrderItems.thicknessMm,
     })
     .from(PurchaseOrderItems)
     .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid))
@@ -140,8 +143,13 @@ export const restatePurchaseLineOptions = async (
       .set({
         netPrice: net.toFixed(4),
         amount: moneyString(
+          // The plates' own size prices an area step: 2 plates of 2 m² at
+          // € 1,70 per M2 is € 6,80 (Grinding on 404361/10, 15-10-2026).
           amountForWeight(net, option.per, kg, {
             quantity: Number(option.quantity ?? line.quantity ?? 0),
+            lengthMm: line.lengthMm,
+            widthMm: line.widthMm,
+            thicknessMm: Number(line.thicknessMm ?? 0),
           }),
         ),
       })

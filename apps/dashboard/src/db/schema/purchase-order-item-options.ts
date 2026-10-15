@@ -42,6 +42,9 @@ export const PurchaseOrderItemOptions = mysqlTable(
     // `Per` — what the price is struck against: `TN` (decoiling), `M2`
     // (grinding, foil), `ST`.
     per: varchar("per", { length: 10 }).default("TN"),
+    // `Specificatie` — what exactly is asked for: `K320` on a Grinding step
+    // (404361, 15-10-2026). The returned lot carries it: `Grinding (K320)`.
+    specification: varchar("specification", { length: 255 }),
     discountPercent: decimal("discount_percent", {
       precision: 6,
       scale: 2,

@@ -353,11 +353,18 @@ export const PurchaseOrderOptionsPanel = ({
     {},
   );
 
+  // `Qty` starts at the line's own quantity (2 plates on 404361/10).
+  const lineQuantity = (uuid: string) =>
+    String(
+      Number(items.find((item) => item.uuid === uuid)?.orderedQuantity ?? 1),
+    );
+
   const {
     control,
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<PurchaseOrderOptionFormValues>({
     resolver: zodResolver(purchaseOrderOptionSchema),
@@ -365,7 +372,8 @@ export const PurchaseOrderOptionsPanel = ({
       purchaseOrderUuid,
       purchaseOrderItemUuid: items[0]?.uuid ?? "",
       option: "decoiling",
-      quantity: "1",
+      specification: "",
+      quantity: lineQuantity(items[0]?.uuid ?? ""),
       grossPrice: "",
       per: "TN",
       discountPercent: "0",
@@ -449,23 +457,25 @@ export const PurchaseOrderOptionsPanel = ({
           <TableHeader>
             <TableRow>
               <TableHead className="text-right">Line</TableHead>
-              <TableHead className="text-right">Sort</TableHead>
+              <TableHead className="text-right">Seq</TableHead>
               <TableHead>Option</TableHead>
               <TableHead className="text-right">Qty</TableHead>
               <TableHead>U</TableHead>
               <TableHead className="text-right">Gross price</TableHead>
               <TableHead>Per</TableHead>
               <TableHead className="text-right">Discount</TableHead>
+              <TableHead>U</TableHead>
               <TableHead className="text-right">Amount</TableHead>
               <TableHead className="text-right">Reference factor</TableHead>
               <TableHead className="text-right">Net price</TableHead>
+              <TableHead>Specificatie</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {options.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={11}
+                  colSpan={13}
                   className="h-16 text-center text-muted-foreground"
                 >
                   No options on this order.
@@ -499,8 +509,9 @@ export const PurchaseOrderOptionsPanel = ({
                   </TableCell>
                   <TableCell>{orDash(option.per)}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatNumber(Number(option.discountPercent ?? 0))} %
+                    {formatNumber(Number(option.discountPercent ?? 0))}
                   </TableCell>
+                  <TableCell>%</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatMoney(Number(option.amount ?? 0))}
                   </TableCell>
@@ -510,6 +521,7 @@ export const PurchaseOrderOptionsPanel = ({
                   <TableCell className="text-right tabular-nums">
                     {formatMoney(Number(option.netPrice ?? 0))}
                   </TableCell>
+                  <TableCell>{orDash(option.specification)}</TableCell>
                 </TableRow>
               ))
             )}
@@ -536,7 +548,10 @@ export const PurchaseOrderOptionsPanel = ({
                       value: item.uuid,
                       label: `${item.lineNumber === null ? "—" : item.lineNumber * 10} · ${item.productCode}`,
                     }))}
-                    onValueChange={field.onChange}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setValue("quantity", lineQuantity(value));
+                    }}
                   />
                 )}
               />
@@ -603,6 +618,13 @@ export const PurchaseOrderOptionsPanel = ({
                 id="option-discount"
                 inputMode="decimal"
                 {...register("discountPercent")}
+              />
+            </div>
+            <div>
+              <FormLabel htmlFor="option-specification">Specificatie</FormLabel>
+              <Input
+                id="option-specification"
+                {...register("specification")}
               />
             </div>
             <div>

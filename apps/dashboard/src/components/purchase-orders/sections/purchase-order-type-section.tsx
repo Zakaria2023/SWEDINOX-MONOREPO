@@ -1,6 +1,6 @@
 "use client";
 
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { PurchaseOrderFormValues } from "@/app/(dashboard)/purchase-orders/validation";
 import { SelectOption } from "@/components/shadcn/select";
 import { FormSelectField } from "@/components/ui/form-select-field";
@@ -22,6 +22,7 @@ export const PurchaseOrderTypeSection = ({
   locked,
 }: Props) => {
   const { register, control } = useFormContext<PurchaseOrderFormValues>();
+  const purchaseOrderType = useWatch({ control, name: "purchaseOrderType" });
 
   return (
     <section className="space-y-3">
@@ -36,6 +37,31 @@ export const PurchaseOrderTypeSection = ({
         emptyValue=""
         disabled={locked}
       />
+
+      {/* Only a `Processing` order offers it (404361, 15-10-2026). */}
+      {purchaseOrderType === "processing" && (
+        <Controller
+          control={control}
+          name="sawingWorkorderOneDelivery"
+          render={({ field }) => (
+            <label
+              className={
+                locked
+                  ? "flex items-center gap-2 text-sm text-muted-foreground"
+                  : "flex cursor-pointer items-center gap-2 text-sm"
+              }
+            >
+              <input
+                type="checkbox"
+                disabled={locked}
+                checked={field.value}
+                onChange={(e) => field.onChange(e.target.checked)}
+              />
+              Sawing workorder with one delivery
+            </label>
+          )}
+        />
+      )}
 
       <FormSelectField
         control={control}

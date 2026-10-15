@@ -30,7 +30,7 @@ import {
   formatMoney,
   formatNumber,
   todayDateString,
-  VAT_CODE_RATE,
+  getQuoteVatRatePercent,
 } from "@/lib/helpers";
 import { PURCHASE_ORDER_STATUS_LABELS } from "@/lib/labels";
 import { ClerkUserOption } from "@/lib/server/clerk";
@@ -46,6 +46,10 @@ type Props = {
 
 type SummaryProps = {
   items: PurchaseOrderFormValues["items"];
+  /** What the saved order's options add up to — `Options € 6,80`. */
+  optionsTotal: number;
+  /** The supplier's own `Calculate VAT`, as the quote summary reads it. */
+  calculatesVat: boolean;
 };
 
 /**
@@ -57,7 +61,11 @@ type SummaryProps = {
  * VAT is struck at the standard rate: 10 plates at € 2.500/TN came to
  * € 785,00, VAT € 164,85, € 949,85 in all (404355, 9-10-2026).
  */
-const PurchaseOrderSummary = ({ items }: SummaryProps) => {
+const PurchaseOrderSummary = ({
+  items,
+  optionsTotal,
+  calculatesVat,
+}: SummaryProps) => {
   const totals = items.reduce(
     (acc, line) => {
       const quantity = Number(line.quantity ?? 0);
@@ -77,15 +85,19 @@ const PurchaseOrderSummary = ({ items }: SummaryProps) => {
     },
     { materials: 0, weightKg: 0 },
   );
-  const vat = (totals.materials * VAT_CODE_RATE.vat_high_21) / 100;
+  const exclVat = totals.materials + optionsTotal;
+  // A supplier we do not calculate VAT for is billed none — `VAT € 0,00` on
+  // 404361 (15-10-2026) — by the same rule a quote's summary follows.
+  const vat =
+    (exclVat * getQuoteVatRatePercent(true, calculatesVat)) / 100;
 
   const rows: Array<[string, string, boolean?]> = [
     ["Materials", formatMoney(totals.materials)],
-    ["Options", formatMoney(0)],
+    ["Options", formatMoney(optionsTotal)],
     ["Surcharges", formatMoney(0), true],
-    ["Tot. excl. VAT", formatMoney(totals.materials)],
+    ["Tot. excl. VAT", formatMoney(exclVat)],
     ["VAT", formatMoney(vat), true],
-    ["Tot. incl. VAT", formatMoney(totals.materials + vat)],
+    ["Tot. incl. VAT", formatMoney(exclVat + vat)],
     ["Total weight", `${formatNumber(totals.weightKg)} Kg`],
   ];
 
@@ -154,6 +166,10 @@ export const PurchaseOrderForm = ({
   // was priced and weighed on them, so they are no longer the header's to
   // change.
   const locked = itemFields.length > 0;
+  // And once the order is saved, the supplier, the type, the weight type and
+  // `Sawing workorder with one delivery` stay what they were saved as
+  // (404361, 15-10-2026).
+  const headerLocked = locked || existing !== null;
 
   // The reference's banner: `Purchase order 404355, Holland Stainless Int,
   // Tel: 06 5065 6338, Fax: - Provisional`. The number is handed out on save
@@ -201,7 +217,7 @@ export const PurchaseOrderForm = ({
                 isLoadingSupplierData={isLoadingSupplierData}
                 handleSupplierChange={handleSupplierChange}
                 handleAgentChange={handleAgentChange}
-                locked={locked}
+                locked={headerLocked}
               />
               <PurchaseOrderFinancesSection
                 paymentTermOptions={paymentTermOptions}
@@ -219,9 +235,16 @@ export const PurchaseOrderForm = ({
               <PurchaseOrderTypeSection
                 purchaseOrderTypeOptions={purchaseOrderTypeOptions}
                 weightTypeOptions={weightTypeOptions}
-                locked={locked}
+                locked={headerLocked}
               />
-              <PurchaseOrderSummary items={items ?? []} />
+              <PurchaseOrderSummary
+                items={items ?? []}
+                optionsTotal={(existing?.options ?? []).reduce(
+                  (sum, option) => sum + Number(option.amount ?? 0),
+                  0,
+                )}
+                calculatesVat={supplierDefaults?.calculateVat !== false}
+              />
             </div>
           </div>
         </section>
