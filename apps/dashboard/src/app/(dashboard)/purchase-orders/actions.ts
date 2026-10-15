@@ -185,6 +185,8 @@ export type PurchaseOrderActionResult = {
   success?: boolean;
   /** Said after the action went through, without stopping it. */
   warnings?: string[];
+  /** What the action raised, said back. */
+  message?: string;
 };
 
 export type PurchaseOrderListItem = SelectPurchaseOrders & {
@@ -2016,13 +2018,19 @@ export const createUnloadingWorkOrder = async (
       // (C8): `400066` raised picking `300253` for the coil, then unloading
       // `301583` for what returned. So the picking is raised here first, for
       // every supply not yet on a work order.
-      const pickedSupplies = await raiseSupplyPicking(tx, {
+      const supplyPicking = await raiseSupplyPicking(tx, {
         purchaseOrderUuid,
         orderId: order.id,
         supplierUuid: order.supplierUuid,
         deliveryDate: order.deliveryDate,
         userId,
       });
+      // 🔑 The send-out comes first, on its own: `Workorder` on 404361 raised
+      // only the picking; the unloading followed with the pre-notify
+      // (15-10-2026).
+      if (supplyPicking !== null) {
+        return { number: supplyPicking, sendOut: true };
+      }
 
       const lines = await tx
         .select({
@@ -2055,9 +2063,6 @@ export const createUnloadingWorkOrder = async (
       );
 
       if (outstanding.length === 0) {
-        if (pickedSupplies > 0) {
-          return { number: null };
-        }
         return {
           error:
             "Every line on this order has already been received, so there is nothing to unload.",
@@ -2179,7 +2184,14 @@ export const createUnloadingWorkOrder = async (
     revalidatePath(`/purchase-orders/${purchaseOrderUuid}`);
     revalidatePath("/warehouse-work-orders");
     revalidatePath("/purchase-receivals");
-    return { success: true, purchaseOrderUuid };
+    return {
+      success: true,
+      purchaseOrderUuid,
+      message:
+        "sendOut" in outcome
+          ? `Picking work order ${outcome.number} raised to send the material out.`
+          : undefined,
+    };
   } catch (error) {
     return {
       error: describeError(error, "Failed to raise the unloading work order"),
@@ -2591,9 +2603,9 @@ export const deletePurchaseOrderReceiptDocument = async (
 
 /**
  * Raise the picking that sends a `Processing` order's new supplies out (C8):
- * one line per supply, from where the lot stands to the loading bay — the
- * reference's `315201` took the coil from `5G` to `Laad`. Returns how many
- * supplies were put on it.
+ * one line per supply, from where the lot stands and to nowhere — the goods
+ * leave the company (404361 → `Van locatie` Ontvangst, `Naar Locatie` empty,
+ * 15-10-2026). Returns the work order's number, or null when nothing was new.
  */
 const raiseSupplyPicking = async (
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
@@ -2604,7 +2616,7 @@ const raiseSupplyPicking = async (
     deliveryDate: Date | null;
     userId: string | null;
   },
-): Promise<number> => {
+): Promise<number | null> => {
   const supplies = await tx
     .select({
       uuid: PurchaseOrderSupplies.uuid,
@@ -2634,25 +2646,17 @@ const raiseSupplyPicking = async (
 
   const first = supplies[0];
   if (!first) {
-    return 0;
+    return null;
   }
 
-  const [loadingBay] = await tx
-    .select({ uuid: Warehouses.uuid })
-    .from(Warehouses)
-    .where(inArray(Warehouses.locationType, ["load", "collection"]))
-    .orderBy(sql`FIELD(${Warehouses.locationType}, 'load', 'collection')`)
-    .limit(1);
-  if (!loadingBay) {
+  const warehouseUuid = first.locationUuid
+    ? await rootWarehouseOfLocation(tx, first.locationUuid)
+    : null;
+  if (!warehouseUuid) {
     throw new Error(
-      "No loading location exists to pick the supplies to. Give a location the `Load` type first.",
+      "The lot to send out stands in no warehouse, so no picking can be planned for it.",
     );
   }
-
-  const warehouseUuid =
-    (first.locationUuid
-      ? await rootWarehouseOfLocation(tx, first.locationUuid)
-      : null) ?? loadingBay.uuid;
   const number = await nextWorkOrderNumber(tx);
   const workOrderUuid = generateUuid();
 
@@ -2681,7 +2685,8 @@ const raiseSupplyPicking = async (
       productUuid: supply.productUuid,
       productCode: supply.productCode,
       fromLocationUuid: supply.locationUuid,
-      toLocationUuid: loadingBay.uuid,
+      // Leaves the company: no destination.
+      toLocationUuid: null,
       length: supply.lengthMm,
       width: supply.widthMm,
       thickness: supply.thicknessMm ? Number(supply.thicknessMm) : null,
@@ -2699,7 +2704,7 @@ const raiseSupplyPicking = async (
     tx,
     supplies.map((supply) => supply.uuid),
   );
-  return supplies.length;
+  return number;
 };
 
 /**

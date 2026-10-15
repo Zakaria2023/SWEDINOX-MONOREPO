@@ -204,6 +204,45 @@ export const markSupplyDelivered = async (
       status: "delivered",
     })
     .where(eq(PurchaseOrderSupplies.uuid, supplyUuid));
+
+  // The material is with the processor, so the order is under way: 404361
+  // read `In progress`, its line `In progress` and its reception `Released`
+  // once the send-out was reported (15-10-2026).
+  const [supply] = await tx
+    .select({ purchaseOrderUuid: PurchaseOrderSupplies.purchaseOrderUuid })
+    .from(PurchaseOrderSupplies)
+    .where(eq(PurchaseOrderSupplies.uuid, supplyUuid))
+    .limit(1);
+  if (!supply) {
+    return;
+  }
+  await tx
+    .update(PurchaseOrders)
+    .set({ status: "in_progress" })
+    .where(
+      and(
+        eq(PurchaseOrders.uuid, supply.purchaseOrderUuid),
+        eq(PurchaseOrders.status, "released"),
+      ),
+    );
+  await tx
+    .update(PurchaseOrderItems)
+    .set({ status: "in_progress" })
+    .where(
+      and(
+        eq(PurchaseOrderItems.purchaseOrderUuid, supply.purchaseOrderUuid),
+        eq(PurchaseOrderItems.status, "released"),
+      ),
+    );
+  await tx
+    .update(PurchaseLineReceivals)
+    .set({ receiptStatus: "released" })
+    .where(
+      and(
+        eq(PurchaseLineReceivals.purchaseOrderUuid, supply.purchaseOrderUuid),
+        eq(PurchaseLineReceivals.receiptStatus, "new"),
+      ),
+    );
 };
 
 /** Mark supplies as being picked once a work order has been raised for them. */

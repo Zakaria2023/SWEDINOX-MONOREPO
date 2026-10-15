@@ -108,6 +108,8 @@ export const PurchaseOrderDetailView = ({
   // The stock window that chooses what a `Processing` order sends out.
   const [isSupplySearchOpen, setIsSupplySearchOpen] = useState(false);
   const [raised, setRaised] = useState(false);
+  // What `Workorder` raised when it was not the unloading.
+  const [raisedMessage, setRaisedMessage] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
   // Said after an action went through — the zero-amount lines on Make
   // final, a sale that can no longer be delivered on Pre-notify.
@@ -185,6 +187,7 @@ export const PurchaseOrderDetailView = ({
         setError(result.error);
         return;
       }
+      setRaisedMessage(result.message);
       setRaised(true);
     });
   };
@@ -362,9 +365,8 @@ export const PurchaseOrderDetailView = ({
 
       {raised && (
         <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
-          Unloading work order raised. Release it, then report what actually
-          turns up — bundle by bundle, each with its heat number — and that is
-          what puts the metal on a shelf.{" "}
+          {raisedMessage ??
+            "Unloading work order raised. Release it, then report what actually turns up — bundle by bundle, each with its heat number — and that is what puts the metal on a shelf."}{" "}
           <Link
             href="/warehouse-work-orders"
             className="text-primary hover:underline"

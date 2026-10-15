@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { refreshOrderStatusForLine } from "@/lib/server/order-status";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderItems } from "@/db/schema/order-items";
+import { SelectPurchaseOrders } from "@/db/schema/purchase-orders";
 import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { JournalEntries } from "@/db/schema/journal-entries";
@@ -203,6 +204,8 @@ export type PickableLot = {
   stockCategory: SelectStock["stockCategory"];
   receiptDate: SelectStock["receiptDate"];
   valuationPrice: SelectStock["valuationPrice"];
+  /** Where the lot was bought — `IO404355` beside its charge. */
+  purchaseOrderId: SelectPurchaseOrders["id"] | null;
   /** Physical stock. Not `quantity - reserved`. */
   available: number;
   reserved: number;
@@ -697,6 +700,9 @@ export const getPickableLotsForLine = async (
       valuationPrice: Stock.valuationPrice,
       quantity: Stock.quantity,
       reserved: Stock.reservedQuantity,
+      purchaseOrderId: sql<SelectPurchaseOrders["id"] | null>`(
+        SELECT po.id FROM PurchaseOrders po
+         WHERE po.uuid = ${Stock.purchaseOrderUuid} LIMIT 1)`,
     })
     .from(Stock)
     .leftJoin(Warehouses, eq(Stock.locationUuid, Warehouses.uuid))

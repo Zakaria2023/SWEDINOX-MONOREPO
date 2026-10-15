@@ -49,6 +49,7 @@ import { WAREHOUSE_WORK_ORDER_TYPE_LABELS } from "@/lib/labels";
 import { WarehouseWorkOrderType } from "@/lib/enums";
 import {
   cn,
+  formatDayMonthYear,
   formatNumber,
   nowTimeString,
   orDash,
@@ -82,7 +83,14 @@ const lotLabel = (lot: PickableLot): string =>
   [
     lot.locationName ?? "no location",
     lot.internalBatch ?? "no bundle",
-    lot.charge ?? "no charge",
+    // `612345, IO404355, 11-10-2026`: the heat, where it was bought, when.
+    [
+      lot.charge ?? "no charge",
+      lot.purchaseOrderId ? `IO${lot.purchaseOrderId}` : null,
+      lot.receiptDate ? formatDayMonthYear(lot.receiptDate) : null,
+    ]
+      .filter(Boolean)
+      .join(", "),
   ].join(" · ");
 
 export const ReportCompletionDialog = ({
@@ -270,6 +278,11 @@ export const ReportCompletionDialog = ({
   // its heat number from it rather than being typed one.
   const isDrawnFromStock =
     meta?.stockEffect === "out" || meta?.stockEffect === "move";
+  // Material sent to a processor or back to a supplier leaves the company:
+  // `Naar Locatie` empty and greyed (404361, 15-10-2026).
+  const leavesCompany = Boolean(
+    line?.purchaseOrderSupplyUuid || line?.purchaseReturnOrderItemUuid,
+  );
 
   const lotOptions: SelectOption[] = useMemo(() => {
     const offered =
@@ -476,11 +489,13 @@ export const ReportCompletionDialog = ({
                   render={({ field }) => (
                     <Select
                       id="toLocationUuid"
-                      value={field.value ?? ""}
+                      value={leavesCompany ? "" : (field.value ?? "")}
                       options={locationOptions}
-                      placeholder="As planned on the line"
+                      placeholder={
+                        leavesCompany ? "" : "As planned on the line"
+                      }
                       onValueChange={field.onChange}
-                      disabled={isPending}
+                      disabled={isPending || leavesCompany}
                     />
                   )}
                 />
