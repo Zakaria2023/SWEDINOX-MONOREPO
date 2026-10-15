@@ -119,6 +119,23 @@ const qualitySpecificationOf = (row: StockLotOverviewRow): string | null => {
   return textCell(row.quality.slice(main.length)) as string | null;
 };
 
+/**
+ * `Valuation price` per tonne, as the reference prints it — `€ 2.499,47 / TN`
+ * on 404766, `€ 2.607,80 / TN` beside `Stock (€) 163,77` on 404769. The lot
+ * keeps its cost per counting unit (receipts.ts), so a weighed lot is turned
+ * into € per TN for display: price × quantity ÷ kg × 1000. A lot with no
+ * weight keeps its own price.
+ */
+const valuationPerTonneOf = (row: StockLotOverviewRow): number | null => {
+  const kg = Number(row.quantityKg ?? 0);
+  const quantity = Number(row.quantity ?? 0);
+  const price = Number(row.valuationPrice ?? 0);
+  if (kg <= 0 || quantity <= 0) {
+    return null;
+  }
+  return (price * quantity * 1000) / kg;
+};
+
 export const STOCK_LOT_COLUMNS: Column[] = [
   column("productCode", "Product code", true, (row) => textCell(row.productCode)),
   column("description", "Description", true, (row) => textCell(row.productName)),
@@ -141,14 +158,14 @@ export const STOCK_LOT_COLUMNS: Column[] = [
   // Product-level — what is on order for the product, repeated on each of
   // its lots — and printed as 0 when nothing is, the way the reference does.
   column("qtyOrdered", "Qty ordered", true, (row) => row.qtyOrdered),
-  column("lengthMm", "Length (mm)", true, (row) => numberCell(row.lengthMm)),
+  column("lengthMm", "Length", true, (row) => numberCell(row.lengthMm)),
   column("location", "Location", true, (row) => textCell(row.locationName)),
   column("locationType", "Location type", true, (row) =>
     row.locationType ? WAREHOUSE_LOCATION_TYPE_LABELS[row.locationType] : null,
   ),
   column("blocked", "Blocked", true, (row) => yesNoCell(row.blocked)),
   column("section", "Warehouse section", true, (row) => textCell(row.sectionName)),
-  column("widthMm", "Width (mm)", true, (row) => numberCell(row.widthMm)),
+  column("widthMm", "Width", true, (row) => numberCell(row.widthMm)),
   column("standardProduct", "Standard product", true, (row) =>
     yesNoCell(row.standardProduct),
   ),
@@ -157,17 +174,24 @@ export const STOCK_LOT_COLUMNS: Column[] = [
     numberCell(row.revenueGroupNumber),
   ),
   column("quality", "Quality", true, (row) => textCell(row.quality)),
-  column("ledgerAccountNumber", "Stk-general ledger account no", true, () =>
+  column("ledgerAccountNumber", "Stk-general ledger account no.", true, () =>
     STOCK_LEDGER_ACCOUNT,
   ),
   column("ledgerAccount", "Stk-general ledger account", true, () =>
     STOCK_LEDGER_ACCOUNT_NAME,
   ),
-  column("valuationPrice", "Valuation price", true, (row) =>
-    numberCell(row.valuationPrice),
+  column("valuationPrice", "Valuation price", true, (row) => {
+    const perTonne = valuationPerTonneOf(row);
+    return perTonne === null
+      ? numberCell(row.valuationPrice)
+      : Math.round(perTonne * 100) / 100;
+  }),
+  // The valuation price is shown per tonne for every weighed lot.
+  column("priceUnit", "PriceU", true, (row) =>
+    valuationPerTonneOf(row) === null
+      ? textCell(row.priceUnit ?? "TN")
+      : "TN",
   ),
-  // The valuation price is struck per tonne for every weighed lot.
-  column("priceUnit", "PriceU", true, (row) => textCell(row.priceUnit ?? "TN")),
   column("stockValue", "Stock (€)", true, (row) => row.stockValue),
   column("orderAdviceCode", "Order advice code", true, (row) =>
     textCell(row.orderAdviceCode),
@@ -181,7 +205,7 @@ export const STOCK_LOT_COLUMNS: Column[] = [
   column("fixedDimensions", "Fixed dimensions", true, (row) =>
     yesNoCell(row.fixedDimensions),
   ),
-  column("pacCode", "PAC-Code", true, (row) => textCell(row.pacCode)),
+  column("pacCode", "PAC", true, (row) => textCell(row.pacCode)),
   column("theoreticalWeight", "Theoretical Wt.", true, (row) =>
     numberCell(row.theoreticalWeight),
   ),

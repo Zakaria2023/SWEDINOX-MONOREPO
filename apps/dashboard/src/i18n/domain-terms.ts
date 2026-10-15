@@ -113,7 +113,8 @@ export const DOMAIN_TERMS: Record<string, DomainTerm> = {
   "Stock Lot": { nl: "Voorraadpartij", ar: "دفعة المخزون" },
   "Stock options": { nl: "Voorraad opties", ar: "خيارات المخزون" },
   "Stock label": { nl: "Voorraadlabel", ar: "ملصق المخزون" },
-  "Stock remark": { nl: "Voorraad opmerking", ar: "ملاحظة المخزون" },
+  // `Vrd. Opmerking` on Stock on location (15-10-2026).
+  "Stock remark": { nl: "Vrd. Opmerking", ar: "ملاحظة المخزون" },
   "Correct stock": { nl: "Corrigeren voorraad", ar: "تصحيح المخزون" },
   "Split stock": { nl: "Splits voorraad", ar: "تقسيم المخزون" },
   "Reserved stock": { nl: "Gereserveerde voorraad", ar: "المخزون المحجوز" },
