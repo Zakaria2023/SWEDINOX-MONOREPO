@@ -281,6 +281,8 @@ export type PurchaseOrderItemDetail = {
   grossPrice: SelectPurchaseOrderItems["grossPrice"];
   lineDiscountPercent: SelectPurchaseOrderItems["lineDiscountPercent"];
   groupDiscountPercent: SelectPurchaseOrderItems["groupDiscountPercent"];
+  // `Category` on the reference's line grid — `Standaard` on 401154.
+  stockCategory: SelectPurchaseOrderItems["stockCategory"];
 };
 
 // A goods receipt booked against this order — the "Product Receipt Documents"
@@ -1097,6 +1099,7 @@ export const getPurchaseOrderDetail = async (
       grossPrice: PurchaseOrderItems.grossPrice,
       lineDiscountPercent: PurchaseOrderItems.lineDiscountPercent,
       groupDiscountPercent: PurchaseOrderItems.groupDiscountPercent,
+      stockCategory: PurchaseOrderItems.stockCategory,
       forLine: sql<string | null>`COALESCE(
         (SELECT CONCAT('O', o.id, '/', oi.line_number * 10)
            FROM OrderItems oi JOIN Orders o ON o.uuid = oi.order_uuid

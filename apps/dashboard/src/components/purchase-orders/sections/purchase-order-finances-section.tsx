@@ -15,6 +15,8 @@ export const PurchaseOrderFinancesSection = ({ paymentTermOptions }: Props) => {
   return (
     <section className="space-y-4">
       <h2 className="text-sm font-semibold">Finances</h2>
+      {/* Greyed, as the reference has it: the terms are the supplier's, set
+          when the supplier is chosen (404355, 404361). */}
       <div className="max-w-sm">
         <FormSelectField
           control={control}
@@ -23,6 +25,7 @@ export const PurchaseOrderFinancesSection = ({ paymentTermOptions }: Props) => {
           label="Payment Terms"
           options={paymentTermOptions}
           emptyValue=""
+          disabled
         />
       </div>
     </section>

@@ -65,6 +65,7 @@ import {
   orDash,
   pluralize,
   runningMeters,
+  stockCategoryLabel,
 } from "@/lib/helpers";
 import {
   COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
@@ -565,35 +566,42 @@ export const PurchaseOrderDetailView = ({
                 (item) => item.uuid === selectedLineUuid,
               ) ?? null
             }
+            onPreNotify={() => setIsPreNotifyOpen(true)}
+            canPreNotify={!isPending && !isProvisional}
           />
         )}
         <div>
           <Table>
             <TableHeader>
-              {/* 🔴 The reference's own line grid, column for column:
-                  `Code` · `Delivery date` · `Status` · `Product` · `Quality` ·
-                  `Length` · `Width` · `Thickness` · `Qty(p)` · `U` · `Kg(p)` ·
-                  `M1(p)` · `Net Price` · `U`. */}
+              {/* 🔴 The reference's own line grid, column for column
+                  (404355, 9–15-10-2026): `Code` · `For line` · `Delivery
+                  date` · `Status` · `Product` · `Description` · `Category` ·
+                  `Quality` · `Length` · `Width` · `Thick.` · `Qty(p)` · `U` ·
+                  `Kg(p)` · `M1(p)` · `Net Price` · `U` · `Amount` · `Kg(a)`
+                  — then ours. */}
               <TableRow>
                 <TableHead className="text-right">Code</TableHead>
                 <TableHead>For line</TableHead>
-                {/* `Type` on the reference's grid: `Stk` · `CD` · `EXW`. */}
-                <TableHead>Type</TableHead>
                 <TableHead>Delivery date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Product</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Quality</TableHead>
                 <TableHead className="text-right">Length</TableHead>
                 <TableHead className="text-right">Width</TableHead>
-                <TableHead className="text-right">Thickness</TableHead>
-                <TableHead className="text-right">Qty (p)</TableHead>
-                <TableHead className="text-right">Qty (a)</TableHead>
+                <TableHead className="text-right">Thick.</TableHead>
+                <TableHead className="text-right">Qty(p)</TableHead>
                 <TableHead>U</TableHead>
-                <TableHead className="text-right">Kg (p)</TableHead>
-                <TableHead className="text-right">M1 (p)</TableHead>
-                <TableHead className="text-right">Net price</TableHead>
+                <TableHead className="text-right">Kg(p)</TableHead>
+                <TableHead className="text-right">M1(p)</TableHead>
+                <TableHead className="text-right">Net Price</TableHead>
                 <TableHead>U</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Kg(a)</TableHead>
+                {/* `Type` on the reference's grid: `Stk` · `CD` · `EXW`. */}
+                <TableHead>Type</TableHead>
+                <TableHead className="text-right">Qty(a)</TableHead>
                 <TableHead className="text-right">Remaining</TableHead>
                 <TableHead>Stock status</TableHead>
                 <TableHead className="text-right">Lot valuation</TableHead>
@@ -603,7 +611,7 @@ export const PurchaseOrderDetailView = ({
               {purchaseOrder.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={21}
+                    colSpan={24}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No lines on this order.
@@ -636,7 +644,6 @@ export const PurchaseOrderDetailView = ({
                         orDash(item.forLine)
                       )}
                     </TableCell>
-                    <TableCell>{ORDER_SOURCE_TYPE_LABELS[item.sourceType]}</TableCell>
                     <TableCell>{formatDateColumn(item.receiptDate)}</TableCell>
                     <TableCell>
                       <StatusBadge
@@ -649,10 +656,14 @@ export const PurchaseOrderDetailView = ({
                       />
                     </TableCell>
                     <TableCell className="font-medium">
-                      {[item.productCode, item.productName]
-                        .filter(Boolean)
-                        .join(" — ")}
+                      {item.productCode}
                     </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {item.productName}
+                    </TableCell>
+                    {/* `Standaard` on every line the reference showed; a
+                        line bought as another category says which. */}
+                    <TableCell>{stockCategoryLabel(item.stockCategory)}</TableCell>
                     <TableCell>{orDash(item.qualityCode)}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatLengthMm(item.lengthMm)}
@@ -666,25 +677,11 @@ export const PurchaseOrderDetailView = ({
                     <TableCell className="text-right tabular-nums">
                       {formatNumber(Number(item.orderedQuantity ?? 0))}
                     </TableCell>
-                    {/* What arrived. A line closed short reads its closing
-                        figure here and `Received` beside it. */}
-                    <TableCell className="text-right tabular-nums">
-                      {formatNumber(Number(item.qtyReceived ?? 0))}
-                      {item.closedAt && (
-                        <span className="ms-1 text-xs text-muted-foreground">
-                          (closed)
-                        </span>
-                      )}
-                    </TableCell>
                     <TableCell>{orDash(item.unit ? item.unit.toUpperCase() : null)}</TableCell>
-                    {/* 🔑 The weighed weight where a lorry has been, the
-                        theoretical one until then — the same figure the line is
-                        billed on, so the grid cannot disagree with its own
-                        amount. */}
+                    {/* What was ordered by weight; what the scale said sits
+                        in `Kg(a)` at the end, as the reference has it. */}
                     <TableCell className="text-right tabular-nums">
-                      {formatNumber(
-                        Number(item.kgActual ?? item.kgPurchased ?? 0),
-                      )}
+                      {formatNumber(Number(item.kgPurchased ?? 0))}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatNumber(
@@ -711,6 +708,20 @@ export const PurchaseOrderDetailView = ({
                     <TableCell>{orDash(item.priceUnit)}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMoney(Number(item.amount ?? 0))}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(Number(item.kgActual ?? 0))}
+                    </TableCell>
+                    <TableCell>{ORDER_SOURCE_TYPE_LABELS[item.sourceType]}</TableCell>
+                    {/* What arrived. A line closed short reads its closing
+                        figure here and `Received` beside it. */}
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(Number(item.qtyReceived ?? 0))}
+                      {item.closedAt && (
+                        <span className="ms-1 text-xs text-muted-foreground">
+                          (closed)
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {item.stockQuantity === null
@@ -751,20 +762,6 @@ export const PurchaseOrderDetailView = ({
       </div>
 
       <div className="space-y-2">
-        {/* The reference's last panel on the order, under `Previous orders`:
-            where a certificate or DoP is stored (C19). */}
-        {/* A processing order buys a step, not metal: the lots it sends out
-            (C8) and the options it pays for (C10). */}
-        {purchaseOrder.purchaseOrderType === "processing" && (
-          <PurchaseOrderSuppliesPanel
-            purchaseOrderUuid={purchaseOrder.uuid}
-            supplies={purchaseOrder.supplies}
-            receipts={purchaseOrder.receipts}
-            items={purchaseOrder.items}
-            searching={isSupplySearchOpen}
-            onSearchingChange={setIsSupplySearchOpen}
-          />
-        )}
         <PurchaseOrderOptionsPanel
           purchaseOrderUuid={purchaseOrder.uuid}
           options={purchaseOrder.options}
@@ -813,21 +810,21 @@ export const PurchaseOrderDetailView = ({
                   <TableRow>
                     <TableHead>Status</TableHead>
                     <TableHead>Delivery date</TableHead>
-                    <TableHead>Delivery date (actual)</TableHead>
+                    <TableHead>Delivery date (pre-notified)</TableHead>
                     <TableHead>Bill of lading</TableHead>
                     <TableHead>Product</TableHead>
                     <TableHead className="text-right">Length</TableHead>
                     <TableHead className="text-right">Width</TableHead>
                     <TableHead className="text-right">Thickness</TableHead>
-                    <TableHead className="text-right">Kg (p)</TableHead>
-                    <TableHead className="text-right">Qty (p)</TableHead>
-                    <TableHead>U (p)</TableHead>
-                    <TableHead className="text-right">Kg (a)</TableHead>
-                    <TableHead className="text-right">Qty (a)</TableHead>
-                    <TableHead>U (a)</TableHead>
+                    <TableHead className="text-right">Kg(p)</TableHead>
+                    <TableHead className="text-right">Qty(p)</TableHead>
+                    <TableHead>U(p)</TableHead>
+                    <TableHead className="text-right">Kg(a)</TableHead>
+                    <TableHead className="text-right">Qty(a)</TableHead>
+                    <TableHead>U(a)</TableHead>
                     <TableHead>Transfer address</TableHead>
                     <TableHead className="text-right">Transfer qty</TableHead>
-                    <TableHead>Pre-announced delivery</TableHead>
+                    <TableHead>Pre-announced</TableHead>
                     <TableHead>Pre-notify code</TableHead>
                     <TableHead>Pre-reported by</TableHead>
                     <TableHead>Charge</TableHead>
@@ -877,18 +874,21 @@ export const PurchaseOrderDetailView = ({
                         )}
                       </TableCell>
                       {/* Red ✗ `Do not c…` until the supplier calls the delivery
-                          ahead, green ✓ `Pre-notified` after (404355, 9-10-2026);
-                          the date itself once a lorry has been. */}
+                          ahead, green ✓ `Pre-notified` after (404355,
+                          9-10-2026) — a marker, not a date. */}
                       <TableCell className="whitespace-nowrap">
-                        {receipt.deliveryDateActual ? (
-                          formatDateColumn(receipt.deliveryDateActual)
-                        ) : receipt.billOfLading ||
-                          receipt.preNotifyCode ||
-                          (receipt.receiptStatus !== "new" &&
-                            receipt.receiptStatus !== "released") ? (
+                        {receipt.billOfLading ||
+                        receipt.preNotifyCode ||
+                        receipt.preAnnouncedDeliveryDate ||
+                        receipt.deliveryDateActual ? (
                           <span className="text-primary">✓ Pre-notified</span>
                         ) : (
-                          <span className="text-destructive">✗ Not pre-notified</span>
+                          <span
+                            className="text-destructive"
+                            title="Not pre-notified"
+                          >
+                            ✗ Do not c…
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -1004,6 +1004,20 @@ export const PurchaseOrderDetailView = ({
             </div>
           )}
         </CollapsibleSection>
+
+        {/* A processing order buys a step, not metal: the lots it sends out
+            (C8), under the Receipts as the reference stacks them — Options ·
+            Receipts · Supplies · Pricing (404361, 15-10-2026). */}
+        {purchaseOrder.purchaseOrderType === "processing" && (
+          <PurchaseOrderSuppliesPanel
+            purchaseOrderUuid={purchaseOrder.uuid}
+            supplies={purchaseOrder.supplies}
+            receipts={purchaseOrder.receipts}
+            items={purchaseOrder.items}
+            searching={isSupplySearchOpen}
+            onSearchingChange={setIsSupplySearchOpen}
+          />
+        )}
 
         <PurchaseOrderNewPanels
           panels={panelsNamed([

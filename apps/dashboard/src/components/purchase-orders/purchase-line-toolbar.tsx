@@ -10,22 +10,31 @@ import { FormError } from "@/components/ui/form-error";
 import { formatNumber, purchaseLineActions } from "@/lib/helpers";
 import {
   BellRing,
+  Boxes,
   Calculator,
   CircleSlash,
+  Eye,
+  Package,
   Plus,
   Scissors,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 
 // The reference's Lines toolbar on a saved order: `New · Delete · Sawing
-// specifications · Calculate · Pre-notify`, then the option shortcuts.
+// specifications · (product) · (stock) · Calculate · PAC · Pre-notify · View`
+// (404355, 9–15-10-2026), then the option shortcuts.
 // Adding and deleting lines on a saved order is not built yet, so those two
 // are greyed with the reason; `Close line` is ours.
 const OPTION_SHORTCUTS = ["DUPK320", "NG", "K320", "BF", "F", "L", "K", "LSR"];
 
 type Props = {
   selected: PurchaseOrderItemDetail | null;
+  /** The order's own `Pre-notify`, which the line toolbar repeats. */
+  onPreNotify: () => void;
+  /** Asleep on a provisional order, as the header's button is. */
+  canPreNotify: boolean;
 };
 
 /**
@@ -37,7 +46,11 @@ type Props = {
  * `Invoiced`, one at 6 plates of 17 (J4, 7-10-2026). The rule for when it may
  * be pressed lives in `purchaseLineActions`, beside the status rule it mirrors.
  */
-export const PurchaseLineToolbar = ({ selected }: Props) => {
+export const PurchaseLineToolbar = ({
+  selected,
+  onPreNotify,
+  canPreNotify,
+}: Props) => {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
   const [isCloseOpen, setIsCloseOpen] = useState(false);
@@ -82,13 +95,62 @@ export const PurchaseLineToolbar = ({ selected }: Props) => {
           <Scissors size={16} />
           Sawing specifications
         </Button>
+        {/* The two icons beside it: the selected line's article, and that
+            article's stock. */}
+        <Button
+          variant="ghost"
+          size="sm"
+          nativeButton={false}
+          disabled={!selected}
+          aria-label="Show product"
+          title="Show product"
+          render={
+            <Link
+              href={selected ? `/products/${selected.productUuid}` : "#"}
+            />
+          }
+        >
+          <Package size={16} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          nativeButton={false}
+          disabled={!selected}
+          aria-label="Stock"
+          title="Stock"
+          render={
+            <Link
+              href={
+                selected
+                  ? `/stock-on-location?q=${encodeURIComponent(selected.productCode)}`
+                  : "#"
+              }
+            />
+          }
+        >
+          <Boxes size={16} />
+        </Button>
         <Button type="button" variant="ghost" size="sm" disabled>
           <Calculator size={16} />
           Calculate
         </Button>
         <Button type="button" variant="ghost" size="sm" disabled>
+          PAC
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={!canPreNotify}
+          onClick={onPreNotify}
+        >
           <BellRing size={16} />
           Pre-notify
+        </Button>
+        <Button type="button" variant="ghost" size="sm" disabled>
+          <Eye size={16} />
+          View
         </Button>
         <span className="mx-1 h-5 border-l" />
         {OPTION_SHORTCUTS.map((option) => (

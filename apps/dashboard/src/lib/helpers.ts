@@ -124,6 +124,7 @@ import {
   WorkorderReleaseMethod,
   WorkorderSlipType,
   PurchaseSourceType,
+  stockCategories,
 } from "./enums";
 import {
   CONTACT_SALUTATION_LABELS,
@@ -138,6 +139,7 @@ import {
   PURCHASE_ORDER_STATUS_LABELS,
   PURCHASE_QUOTE_STATUS_LABELS,
   SALES_REPRESENTATIVE_LABELS,
+  STOCK_CATEGORY_LABELS,
   STOCK_UNIT_LABELS,
   TEXT_USAGE_CATEGORY_LABELS,
   VISIT_REPORT_REASON_LABELS,
@@ -7742,6 +7744,19 @@ export const representativeInitials = (
     return null;
   }
   return words.map((word) => word[0]?.toUpperCase() ?? "").join("");
+};
+
+/**
+ * A line's `Category` as the reference prints it: the stock category's label,
+ * and `Standard` where none was set — every purchase line it showed read
+ * `Standaard` (401154, 404355).
+ */
+export const stockCategoryLabel = (value: string | null): string => {
+  const known = stockCategories.find((category) => category === value);
+  if (known) {
+    return STOCK_CATEGORY_LABELS[known];
+  }
+  return value ?? STOCK_CATEGORY_LABELS.standard;
 };
 
 /**
