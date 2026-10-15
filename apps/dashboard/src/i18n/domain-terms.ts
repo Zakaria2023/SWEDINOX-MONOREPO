@@ -439,6 +439,25 @@ export const DOMAIN_TERMS: Record<string, DomainTerm> = {
   Ready: { nl: "Gereed", ar: "جاهز" },
   "#Lines": { nl: "#Regels", ar: "#الأسطر" },
   Pieces: { nl: "Stuks", ar: "قطع" },
+
+  // ── Gereedmelden: the report dialogs, verbatim (327402, 327410, 327411) ──
+  "Report completion": { nl: "Gereedmelden", ar: "الإبلاغ عن الإنجاز" },
+  "Report completion unloading": {
+    nl: "Gereedmelden losopdracht",
+    ar: "الإبلاغ عن إنجاز التفريغ",
+  },
+  "Report completion work order": {
+    nl: "Gereedmelden opdracht",
+    ar: "الإبلاغ عن إنجاز الأمر",
+  },
+  "Executed on": { nl: "Uitgevoerd op", ar: "نُفّذ في" },
+  "For order": { nl: "Voor order", ar: "للطلب" },
+  Batch: { nl: "Partij", ar: "الدفعة" },
+  "Plate number": { nl: "Plaatnummer", ar: "رقم اللوح" },
+  Metres: { nl: "Meters", ar: "أمتار" },
+  "Total qty": { nl: "Totale Hvh", ar: "إجمالي الكمية" },
+  "Total length": { nl: "Totale Lengte", ar: "إجمالي الطول" },
+  "-empty-": { nl: "-leeg-", ar: "-فارغ-" },
 };
 
 /**

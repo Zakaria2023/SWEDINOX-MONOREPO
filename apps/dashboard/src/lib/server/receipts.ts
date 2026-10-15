@@ -235,6 +235,9 @@ export const applyReceipt = async (
      * identified on the way in became anonymous the moment it hit the rack.
      */
     internalBatch: string | null;
+    /** The supplier's batch (`Partij`) and the plate's number, as typed. */
+    batch?: string | null;
+    plateNumber?: string | null;
     /**
      * 🔑 The other thing an unloading can be receiving. Return order
      * `290247` raised an `Unloading` work order with `Purchase order` empty on
@@ -521,6 +524,8 @@ export const applyReceipt = async (
     charge: supplied?.charge ?? normaliseCharge(params.charge),
     internalCharge,
     internalBatch,
+    bundle: params.batch ?? null,
+    plateNumber: params.plateNumber ?? null,
     receiptDate: supplied?.receiptDate ?? todayDateString(),
     // The parcel as it was bought: 2000 × 1000 × 2,00 in 304L on the lot
     // 404355 produced (26AQWF, 11-10-2026), read off the purchase line.

@@ -34,6 +34,7 @@ import {
   generateUuid,
   lotOrigin,
   moneyString,
+  nextInternalBatch,
   nextInternalCharge,
   NON_SELLABLE_LOCATION_TYPES,
   normaliseCharge,
@@ -133,6 +134,8 @@ export type WorkOrderListItem = SelectWarehouseWorkOrders & {
 export type WorkOrderLineListItem = SelectWarehouseWorkOrderLines & {
   companyName: SelectCompanies["companyName"] | null;
   productName: SelectProducts["name"] | null;
+  /** What the line is counted in — `ST` in `Hvh ST` on the report dialog. */
+  stockUnit: SelectProducts["stockUnit"] | null;
   // Null is the company boundary rather than a missing name: the goods came
   // from outside, or they left.
   fromLocationName: SelectWarehouses["name"] | null;
@@ -204,6 +207,8 @@ export type PickableLot = {
   internalCharge: SelectStock["internalCharge"];
   /** The six-digit parcel number — the reference's `Interne partij`. */
   internalBatch: SelectStock["internalBatch"];
+  /** The supplier's batch — the reference's `Partij`. */
+  bundle: SelectStock["bundle"];
   quality: SelectStock["quality"];
   stockCategory: SelectStock["stockCategory"];
   receiptDate: SelectStock["receiptDate"];
@@ -298,6 +303,9 @@ export type ReportPickInput = {
   charge?: string | null;
   internalCharge?: string | null;
   internalBatch?: string | null;
+  /** `Partij` and `Plaatnummer`, typed on an unloading. */
+  batch?: string | null;
+  plateNumber?: string | null;
 };
 
 export type ReportCompletionInput = {
@@ -499,6 +507,7 @@ export const getWarehouseWorkOrderLines = async (
       ...getTableColumns(WarehouseWorkOrderLines),
       companyName: Companies.companyName,
       productName: Products.name,
+      stockUnit: Products.stockUnit,
       fromLocationName: FromLocation.name,
       toLocationName: ToLocation.name,
       customerLabelForPickingSlip: Products.customerLabelForPickingSlip,
@@ -545,6 +554,7 @@ export const getWarehouseWorkOrderLines = async (
       ...line,
       companyName: line.companyName ?? null,
       productName: line.productName ?? null,
+      stockUnit: line.stockUnit ?? null,
       fromLocationName: line.fromLocationName ?? null,
       toLocationName: line.toLocationName ?? null,
       customerLabels: customerLabelCount(customerLabelForPickingSlip, {
@@ -659,6 +669,21 @@ export const previewNextInternalCharge = async (): Promise<string> => {
   return nextInternalCharge(year, lastOfYear?.charge ?? null);
 };
 
+/**
+ * The bundle number the next lot will take — the reference's `Interne partij`
+ * already filled on its unloading dialog (404361 → 327411, 15-10-2026). Shown,
+ * not reserved: the number is struck when the report is saved.
+ */
+export const previewNextInternalBatch = async (): Promise<string> => {
+  const [last] = await db
+    .select({
+      batch: sql<string | null>`MAX(CAST(${Stock.internalBatch} AS UNSIGNED))`,
+    })
+    .from(Stock)
+    .where(sql`${Stock.internalBatch} REGEXP '^[0-9]+$'`);
+  return nextInternalBatch(last?.batch ?? null);
+};
+
 export const getPickableLotsForLine = async (
   lineUuid: string,
 ): Promise<PickableLot[]> => {
@@ -698,6 +723,7 @@ export const getPickableLotsForLine = async (
       charge: Stock.charge,
       internalCharge: Stock.internalCharge,
       internalBatch: Stock.internalBatch,
+      bundle: Stock.bundle,
       quality: Stock.quality,
       stockCategory: Stock.stockCategory,
       receiptDate: Stock.receiptDate,
@@ -1554,6 +1580,8 @@ export const reportWarehouseWorkOrderLineCompletion = async (
               charge: pick.charge ?? null,
               internalCharge: pick.internalCharge ?? null,
               internalBatch: pick.internalBatch ?? null,
+              batch: pick.batch?.trim() || null,
+              plateNumber: pick.plateNumber?.trim() || null,
               // What this bundle actually weighed on the way in.
               weighedKg:
                 pick.kgActual === null || pick.kgActual === undefined

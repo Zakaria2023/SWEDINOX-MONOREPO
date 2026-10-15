@@ -9,6 +9,7 @@ import {
   getPickableLotsForLine,
   getWarehouseWorkOrderPicks,
   PickableLot,
+  previewNextInternalBatch,
   previewNextInternalCharge,
   reportWarehouseWorkOrderLineCompletion,
   WorkOrderLineListItem,
@@ -45,7 +46,6 @@ import { TimePicker } from "@/components/shadcn/time-picker";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { ClerkUserOption } from "@/lib/server/clerk";
-import { WAREHOUSE_WORK_ORDER_TYPE_LABELS } from "@/lib/labels";
 import { WarehouseWorkOrderType } from "@/lib/enums";
 import {
   cn,
@@ -113,6 +113,9 @@ export const ReportCompletionDialog = ({
   // The row `Verwijder` acts on — the reference deletes the selected row from
   // a toolbar above the grid, not from a button on every row.
   const [selectedRow, setSelectedRow] = useState(0);
+  // The bundle number the next lot takes, shown in `Interne partij` before
+  // anything is typed (327411, 15-10-2026). Struck by the server on OK.
+  const [nextBundle, setNextBundle] = useState<number | null>(null);
 
   const {
     control,
@@ -168,6 +171,9 @@ export const ReportCompletionDialog = ({
         incoming && !line.internalCharge
           ? await previewNextInternalCharge().catch(() => "")
           : (line.internalCharge ?? "");
+      const bundlePreview = incoming
+        ? await previewNextInternalBatch().catch(() => "")
+        : "";
 
       if (request.cancelled) {
         return;
@@ -183,11 +189,15 @@ export const ReportCompletionDialog = ({
             stockUuid: pick.stockUuid ?? "",
             qtyPlanned: pick.qtyPlanned ?? "0",
             qtyActual: pick.qtyActual ?? (pick.qtyPlanned ?? ""),
-            kgActual: pick.kgActual ?? "",
+            // Off a shelf the weight is pre-filled with the planned one, as
+            // the reference opens its picking (327410, 15-10-2026).
+            kgActual: pick.kgActual ?? (incoming ? "" : (pick.kgPlanned ?? "")),
             charge: pick.stockCharge ?? line.charge ?? "",
             internalCharge:
               pick.stockInternalCharge ?? line.internalCharge ?? "",
             internalBatch: pick.internalBatch ?? line.internalBatch ?? "",
+            batch: "",
+            plateNumber: "",
           }))
         : perPiece
           ? Array.from({ length: plannedPieces }, (_, index) => ({
@@ -202,6 +212,8 @@ export const ReportCompletionDialog = ({
               charge: line.charge ?? "",
               internalCharge: mintedCharge,
               internalBatch: line.internalBatch ?? "",
+              batch: "",
+              plateNumber: "",
             }))
           : [
               {
@@ -215,10 +227,13 @@ export const ReportCompletionDialog = ({
                 charge: line.charge ?? "",
                 internalCharge: mintedCharge,
                 internalBatch: line.internalBatch ?? "",
+                batch: "",
+                plateNumber: "",
               },
             ];
 
       setLots(pickable);
+      setNextBundle(bundlePreview ? Number(bundlePreview) : null);
       reset({
         executedAt: todayDateString(),
         executedTime: nowTimeString(),
@@ -257,6 +272,8 @@ export const ReportCompletionDialog = ({
           charge: pick.charge || null,
           internalCharge: pick.internalCharge || null,
           internalBatch: pick.internalBatch || null,
+          batch: pick.batch || null,
+          plateNumber: pick.plateNumber || null,
         })),
       });
 
@@ -385,7 +402,45 @@ export const ReportCompletionDialog = ({
     value: user.value,
   }));
 
-  const columnCount = isReceipt ? 15 : isDrawnFromStock ? 7 : 6;
+  const columnCount = isReceipt ? 15 : isDrawnFromStock ? 11 : 6;
+  // `Hvh ST`: the quantity's column names the unit it is counted in.
+  const unitCode = line?.stockUnit ? line.stockUnit.toUpperCase() : "";
+  // `Gereedmelden losopdracht` on an unloading, `Gereedmelden opdracht` on
+  // every other kind (327402, 327410, 9/15-10-2026).
+  const titleVerb = isReceipt
+    ? "Report completion unloading"
+    : "Report completion work order";
+  // The bundle each reported row will take, in the order they are saved: only
+  // a row with a quantity becomes a lot.
+  const bundlePlaceholder = (index: number): string => {
+    if (nextBundle === null) {
+      return "";
+    }
+    const quantityOf = (value: string | undefined) =>
+      Number(String(value ?? "").replace(",", "."));
+    const rows = watchedPicks ?? [];
+    if (!(quantityOf(rows[index]?.qtyActual) > 0)) {
+      return "";
+    }
+    const before = rows
+      .slice(0, index)
+      .filter((pick) => quantityOf(pick?.qtyActual) > 0).length;
+    return String(nextBundle + before).padStart(6, "0");
+  };
+  // `612345, IO404355, 11-10-2026`: the heat, where it was bought, when.
+  const chargeOf = (index: number): string => {
+    const lot = lotsByUuid.get(watchedPicks?.[index]?.stockUuid ?? "");
+    if (!lot) {
+      return String(watchedPicks?.[index]?.charge ?? "");
+    }
+    return [
+      lot.charge ?? "",
+      lot.purchaseOrderId ? `IO${lot.purchaseOrderId}` : null,
+      lot.receiptDate ? formatDayMonthYear(lot.receiptDate) : null,
+    ]
+      .filter((part) => part !== null)
+      .join(", ");
+  };
   // `Nieuw` is greyed on an unloading opened one row per piece: every piece
   // already has its row (327402, 11-10-2026).
   const canAddRow =
@@ -403,10 +458,9 @@ export const ReportCompletionDialog = ({
       <DialogContent className="max-w-7xl">
         <DialogHeader>
           <DialogTitle>
-            Report completion{" "}
-            {WAREHOUSE_WORK_ORDER_TYPE_LABELS[workOrderType].toLowerCase()}{" "}
-            {workOrderNumber ?? ""}/{line?.lineNumber ?? ""},{" "}
-            {formatNumber(Number(line?.qtyPlanned ?? 0))} {line?.productName ?? ""}
+            {titleVerb} {workOrderNumber ?? ""}/{line?.lineNumber ?? ""},{" "}
+            {formatNumber(Number(line?.qtyPlanned ?? 0))} {unitCode}{" "}
+            {line?.productName ?? ""}
             {line?.length || line?.width || line?.thickness
               ? ` ${[line?.length, line?.width, line?.thickness]
                   .filter((value) => value !== null && Number(value) > 0)
@@ -481,7 +535,7 @@ export const ReportCompletionDialog = ({
                   always: work order 318341 sends its line to `Afroep`. An
                   unloading's header has no such field — each row's `Naar`
                   says it. */}
-              <div className={cn(isReceipt && "hidden")}>
+              <div className={cn((isReceipt || isDrawnFromStock) && "hidden")}>
                 <FormLabel htmlFor="toLocationUuid">To location</FormLabel>
                 <Controller
                   control={control}
@@ -520,6 +574,8 @@ export const ReportCompletionDialog = ({
                     charge: "",
                     internalCharge: "",
                     internalBatch: "",
+                    batch: "",
+                    plateNumber: "",
                   })
                 }
                 disabled={isPending || !canAddRow}
@@ -552,7 +608,9 @@ export const ReportCompletionDialog = ({
                        · Plaatnummer. */
                     <TableRow>
                       <TableHead className="whitespace-normal">For order</TableHead>
-                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">
+                        Qty {unitCode}
+                      </TableHead>
                       <TableHead className="text-right">Length</TableHead>
                       <TableHead className="text-right">Width</TableHead>
                       <TableHead className="text-right">Thickness</TableHead>
@@ -567,9 +625,26 @@ export const ReportCompletionDialog = ({
                       <TableHead>Batch</TableHead>
                       <TableHead className="whitespace-normal">Plate number</TableHead>
                     </TableRow>
+                  ) : isDrawnFromStock ? (
+                    /* The reference's Gereedmelden opdracht, column for
+                       column: Hvh(p) · Hvh(w) · Kg(p) · Kg(w) · Lengte ·
+                       Breedte · Dikte · Van locatie · Charge · Partij ·
+                       Interne partij (327410, 15-10-2026). */
+                    <TableRow>
+                      <TableHead className="text-right">Qty(p)</TableHead>
+                      <TableHead className="text-right">Qty(a)</TableHead>
+                      <TableHead className="text-right">Kg(p)</TableHead>
+                      <TableHead className="text-right">Kg(a)</TableHead>
+                      <TableHead className="text-right">Length</TableHead>
+                      <TableHead className="text-right">Width</TableHead>
+                      <TableHead className="text-right">Thickness</TableHead>
+                      <TableHead>From location</TableHead>
+                      <TableHead>Charge</TableHead>
+                      <TableHead>Batch</TableHead>
+                      <TableHead className="whitespace-normal">Internal batch</TableHead>
+                    </TableRow>
                   ) : (
                   <TableRow>
-                    {isDrawnFromStock ? <TableHead>Lot</TableHead> : null}
                     <TableHead className="text-right">Qty planned</TableHead>
                     <TableHead className="text-right">
                       {isCount ? "Counted" : "Qty actual"}
@@ -598,35 +673,108 @@ export const ReportCompletionDialog = ({
                         onClick={() => setSelectedRow(index)}
                         className={cn(index === selectedRow && "bg-muted")}
                       >
+                        {isDrawnFromStock ? (
+                          <>
+                            <TableCell className="text-right">
+                              <Input
+                                className="w-16 text-right"
+                                readOnly
+                                {...register(`picks.${index}.qtyPlanned`)}
+                              />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Input
+                                type="text"
+                                inputMode="decimal"
+                                className="w-16 text-right"
+                                {...register(`picks.${index}.qtyActual`, {
+                                  onChange: (event) =>
+                                    restateWeight(index, event.target.value),
+                                })}
+                                disabled={isPending}
+                              />
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatNumber(
+                                Number(line?.qtyPlanned ?? 0) > 0
+                                  ? (Number(line?.kgPlanned ?? 0) *
+                                      Number(
+                                        watchedPicks?.[index]?.qtyPlanned ?? 0,
+                                      )) /
+                                      Number(line?.qtyPlanned ?? 0)
+                                  : 0,
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Input
+                                type="text"
+                                inputMode="decimal"
+                                className="w-20 text-right"
+                                {...register(`picks.${index}.kgActual`)}
+                                disabled={isPending}
+                              />
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {orDash(line?.length ?? null)}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {orDash(line?.width ?? null)}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {line?.thickness === null ||
+                              line?.thickness === undefined
+                                ? "—"
+                                : formatNumber(Number(line.thickness))}
+                            </TableCell>
+                            {/* `Van locatie`: where the parcel is taken
+                                from, chosen by its lot. */}
+                            <TableCell className="min-w-64">
+                              <Controller
+                                control={control}
+                                name={`picks.${index}.stockUuid`}
+                                render={({ field: lotField }) => (
+                                  <Select
+                                    value={lotField.value || EMPTY_LOT}
+                                    options={lotOptions}
+                                    placeholder="Which parcel?"
+                                    onValueChange={(value) =>
+                                      chooseLot(index, value)
+                                    }
+                                    disabled={isPending}
+                                    invalid={
+                                      Number(
+                                        String(
+                                          watchedPicks?.[index]?.qtyActual ?? "",
+                                        ).replace(",", "."),
+                                      ) > 0 && !lotField.value
+                                    }
+                                  />
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {orDash(chargeOf(index) || null)}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {orDash(
+                                lotsByUuid.get(
+                                  watchedPicks?.[index]?.stockUuid ?? "",
+                                )?.bundle ?? null,
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                className="w-20"
+                                {...register(`picks.${index}.internalBatch`)}
+                                readOnly
+                              />
+                            </TableCell>
+                          </>
+                        ) : (
+                          <>
                         {isReceipt ? (
                           <TableCell className="whitespace-nowrap">
                             {orDash(line?.forOrder ?? null)}
-                          </TableCell>
-                        ) : null}
-                        {isDrawnFromStock ? (
-                          <TableCell className="min-w-72">
-                            <Controller
-                              control={control}
-                              name={`picks.${index}.stockUuid`}
-                              render={({ field: lotField }) => (
-                                <Select
-                                  value={lotField.value || EMPTY_LOT}
-                                  options={lotOptions}
-                                  placeholder="Which parcel?"
-                                  onValueChange={(value) =>
-                                    chooseLot(index, value)
-                                  }
-                                  disabled={isPending}
-                                  invalid={
-                                    Number(
-                                      String(
-                                        watchedPicks?.[index]?.qtyActual ?? "",
-                                      ).replace(",", "."),
-                                    ) > 0 && !lotField.value
-                                  }
-                                />
-                              )}
-                            />
                           </TableCell>
                         ) : null}
                         {!isReceipt ? (
@@ -713,6 +861,7 @@ export const ReportCompletionDialog = ({
                             <TableCell>
                               <Input
                                 className="w-20"
+                                placeholder={bundlePlaceholder(index)}
                                 {...register(`picks.${index}.internalBatch`)}
                                 disabled={isPending}
                               />
@@ -745,10 +894,25 @@ export const ReportCompletionDialog = ({
                         </TableCell>
                         {isReceipt ? (
                           <>
-                            {/* Batch and plate number are not taken here yet;
-                                the reference's columns are kept in place. */}
-                            <TableCell>—</TableCell>
-                            <TableCell>—</TableCell>
+                            {/* `Partij` and `Plaatnummer`: the supplier's
+                                batch and the plate's own number, kept on the
+                                lot this row becomes. */}
+                            <TableCell>
+                              <Input
+                                className="w-24"
+                                aria-label="Batch"
+                                {...register(`picks.${index}.batch`)}
+                                disabled={isPending}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                className="w-24"
+                                aria-label="Plate number"
+                                {...register(`picks.${index}.plateNumber`)}
+                                disabled={isPending}
+                              />
+                            </TableCell>
                           </>
                         ) : (
                           <>
@@ -768,12 +932,38 @@ export const ReportCompletionDialog = ({
                             </TableCell>
                           </>
                         )}
+                          </>
+                        )}
                       </TableRow>
                     ))
                   )}
                 </TableBody>
               </Table>
             </div>
+
+            {/* `Naar Locatie` sits under the grid on a picking; greyed and
+                `-leeg-` where the goods leave the company (327410). */}
+            {isDrawnFromStock ? (
+              <div className="max-w-xs">
+                <FormLabel htmlFor="toLocationUuidBelow">To location</FormLabel>
+                <Controller
+                  control={control}
+                  name="toLocationUuid"
+                  render={({ field }) => (
+                    <Select
+                      id="toLocationUuidBelow"
+                      value={leavesCompany ? "" : (field.value ?? "")}
+                      options={locationOptions}
+                      placeholder={
+                        leavesCompany ? "-empty-" : "As planned on the line"
+                      }
+                      onValueChange={field.onChange}
+                      disabled={isPending || leavesCompany}
+                    />
+                  )}
+                />
+              </div>
+            ) : null}
 
             {isReceipt ? (
               <dl className="flex flex-wrap gap-x-10 gap-y-1 text-sm">

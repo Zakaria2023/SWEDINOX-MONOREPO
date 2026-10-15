@@ -119,6 +119,10 @@ export const reportPickSchema = z.object({
   charge: z.string().optional(),
   internalCharge: z.string().optional(),
   internalBatch: z.string().optional(),
+  // `Partij` and `Plaatnummer` — typed on an unloading, read off the lot
+  // elsewhere.
+  batch: z.string().optional(),
+  plateNumber: z.string().optional(),
 });
 
 export const reportCompletionSchema = z.object({
