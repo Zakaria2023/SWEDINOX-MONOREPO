@@ -13,6 +13,8 @@ type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type SuppliedIdentity = {
   /** The heat the processed metal keeps — `70120 3` out, `70120 3` back. */
   charge: SelectStock["charge"];
+  /** And our own charge: `26AQWF` out, `26AQWF` back (404361, 15-10-2026). */
+  internalCharge: SelectStock["internalCharge"];
   /** Where the metal was bought, which the processed lot keeps (C13). */
   purchaseOrderUuid: SelectStock["purchaseOrderUuid"];
   purchaseOrderItemUuid: SelectStock["purchaseOrderItemUuid"];
@@ -58,6 +60,7 @@ export const suppliedIdentityOf = async (
       kgActual: PurchaseOrderSupplies.kgActual,
       valueEur: PurchaseOrderSupplies.valueEur,
       charge: Stock.charge,
+      internalCharge: Stock.internalCharge,
       purchaseOrderUuid: Stock.purchaseOrderUuid,
       purchaseOrderItemUuid: Stock.purchaseOrderItemUuid,
       supplierUuid: Stock.supplierUuid,
@@ -80,6 +83,7 @@ export const suppliedIdentityOf = async (
 
   return {
     charge: first.charge,
+    internalCharge: first.internalCharge,
     purchaseOrderUuid: first.purchaseOrderUuid,
     purchaseOrderItemUuid: first.purchaseOrderItemUuid,
     supplierUuid: first.supplierUuid,

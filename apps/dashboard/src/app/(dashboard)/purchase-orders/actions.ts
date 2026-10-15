@@ -53,6 +53,7 @@ import {
   markSuppliesPicking,
   restatePurchaseLineOptions,
   restatePurchaseOrderAmount,
+  suppliedIdentityOf,
 } from "@/lib/server/external-processing";
 import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { Products, SelectProducts } from "@/db/schema/products";
@@ -1743,6 +1744,24 @@ export const preNotifyPurchaseOrder = async (
           ),
         );
 
+      // A `Processing` order's goods come back under the heat that went out:
+      // the reception's Charge reads 612345 once pre-notified (404361,
+      // 15-10-2026).
+      const supplied = await suppliedIdentityOf(tx, uuid);
+      if (supplied?.charge) {
+        await tx
+          .update(PurchaseLineReceivals)
+          .set({
+            charge: sql`COALESCE(${PurchaseLineReceivals.charge}, ${supplied.charge})`,
+          })
+          .where(
+            and(
+              eq(PurchaseLineReceivals.purchaseOrderUuid, uuid),
+              inArray(PurchaseLineReceivals.uuid, receivalUuids),
+            ),
+          );
+      }
+
       // The line follows: Confirm had left it at 12-10-2026, Pre-notify
       // moved it to 14-10-2026 (404355, 9-10-2026).
       const advised = await tx
@@ -2113,6 +2132,9 @@ export const createUnloadingWorkOrder = async (
       }
 
       const number = await nextWorkOrderNumber(tx);
+      // Processed metal is reported under the heat and the internal charge
+      // it went out under: 612345 and 26AQWF on 404361 (15-10-2026).
+      const supplied = await suppliedIdentityOf(tx, purchaseOrderUuid);
 
       await tx.insert(WarehouseWorkOrders).values({
         createdByUserId: userId,
@@ -2157,6 +2179,8 @@ export const createUnloadingWorkOrder = async (
           qtyPlanned: stillDue.toFixed(3),
           kgPlanned: kgDue.toFixed(2),
           quality: line.quality,
+          charge: supplied?.charge ?? null,
+          internalCharge: supplied?.internalCharge ?? null,
           status: "new",
         });
       }

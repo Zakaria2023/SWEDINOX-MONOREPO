@@ -13,6 +13,9 @@ import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import { JournalEntries } from "@/db/schema/journal-entries";
 import { Stock } from "@/db/schema/stock";
+import { StockOptions } from "@/db/schema/stock-options";
+import { PurchaseOrderItemOptions } from "@/db/schema/purchase-order-item-options";
+import { STOCK_OPTION_LABELS } from "@/lib/labels";
 import { StockMovements } from "@/db/schema/stock-movements";
 import {
   generateUuid,
@@ -373,13 +376,40 @@ export const applyReceipt = async (
   const supplied = processing
     ? await suppliedIdentityOf(tx, purchaseLine.purchaseOrderUuid)
     : null;
+  // 🔑 And the processing it was bought for. The lot back from 404361 is worth
+  // what went out plus the step: 2 plates × 2 499,47 €/TN × 0,0628 t =
+  // € 156,97, + Grinding € 6,80 = € 163,77 (15-10-2026). The line's options
+  // are what the step costs, shared by what came back of the line.
+  const lineOptions = supplied
+    ? await tx
+        .select({
+          option: PurchaseOrderItemOptions.option,
+          specification: PurchaseOrderItemOptions.specification,
+          amount: PurchaseOrderItemOptions.amount,
+        })
+        .from(PurchaseOrderItemOptions)
+        .where(eq(PurchaseOrderItemOptions.purchaseOrderItemUuid, purchaseLine.uuid))
+        .orderBy(PurchaseOrderItemOptions.sortOrder)
+    : [];
+  const processingCost =
+    lineOptions.reduce((sum, option) => sum + Number(option.amount ?? 0), 0) *
+    (plannedQty > 0 ? Math.min(1, quantity / plannedQty) : 1);
   const value = supplied
     ? roundToCents(
-        supplied.kgOut > 0
+        (supplied.kgOut > 0
           ? (supplied.valueOut * weightKg) / supplied.kgOut
-          : 0,
+          : 0) + processingCost,
       )
     : roundToCents(pricePerUnit * measure);
+  // The lot reads what was done to it — `Grinding (K320)`.
+  const processedOptions =
+    lineOptions
+      .map((option) =>
+        option.specification
+          ? `${STOCK_OPTION_LABELS[option.option]} (${option.specification})`
+          : STOCK_OPTION_LABELS[option.option],
+      )
+      .join(", ") || null;
   const movementReason = supplied
     ? ("external_processing_return" as const)
     : ("warehouse_receipt" as const);
@@ -442,8 +472,11 @@ export const applyReceipt = async (
           .where(
             sql`${Stock.internalCharge} REGEXP ${`^${String(year % 100).padStart(2, "0")}[A-Z]{4}$`}`,
           );
+  // Processed metal keeps the internal charge it went out under (26AQWF on
+  // 404361); only its bundle number is new.
   const internalCharge =
     typedCharge ??
+    supplied?.internalCharge ??
     sameReceipt?.internalCharge ??
     nextInternalCharge(year, lastOfYear?.charge ?? null);
 
@@ -497,7 +530,20 @@ export const applyReceipt = async (
     unit: purchaseLine.unit ?? undefined,
     valuationPrice: unitCostString(unitCost),
     valuationEuro: moneyString(value),
+    ...(processedOptions ? { options: processedOptions } : {}),
   });
+
+  // And as rows, the way the lot's `Options` panel holds them: applied.
+  for (const option of lineOptions) {
+    await tx.insert(StockOptions).values({
+      uuid: generateUuid(),
+      stockUuid,
+      productUuid: params.productUuid,
+      option: option.option,
+      specification: option.specification,
+      status: "applied",
+    });
+  }
 
   await tx
     .update(PurchaseOrderItems)
