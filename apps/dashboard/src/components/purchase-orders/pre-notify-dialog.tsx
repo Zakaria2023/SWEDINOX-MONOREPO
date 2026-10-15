@@ -2,6 +2,8 @@
 
 import {
   preNotifyPurchaseOrder,
+  PurchaseOrderItemDetail,
+  PurchaseOrderReceiptDocumentRow,
   PurchaseReceiptDocument,
 } from "@/app/(dashboard)/purchase-orders/actions";
 import {
@@ -39,6 +41,7 @@ import {
   todayDateString,
 } from "@/lib/helpers";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ChevronRight } from "lucide-react";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
@@ -46,6 +49,15 @@ type Props = {
   purchaseOrderUuid: string;
   purchaseOrderId: number;
   receipts: PurchaseReceiptDocument[];
+  /** For `For line`: the line each reception hangs off. */
+  items: PurchaseOrderItemDetail[];
+  /** What `…` beside `Document Supplier` picks from. */
+  documents: PurchaseOrderReceiptDocumentRow[];
+  /**
+   * The heat the lot sent out on a `Processing` order carries, which the
+   * returning goods keep: `Charge 612345` pre-filled on 404361 (15-10-2026).
+   */
+  suppliedCharge: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** What the pre-notify warned of while going through. */
@@ -65,6 +77,9 @@ export const PreNotifyDialog = ({
   purchaseOrderUuid,
   purchaseOrderId,
   receipts,
+  items,
+  documents,
+  suppliedCharge,
   open,
   onOpenChange,
   onWarnings,
@@ -75,6 +90,14 @@ export const PreNotifyDialog = ({
   );
   const [changing, setChanging] = useState(false);
   const [takeOverFrom, setTakeOverFrom] = useState("");
+  const [isPickingDocument, setIsPickingDocument] = useState(false);
+  const documentCodes = [
+    ...new Set(
+      documents.flatMap((document) =>
+        document.documentCode ? [document.documentCode] : [],
+      ),
+    ),
+  ];
 
   // Only what has not arrived can be pre-notified.
   const openReceipts = receipts.filter(
@@ -166,13 +189,17 @@ export const PreNotifyDialog = ({
               Pre-notify purchase order {purchaseOrderId}
             </DialogTitle>
             <DialogDescription>
-              Copy these values into the selected receipts below.
+              Tick the receipts the supplier has announced, fill in what they
+              said, and press OK.
             </DialogDescription>
           </DialogHeader>
 
           <DialogBody className="space-y-4">
             <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-              <div className="grid grid-cols-2 gap-3 rounded-lg border p-3">
+              <fieldset className="grid grid-cols-2 gap-3 rounded-lg border p-3">
+                <legend className="px-1 text-sm font-medium">
+                  Copy these values into the selected receipts below
+                </legend>
                 <div className="col-span-2">
                   <FormLabel htmlFor="billOfLading">
                     Bill of lading number
@@ -197,6 +224,12 @@ export const PreNotifyDialog = ({
                   <FormFieldError message={errors.advisedDate?.message} />
                 </div>
                 <div>
+                  <FormLabel htmlFor="preNotifyCode">
+                    Pre-notification code
+                  </FormLabel>
+                  <Input id="preNotifyCode" {...register("preNotifyCode")} />
+                </div>
+                <div>
                   <FormLabel htmlFor="confirmationNumber">
                     Confirmation number
                   </FormLabel>
@@ -204,12 +237,6 @@ export const PreNotifyDialog = ({
                     id="confirmationNumber"
                     {...register("confirmationNumber")}
                   />
-                </div>
-                <div>
-                  <FormLabel htmlFor="preNotifyCode">
-                    Pre-notification code
-                  </FormLabel>
-                  <Input id="preNotifyCode" {...register("preNotifyCode")} />
                 </div>
                 <div>
                   <FormLabel htmlFor="confirmationDate">
@@ -227,16 +254,49 @@ export const PreNotifyDialog = ({
                     )}
                   />
                 </div>
+                {/* `Document Supplier` with its `…`: picks one of the
+                    documents the supplier sent, as entered on the order's
+                    Product Receipt Documents. */}
                 <div className="col-span-2">
                   <FormLabel htmlFor="documentSupplier">
-                    Document supplier
+                    Document Supplier
                   </FormLabel>
-                  <Input
-                    id="documentSupplier"
-                    {...register("documentSupplier")}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="documentSupplier"
+                      {...register("documentSupplier")}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label="Choose a document"
+                      disabled={documentCodes.length === 0}
+                      onClick={() => setIsPickingDocument((shown) => !shown)}
+                    >
+                      …
+                    </Button>
+                  </div>
+                  {isPickingDocument && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {documentCodes.map((code) => (
+                        <Button
+                          key={code}
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setValue("documentSupplier", code);
+                            setIsPickingDocument(false);
+                          }}
+                        >
+                          {code}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
+              </fieldset>
 
               <div className="space-y-3 rounded-lg border p-3">
                 <label className="flex items-center gap-2 text-sm font-medium">
@@ -265,15 +325,6 @@ export const PreNotifyDialog = ({
                     onValueChange={setTakeOverFrom}
                   />
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={!changing || !takeOverFrom}
-                  onClick={takeOver}
-                >
-                  Take over
-                </Button>
                 <div>
                   <FormLabel htmlFor="takeOverDate">
                     Pre-notified delivery date
@@ -293,6 +344,15 @@ export const PreNotifyDialog = ({
                     }
                   />
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!changing || !takeOverFrom}
+                  onClick={takeOver}
+                >
+                  Take over
+                </Button>
               </div>
             </div>
 
@@ -310,7 +370,8 @@ export const PreNotifyDialog = ({
 
             <div className="overflow-x-auto">
             <Table>
-              {/* 🔴 The reference's grid, column for column: It. · For line ·
+              {/* 🔴 The reference's grid, column for column: (expand) ·
+                  ☐ Item · For line ·
                   Qty1 · U1 · Kg1 · M1 · Charge · Batch number · #Bundle ·
                   Product · Length1 · Width · Thickness · Bill of lading ·
                   Delivery date · Qty2 · U2 · Length2 · Delivery date (actual)
@@ -321,7 +382,7 @@ export const PreNotifyDialog = ({
               <TableHeader>
                 <TableRow>
                   <TableHead />
-                  <TableHead className="text-right">It.</TableHead>
+                  <TableHead>Item</TableHead>
                   <TableHead>For line</TableHead>
                   <TableHead className="text-right">Qty1</TableHead>
                   <TableHead>U1</TableHead>
@@ -365,20 +426,31 @@ export const PreNotifyDialog = ({
                 ) : (
                   openReceipts.map((receipt) => (
                     <TableRow key={receipt.uuid}>
-                      <TableCell>
-                        <Checkbox
-                          aria-label={`Pre-notify reception ${receipt.lineNumber ?? ""}`}
-                          checked={ticked.includes(receipt.uuid)}
-                          onChange={(event) =>
-                            toggle(receipt.uuid, event.target.checked)
-                          }
-                        />
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {receipt.lineNumber === null ? "—" : receipt.lineNumber * 10}
+                      {/* Read-only rows: the tick is the only cell that
+                          takes input. */}
+                      <TableCell className="w-6 text-muted-foreground">
+                        <ChevronRight className="size-4" />
                       </TableCell>
                       <TableCell>
-                        —
+                        <label className="flex items-center gap-2 tabular-nums">
+                          <Checkbox
+                            aria-label={`Pre-notify reception ${receipt.lineNumber ?? ""}`}
+                            checked={ticked.includes(receipt.uuid)}
+                            onChange={(event) =>
+                              toggle(receipt.uuid, event.target.checked)
+                            }
+                          />
+                          {receipt.lineNumber === null
+                            ? "—"
+                            : receipt.lineNumber * 10}
+                        </label>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {orDash(
+                          items.find(
+                            (item) => item.lineNumber === receipt.lineNumber,
+                          )?.forLine ?? null,
+                        )}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatNumber(Number(receipt.qtyPlanned ?? 0))}
@@ -393,7 +465,7 @@ export const PreNotifyDialog = ({
                         {formatNumber((Number(receipt.qtyPlanned ?? 0) * Number(receipt.lengthMm ?? 0)) / 1000)}
                       </TableCell>
                       <TableCell>
-                        {orDash(receipt.charge)}
+                        {orDash(receipt.charge ?? suppliedCharge)}
                       </TableCell>
                       <TableCell>
                         {orDash(receipt.plateNumber)}
@@ -488,11 +560,10 @@ export const PreNotifyDialog = ({
               name="inStockUnit"
               control={control}
               render={({ field }) => (
-                <label className="me-auto flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={field.value}
-                    onChange={(event) => field.onChange(event.target.checked)}
-                  />
+                <label className="me-auto flex items-center gap-2 text-sm text-muted-foreground">
+                  {/* Ticked and greyed on every order the reference
+                      showed. */}
+                  <Checkbox checked={field.value} disabled />
                   Pre-notify in stock unit (if receipt for stock)
                 </label>
               )}

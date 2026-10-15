@@ -1283,6 +1283,17 @@ export const PurchaseOrderDetailView = ({
         purchaseOrderUuid={purchaseOrder.uuid}
         purchaseOrderId={purchaseOrder.id}
         receipts={purchaseOrder.receipts}
+        items={purchaseOrder.items}
+        documents={purchaseOrder.receiptDocuments}
+        suppliedCharge={
+          isProcessing
+            ? (purchaseOrder.supplies.find(
+                (supply) => supply.status === "delivered",
+              )?.charge ??
+              purchaseOrder.supplies[0]?.charge ??
+              null)
+            : null
+        }
         open={isPreNotifyOpen}
         onOpenChange={setIsPreNotifyOpen}
         onWarnings={setWarnings}
