@@ -51,6 +51,7 @@ import {
 } from "@/lib/labels";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { applyReceipt } from "@/lib/server/receipts";
+import { raiseCrossDockPicking } from "@/lib/server/cross-dock";
 import { markSupplyDelivered } from "@/lib/server/external-processing";
 import {
   issuePurchaseReturnPick,
@@ -138,6 +139,12 @@ export type WorkOrderLineListItem = SelectWarehouseWorkOrderLines & {
   customerLabels: number;
   stockLabels: number;
   labelMedium: PrintMedium | null;
+  /**
+   * `Voor order` on the report dialog: the sales line the goods are for —
+   * the line's own, or on a `CD` unloading the one its purchase line was
+   * bought for (O108307/10, 15-10-2026). Composed, so a plain string.
+   */
+  forOrder: string | null;
 };
 
 /**
@@ -490,6 +497,16 @@ export const getWarehouseWorkOrderLines = async (
       customerLabelForPickingSlip: Products.customerLabelForPickingSlip,
       stockLabelBreakdown: Products.stockLabelBreakdown,
       stockLabelPieces: Products.stockLabelPieces,
+      forOrder: sql<string | null>`COALESCE(
+        (SELECT CONCAT('O', o.id, '/', oi.line_number * 10)
+           FROM OrderItems oi JOIN Orders o ON o.uuid = oi.order_uuid
+          WHERE oi.uuid = ${WarehouseWorkOrderLines.orderItemUuid}
+          LIMIT 1),
+        (SELECT CONCAT('O', o.id, '/', oi.line_number * 10)
+           FROM OrderItems oi JOIN Orders o ON o.uuid = oi.order_uuid
+          WHERE oi.purchase_order_item_uuid = ${WarehouseWorkOrderLines.purchaseOrderItemUuid}
+            AND oi.status <> 'cancelled'
+          ORDER BY oi.line_number LIMIT 1))`,
     })
     .from(WarehouseWorkOrderLines)
     .leftJoin(
@@ -1702,6 +1719,17 @@ export const reportWarehouseWorkOrderLineCompletion = async (
         })
         .where(eq(WarehouseWorkOrderLines.uuid, input.lineUuid));
 
+      // 🔑 Goods bought for a sale, unloaded onto `Laad` and approved: the
+      // picking that sends them out is raised at once (O108307/10,
+      // 15-10-2026). A product approved by hand waits for its approval.
+      if (
+        meta.stockEffect === "in" &&
+        line.purchaseOrderItemUuid &&
+        !approveManually
+      ) {
+        await raiseCrossDockPicking(tx, line.purchaseOrderItemUuid, userId);
+      }
+
       // The goods have gone back to the supplier: the return line reads what
       // went, and the return is `Delivered` once all of it has.
       if (line.purchaseReturnOrderItemUuid) {
@@ -1802,8 +1830,14 @@ export const approveWarehouseWorkOrderLine = async (
         uuid: WarehouseWorkOrderLines.uuid,
         status: WarehouseWorkOrderLines.status,
         workOrderUuid: WarehouseWorkOrderLines.workOrderUuid,
+        purchaseOrderItemUuid: WarehouseWorkOrderLines.purchaseOrderItemUuid,
+        type: WarehouseWorkOrders.type,
       })
       .from(WarehouseWorkOrderLines)
+      .innerJoin(
+        WarehouseWorkOrders,
+        eq(WarehouseWorkOrderLines.workOrderUuid, WarehouseWorkOrders.uuid),
+      )
       .where(eq(WarehouseWorkOrderLines.uuid, lineUuid))
       .limit(1);
 
@@ -1832,6 +1866,15 @@ export const approveWarehouseWorkOrderLine = async (
         throw new Error(
           "The line changed while approving it — please refresh and try again.",
         );
+      }
+
+      // An unloading of goods bought for a sale, approved by hand: its
+      // picking follows, as it would have on the report.
+      if (
+        WAREHOUSE_WORK_ORDER_TYPE_META[line.type].stockEffect === "in" &&
+        line.purchaseOrderItemUuid
+      ) {
+        await raiseCrossDockPicking(tx, line.purchaseOrderItemUuid, user.id);
       }
 
       const [outstanding] = await tx

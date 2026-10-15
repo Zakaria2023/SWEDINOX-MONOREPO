@@ -21,6 +21,10 @@ import {
 import { Reservations } from "@/db/schema/reservations";
 import { SelectStock, Stock } from "@/db/schema/stock";
 import {
+  WarehouseWorkOrderLines,
+  WarehouseWorkOrders,
+} from "@/db/schema/warehouse-work-orders";
+import {
   addLeadTime,
   articlePieceWeightKg,
   canEditPurchaseRequestLines,
@@ -37,7 +41,18 @@ import {
   syncPurchaseLineReceiptDates,
   syncPurchaseLineReceipts,
 } from "@/lib/server/purchase-lines";
-import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { raisePickingWorkOrder } from "@/lib/server/picking";
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  isNull,
+  ne,
+  notExists,
+  notInArray,
+  sql,
+} from "drizzle-orm";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -127,6 +142,14 @@ type CreatedPurchaseOrder = {
 type CreatedPurchaseRequest = {
   purchaseRequestUuid: string;
   purchaseRequestId: number;
+};
+
+/** A covered sales line and how much of a received lot it takes. */
+type CoveredLineAllocation = Pick<
+  SelectOrderItems,
+  "uuid" | "quantity" | "kgPlanned" | "deliveryDate"
+> & {
+  take: number;
 };
 
 /**
@@ -236,6 +259,7 @@ export const reserveReceiptToCoveredSalesLines = async (
       uuid: OrderItems.uuid,
       quantity: OrderItems.quantity,
       kgPlanned: OrderItems.kgPlanned,
+      deliveryDate: OrderItems.deliveryDate,
     })
     .from(OrderItems)
     .where(
@@ -248,15 +272,14 @@ export const reserveReceiptToCoveredSalesLines = async (
     .orderBy(OrderItems.lineNumber);
 
   // Served in line order until the lot runs out.
-  const allocations = covered.reduce<
-    { uuid: string; kgPlanned: string | null; take: number }[]
-  >((taken, line) => {
-    const used = taken.reduce((sum, entry) => sum + entry.take, 0);
-    const take = Math.min(lot.quantity - used, Number(line.quantity ?? 0));
-    return take > 0
-      ? [...taken, { uuid: line.uuid, kgPlanned: line.kgPlanned, take }]
-      : taken;
-  }, []);
+  const allocations = covered.reduce<CoveredLineAllocation[]>(
+    (taken, line) => {
+      const used = taken.reduce((sum, entry) => sum + entry.take, 0);
+      const take = Math.min(lot.quantity - used, Number(line.quantity ?? 0));
+      return take > 0 ? [...taken, { ...line, take }] : taken;
+    },
+    [],
+  );
 
   for (const line of allocations) {
     await tx
@@ -276,7 +299,10 @@ export const reserveReceiptToCoveredSalesLines = async (
       quantity: line.take.toFixed(STOCK_QUANTITY_SCALE),
       unit: lot.unit ?? "st",
       quantityKg: line.kgPlanned ?? "0.00",
-      reservedFor,
+      // Held for the day the sale goes out, as every other sales
+      // reservation is.
+      reservedFor:
+        reservedFor ?? (line.deliveryDate ? new Date(line.deliveryDate) : null),
     });
 
     await restateLineCost(
@@ -289,9 +315,13 @@ export const reserveReceiptToCoveredSalesLines = async (
   const reserved = allocations.reduce((sum, entry) => sum + entry.take, 0);
 
   if (reserved > 0) {
+    // Added to whatever the lot already holds for others, never written over
+    // it.
     await tx
       .update(Stock)
-      .set({ reservedQuantity: reserved.toFixed(STOCK_QUANTITY_SCALE) })
+      .set({
+        reservedQuantity: sql`${Stock.reservedQuantity} + ${reserved.toFixed(STOCK_QUANTITY_SCALE)}`,
+      })
       .where(eq(Stock.uuid, lot.stockUuid));
   }
 
@@ -793,4 +823,110 @@ export const crossDockLateDeliveryWarnings = async (
         ]
       : [];
   });
+};
+
+/**
+ * The goods bought for a `CD` sale have been unloaded onto `Laad` and
+ * reported: raise the picking that sends them out. Watched on O108307/10
+ * (15-10-2026) — reporting unloading line 404360/10 raised picking work order
+ * New, `From Laad` `To Laad`, the sales line's quantity and **its** weight
+ * (160 kg against the 157 unloaded), the received lot's charge and internal
+ * charge, and the purchase order in its purchase column; the sales order's
+ * delivery row read `Workorders created`.
+ *
+ * Only for a sale that has been released — `Make final` picks a provisional
+ * one's lines itself — and never twice for the same line.
+ */
+export const raiseCrossDockPicking = async (
+  tx: Transaction,
+  purchaseOrderItemUuid: string,
+  userId: string | null,
+): Promise<number[]> => {
+  const lines = await tx
+    .select({
+      orderItemUuid: OrderItems.uuid,
+      orderUuid: OrderItems.orderUuid,
+      lineNumber: OrderItems.lineNumber,
+      stockUuid: Stock.uuid,
+      productUuid: OrderItems.productUuid,
+      productCode: Products.productCode,
+      fromLocationUuid: Stock.locationUuid,
+      lengthMm: OrderItems.lengthMm,
+      widthMm: OrderItems.widthMm,
+      thicknessMm: OrderItems.thicknessMm,
+      quantity: OrderItems.quantity,
+      kgPlanned: OrderItems.kgPlanned,
+      charge: Stock.charge,
+      internalCharge: Stock.internalCharge,
+      internalBatch: Stock.internalBatch,
+      quality: Stock.quality,
+      orderId: Orders.id,
+      companyUuid: Orders.companyUuid,
+      orderDeliveryDate: Orders.deliveryDate,
+    })
+    .from(OrderItems)
+    .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+    .innerJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
+    .innerJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+    .where(
+      and(
+        eq(OrderItems.purchaseOrderItemUuid, purchaseOrderItemUuid),
+        eq(OrderItems.sourceType, "cross_dock"),
+        ne(OrderItems.status, "cancelled"),
+        notInArray(Orders.status, ["provisional", "cancelled"]),
+        notExists(
+          tx
+            .select({ uuid: WarehouseWorkOrderLines.uuid })
+            .from(WarehouseWorkOrderLines)
+            .innerJoin(
+              WarehouseWorkOrders,
+              eq(WarehouseWorkOrderLines.workOrderUuid, WarehouseWorkOrders.uuid),
+            )
+            .where(
+              and(
+                eq(WarehouseWorkOrderLines.orderItemUuid, OrderItems.uuid),
+                eq(WarehouseWorkOrders.type, "picking"),
+              ),
+            ),
+        ),
+      ),
+    )
+    .orderBy(asc(Orders.id), asc(OrderItems.lineNumber));
+
+  const orderUuids = [...new Set(lines.map((line) => line.orderUuid))];
+  const numbers: number[] = [];
+
+  for (const orderUuid of orderUuids) {
+    const orderLines = lines.filter((line) => line.orderUuid === orderUuid);
+    const [first] = orderLines;
+    if (!first) {
+      continue;
+    }
+    numbers.push(
+      await raisePickingWorkOrder(tx, {
+        order: {
+          id: first.orderId,
+          companyUuid: first.companyUuid,
+          deliveryDate: first.orderDeliveryDate,
+        },
+        lines: orderLines.map((line) => ({
+          ...line,
+          purchaseOrderItemUuid,
+        })),
+        userId,
+      }),
+    );
+
+    await tx
+      .update(OrderItems)
+      .set({ deliveryStatus: "workorders_created" })
+      .where(
+        inArray(
+          OrderItems.uuid,
+          orderLines.map((line) => line.orderItemUuid),
+        ),
+      );
+  }
+
+  return numbers;
 };

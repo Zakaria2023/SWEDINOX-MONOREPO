@@ -24,11 +24,6 @@ import {
   TransportWorkOrderLines,
   TransportWorkOrders,
 } from "@/db/schema/transport-work-orders";
-import {
-  WarehouseWorkOrderLines,
-  WarehouseWorkOrders,
-} from "@/db/schema/warehouse-work-orders";
-import { Warehouses } from "@/db/schema/warehouses";
 import { SelectStock, Stock } from "@/db/schema/stock";
 import { InsertTexts, SelectTexts, Texts } from "@/db/schema/texts";
 import { requireAuth } from "@/lib/auth";
@@ -52,7 +47,6 @@ import {
   quoteOrderPolicy,
   resolveSurchargeAmounts,
   toDateString,
-  todayDateString,
   unloadingRequirements,
   STOCK_QUANTITY_SCALE,
 } from "@/lib/helpers";
@@ -71,7 +65,7 @@ import {
 } from "@/lib/server/stock-search";
 import { exportRows } from "@/lib/server/excel";
 import { writeSystemLog } from "@/lib/server/system-log";
-import { nextWorkOrderNumber } from "@/lib/server/work-order-numbers";
+import { raisePickingWorkOrder } from "@/lib/server/picking";
 import {
   assertWorkPanelFree,
   releaseWorkPanelLockFor,
@@ -1902,37 +1896,6 @@ export const updateOrder = async (
 };
 
 /**
- * Walk a location up its tree to the warehouse it belongs to.
- *
- * The reference's tree is four levels — `00 Hego Almere` → section `01` →
- * subsection `1A` → bin `1A-1` — and some bins go deeper still, so a fixed
- * number of joins would not reach the top. The bound is a guard against a
- * parent cycle, not a claim about the depth.
- */
-const rootWarehouseOf = async (
-  tx: Transaction,
-  locationUuid: string,
-): Promise<string | null> => {
-  const seen = new Set<string>();
-  const climb = async (uuid: string): Promise<string | null> => {
-    if (seen.has(uuid) || seen.size > 16) {
-      return null;
-    }
-    seen.add(uuid);
-    const [row] = await tx
-      .select({ parentUuid: Warehouses.parentUuid })
-      .from(Warehouses)
-      .where(eq(Warehouses.uuid, uuid))
-      .limit(1);
-    if (!row) {
-      return null;
-    }
-    return row.parentUuid ? climb(row.parentUuid) : uuid;
-  };
-  return climb(locationUuid);
-};
-
-/**
  * Make an order final — the one button that turns a typed document into work.
  *
  * Watched on 21-9-2026, on order 102191. A single press produced all of this:
@@ -2032,98 +1995,39 @@ export const makeOrderFinal = async (
       }
 
       // 🔴 Only lines cut from a lot are picked. A `CD` line still waiting for
-      // the goods bought for it has nothing on a shelf yet; its lot is
-      // unloaded straight onto the loading bay when it comes (C3/C6), which
-      // is where a picking would have taken it anyway.
-      const pickable = items.filter((item) => item.stockUuid);
+      // the goods bought for it has nothing on a shelf yet; its picking is
+      // raised when its unloading is reported (O108307/10, 15-10-2026).
+      const pickable = items.flatMap((item) =>
+        item.stockUuid ? [{ ...item, stockUuid: item.stockUuid }] : [],
+      );
       const pickingNumber =
-        pickable.length > 0 ? await nextWorkOrderNumber(tx) : null;
-
-      if (pickingNumber !== null) {
-        // Where the picked metal is staged.
-        //
-        // The reference uses exactly three destinations for a picking, and this
-        // is their order of preference because it is their order of frequency
-        // across its own 3 936 picking rows: `Laad` 3 420, `Afhaal` 287,
-        // `Afroep` 39. Order 102191's picking went to `Laad`.
-        //
-        // The fallback is not ceremony. Our warehouse tree has no `load` location
-        // at all — six rows, four `pick`, one `call_off`, one `collection` — so
-        // insisting on one would refuse every order ever made final.
-        const [loadLocation] = await tx
-          .select({ uuid: Warehouses.uuid })
-          .from(Warehouses)
-          .where(
-            inArray(Warehouses.locationType, ["load", "collection", "call_off"]),
-          )
-          .orderBy(
-            sql`FIELD(${Warehouses.locationType}, 'load', 'collection', 'call_off')`,
-          )
-          .limit(1);
-
-        if (!loadLocation) {
-          throw new Error(
-            "No loading, collection or call-off location exists, so there is nowhere to pick this order to. Add one on the warehouses screen first.",
-          );
-        }
-
-        const firstLocation = pickable.find(
-          (item) => item.locationUuid,
-        )?.locationUuid;
-        const warehouseUuid = firstLocation
-          ? await rootWarehouseOf(tx, firstLocation)
+        pickable.length > 0
+          ? await raisePickingWorkOrder(tx, {
+              order: {
+                id: order.id,
+                companyUuid: order.companyUuid,
+                deliveryDate: order.deliveryDate,
+              },
+              lines: pickable.map((item) => ({
+                orderItemUuid: item.uuid,
+                lineNumber: item.lineNumber,
+                stockUuid: item.stockUuid,
+                productUuid: item.productUuid,
+                productCode: item.productCode,
+                fromLocationUuid: item.locationUuid,
+                lengthMm: item.lengthMm,
+                widthMm: item.widthMm,
+                thicknessMm: item.thicknessMm,
+                quantity: item.quantity,
+                kgPlanned: item.kgPlanned,
+                charge: item.charge,
+                internalCharge: item.internalCharge,
+                internalBatch: item.internalBatch,
+                quality: item.quality,
+              })),
+              userId,
+            })
           : null;
-
-        if (!warehouseUuid) {
-          throw new Error(
-            "The lots on this order do not sit in any warehouse, so no picking can be planned.",
-          );
-        }
-
-        const number = pickingNumber;
-        const workOrderUuid = generateUuid();
-
-        await tx.insert(WarehouseWorkOrders).values({
-          createdByUserId: userId,
-          uuid: workOrderUuid,
-          number,
-          warehouseUuid,
-          type: "picking",
-          // `Orders.deliveryDate` is a Date, the work order's planned date a
-          // string, so the conversion is explicit rather than left to Drizzle.
-          plannedDate: order.deliveryDate
-            ? toDateString(order.deliveryDate)
-            : todayDateString(),
-          status: "new",
-        });
-
-        for (const [index, item] of pickable.entries()) {
-          await tx.insert(WarehouseWorkOrderLines).values({
-            modifiedByUserId: userId,
-            uuid: generateUuid(),
-            workOrderUuid,
-            lineNumber: item.lineNumber ?? index + 1,
-            orderItemUuid: item.uuid,
-            orderNumber: String(order.id),
-            companyUuid: order.companyUuid,
-            stockUuid: item.stockUuid,
-            productUuid: item.productUuid,
-            productCode: item.productCode,
-            fromLocationUuid: item.locationUuid,
-            toLocationUuid: loadLocation.uuid,
-            length: item.lengthMm,
-            width: item.widthMm,
-            thickness: item.thicknessMm ? Number(item.thicknessMm) : null,
-            qtyPlanned: item.quantity,
-            kgPlanned: item.kgPlanned,
-            charge: item.charge,
-            internalCharge: item.internalCharge,
-            internalBatch: item.internalBatch,
-            quality: item.quality,
-            status: "new",
-          });
-        }
-      }
 
       const transportUuid = generateUuid();
       await tx.insert(TransportWorkOrders).values({

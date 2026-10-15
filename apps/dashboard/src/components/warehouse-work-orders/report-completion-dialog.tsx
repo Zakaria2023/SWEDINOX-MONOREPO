@@ -584,9 +584,9 @@ export const ReportCompletionDialog = ({
                         className={cn(index === selectedRow && "bg-muted")}
                       >
                         {isReceipt ? (
-                          <>
-                            <TableCell />
-                          </>
+                          <TableCell className="whitespace-nowrap">
+                            {orDash(line?.forOrder ?? null)}
+                          </TableCell>
                         ) : null}
                         {isDrawnFromStock ? (
                           <TableCell className="min-w-72">

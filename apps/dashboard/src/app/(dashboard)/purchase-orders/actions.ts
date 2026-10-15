@@ -2035,15 +2035,25 @@ export const createUnloadingWorkOrder = async (
       // `404744`, bought for `O108183/10`, sat on `Laad` (type `Laad`) while
       // every other lot of the article was on a `Pick` rack (C6, 8-10-2026):
       // it was received only to go out again on the customer's lorry.
-      const [loadingBay] = outstanding.some(
+      const hasCrossDock = outstanding.some(
         (line) => line.sourceType === "cross_dock",
-      )
+      );
+      const [loadingBay] = hasCrossDock
         ? await tx
             .select({ uuid: Warehouses.uuid })
             .from(Warehouses)
             .where(eq(Warehouses.locationType, "load"))
             .limit(1)
         : [];
+
+      // Not quietly onto `Ontvangst` instead: a cross-docked parcel left
+      // there would be restocked into the racking and miss its lorry.
+      if (hasCrossDock && !loadingBay) {
+        return {
+          error:
+            "No loading location exists, so the cross-docked goods have nowhere to be unloaded. Give a location the `Load` type on the warehouses screen first.",
+        };
+      }
 
       const number = await nextWorkOrderNumber(tx);
 
