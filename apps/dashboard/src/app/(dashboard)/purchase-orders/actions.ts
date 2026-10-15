@@ -45,6 +45,7 @@ import {
 } from "@/db/schema/purchase-order-item-options";
 import { applyReceipt } from "@/lib/server/receipts";
 import {
+  crossDockLateDeliveryWarnings,
   crossDockReleaseRefusal,
   restateCoveredSalesLines,
 } from "@/lib/server/cross-dock";
@@ -1648,11 +1649,18 @@ export const preNotifyPurchaseOrder = async (
       return { error: "A cancelled purchase order cannot be pre-notified." };
     }
 
-    await db.transaction(async (tx) => {
-      // A stamp, not a rung: the order keeps its place on the ladder.
+    const advised = await db.transaction(async (tx) => {
+      // A stamp, not a rung: the order keeps its place on the ladder. The
+      // header's Date moves to the pre-notified one, as the line's does
+      // below (404360, 15-10-2026).
       await tx
         .update(PurchaseOrders)
-        .set({ preNotifiedAt: new Date() })
+        .set({
+          preNotifiedAt: new Date(),
+          deliveryDate: new Date(advisedDate),
+          deliveryWeek: isoWeekOf(advisedDate),
+          deliveryYear: Number(advisedDate.slice(0, 4)),
+        })
         .where(eq(PurchaseOrders.uuid, uuid));
 
       // Only the receipts ticked in the dialog, and never one that has
@@ -1696,7 +1704,15 @@ export const preNotifyPurchaseOrder = async (
           .set({ receiptDate: advisedDate })
           .where(inArray(PurchaseOrderItems.uuid, itemUuids));
       }
+      return itemUuids;
     });
+
+    // Said, not refused: the delivery is coming when it is coming.
+    const warnings = await crossDockLateDeliveryWarnings(
+      db,
+      advised,
+      advisedDate,
+    );
 
     // 🔑 Pre-notify raises the unloading by itself: the reception on 404355
     // read `Workorders created` the moment OK was pressed (9-10-2026). A
@@ -1723,7 +1739,11 @@ export const preNotifyPurchaseOrder = async (
     revalidatePath("/purchase-orders");
     revalidatePath(`/purchase-orders/${uuid}`);
     revalidatePath("/purchase-receivals");
-    return { success: true, purchaseOrderUuid: uuid };
+    return {
+      success: true,
+      purchaseOrderUuid: uuid,
+      warnings: warnings.length > 0 ? warnings : undefined,
+    };
   } catch (error) {
     return {
       error:

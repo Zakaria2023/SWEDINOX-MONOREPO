@@ -48,6 +48,8 @@ type Props = {
   receipts: PurchaseReceiptDocument[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** What the pre-notify warned of while going through. */
+  onWarnings: (warnings: string[]) => void;
 };
 
 /**
@@ -65,6 +67,7 @@ export const PreNotifyDialog = ({
   receipts,
   open,
   onOpenChange,
+  onWarnings,
 }: Props) => {
   const [state, dispatch, isPending] = useActionState(
     preNotifyPurchaseOrder,
@@ -112,8 +115,9 @@ export const PreNotifyDialog = ({
   useEffect(() => {
     if (state.success) {
       onOpenChange(false);
+      onWarnings(state.warnings ?? []);
     }
-  }, [state, onOpenChange]);
+  }, [state, onOpenChange, onWarnings]);
 
   const toggle = (uuid: string, on: boolean) =>
     setValue(

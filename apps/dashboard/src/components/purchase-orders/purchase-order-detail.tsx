@@ -1235,6 +1235,7 @@ export const PurchaseOrderDetailView = ({
         receipts={purchaseOrder.receipts}
         open={isPreNotifyOpen}
         onOpenChange={setIsPreNotifyOpen}
+        onWarnings={setWarnings}
       />
       <ConfirmPurchaseOrderDialog
         purchaseOrderUuid={purchaseOrder.uuid}

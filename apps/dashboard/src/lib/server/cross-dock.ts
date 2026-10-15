@@ -37,7 +37,7 @@ import {
   syncPurchaseLineReceiptDates,
   syncPurchaseLineReceipts,
 } from "@/lib/server/purchase-lines";
-import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -749,4 +749,48 @@ export const restateCoveredSalesLines = async (
       Number(purchaseLine.amount ?? 0) * share,
     );
   }
+};
+
+/**
+ * The `CD` sales lines a pre-notified delivery now arrives too late for.
+ * Pre-notifying 404360 for after O108307/10's delivery date warned `Sales
+ * order line O108307/10 can now no longer be delivered as planned` and went
+ * through all the same (15-10-2026).
+ */
+export const crossDockLateDeliveryWarnings = async (
+  query: ReadQuery,
+  purchaseOrderItemUuids: string[],
+  advisedDate: string,
+): Promise<string[]> => {
+  if (purchaseOrderItemUuids.length === 0) {
+    return [];
+  }
+
+  const covered = await query
+    .select({
+      orderId: Orders.id,
+      lineNumber: OrderItems.lineNumber,
+      lineDeliveryDate: OrderItems.deliveryDate,
+      orderDeliveryDate: Orders.deliveryDate,
+    })
+    .from(OrderItems)
+    .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+    .where(
+      and(
+        inArray(OrderItems.purchaseOrderItemUuid, purchaseOrderItemUuids),
+        ne(OrderItems.status, "cancelled"),
+      ),
+    )
+    .orderBy(asc(Orders.id), asc(OrderItems.lineNumber));
+
+  return covered.flatMap((line) => {
+    const salesDate =
+      line.lineDeliveryDate ??
+      (line.orderDeliveryDate ? toDateString(line.orderDeliveryDate) : null);
+    return salesDate && advisedDate.slice(0, 10) > salesDate.slice(0, 10)
+      ? [
+          `Sales order line O${line.orderId}/${(line.lineNumber ?? 0) * 10} can now no longer be delivered as planned`,
+        ]
+      : [];
+  });
 };
