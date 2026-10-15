@@ -44,6 +44,7 @@ import {
   SelectPurchaseOrderItemOptions,
 } from "@/db/schema/purchase-order-item-options";
 import { applyReceipt } from "@/lib/server/receipts";
+import { crossDockReleaseRefusal } from "@/lib/server/cross-dock";
 import {
   markSuppliesPicking,
   restatePurchaseLineOptions,
@@ -177,6 +178,8 @@ export type PurchaseOrderActionResult = {
   purchaseOrderUuid?: string;
   error?: string;
   success?: boolean;
+  /** Said after the action went through, without stopping it. */
+  warnings?: string[];
 };
 
 export type PurchaseOrderListItem = SelectPurchaseOrders & {
@@ -1464,6 +1467,27 @@ export const makePurchaseOrderFinal = async (
       return { error: "Only a provisional purchase order can be made final." };
     }
 
+    // 🔴 Bought for a customer, released only once the sale is: 404360 was
+    // refused while O108307/10 was still provisional (14-10-2026).
+    const refusal = await crossDockReleaseRefusal(db, uuid);
+    if (refusal) {
+      return { error: refusal };
+    }
+
+    // A line nobody has priced still goes out, but not silently: `The line
+    // amount of the following lines is zero:` and one `Line 10` per line.
+    const unpriced = await db
+      .select({ lineNumber: PurchaseOrderItems.lineNumber })
+      .from(PurchaseOrderItems)
+      .where(
+        and(
+          eq(PurchaseOrderItems.purchaseOrderUuid, uuid),
+          ne(PurchaseOrderItems.status, "cancelled"),
+          sql`COALESCE(${PurchaseOrderItems.amount}, 0) = 0`,
+        ),
+      )
+      .orderBy(asc(PurchaseOrderItems.lineNumber));
+
     await db.transaction(async (tx) => {
       // `Make final` on the reference releases the order and opens the
       // printed document, so the banner reads `Released, Printed` (404355,
@@ -1487,7 +1511,21 @@ export const makePurchaseOrderFinal = async (
     revalidatePath("/purchase-orders");
     revalidatePath(`/purchase-orders/${uuid}`);
     revalidatePath("/purchase-lines");
-    return { success: true, purchaseOrderUuid: uuid };
+    return {
+      success: true,
+      purchaseOrderUuid: uuid,
+      warnings:
+        unpriced.length > 0
+          ? [
+              [
+                "The line amount of the following lines is zero:",
+                ...unpriced.map(
+                  (line) => `Line ${(line.lineNumber ?? 0) * 10}`,
+                ),
+              ].join("\n"),
+            ]
+          : undefined,
+    };
   } catch (error) {
     return {
       error:

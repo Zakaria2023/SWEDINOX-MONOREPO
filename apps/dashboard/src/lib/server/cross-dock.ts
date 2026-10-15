@@ -37,9 +37,12 @@ import {
   syncPurchaseLineReceiptDates,
   syncPurchaseLineReceipts,
 } from "@/lib/server/purchase-lines";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** Anything that can read — the database or an open transaction. */
+type ReadQuery = Pick<typeof db, "select">;
 
 type PurchaseLineCost = {
   /** The purchase line's amount — what the whole line is bought for. */
@@ -651,4 +654,52 @@ export const addCrossDockLineToPurchaseRequest = async (
   });
 
   return { purchaseRequestUuid, purchaseRequestId: request.id };
+};
+
+/**
+ * Why `Make final` refuses a purchase order bought for sales lines, or null
+ * when nothing stands in the way (404360, 14-10-2026). The goods are bought
+ * for a customer, so the sale has to be real first: every sales line it
+ * covers released, and none of those orders financially blocked.
+ */
+export const crossDockReleaseRefusal = async (
+  query: ReadQuery,
+  purchaseOrderUuid: string,
+): Promise<string | null> => {
+  const covered = await query
+    .select({
+      orderId: Orders.id,
+      orderStatus: Orders.status,
+      financialBlockage: Orders.financialBlockage,
+      lineNumber: OrderItems.lineNumber,
+      lineStatus: OrderItems.lineStatus,
+    })
+    .from(OrderItems)
+    .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+    .innerJoin(
+      PurchaseOrderItems,
+      eq(OrderItems.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
+    )
+    .where(
+      and(
+        eq(PurchaseOrderItems.purchaseOrderUuid, purchaseOrderUuid),
+        ne(OrderItems.status, "cancelled"),
+      ),
+    )
+    .orderBy(asc(PurchaseOrderItems.lineNumber), asc(OrderItems.lineNumber));
+
+  const unreleased = covered.find(
+    (line) =>
+      line.orderStatus === "provisional" || line.lineStatus === "provisional",
+  );
+  if (unreleased) {
+    return `Sales line O${unreleased.orderId}/${(unreleased.lineNumber ?? 0) * 10} has not been released.`;
+  }
+
+  const blocked = covered.find((line) => line.financialBlockage);
+  if (blocked) {
+    return `Sales order ${blocked.orderId} is blocked.`;
+  }
+
+  return null;
 };

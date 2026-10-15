@@ -106,6 +106,9 @@ export const PurchaseOrderDetailView = ({
   const [isPreNotifyOpen, setIsPreNotifyOpen] = useState(false);
   const [raised, setRaised] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  // Said after an action went through — the zero-amount lines on Make
+  // final, a sale that can no longer be delivered on Pre-notify.
+  const [warnings, setWarnings] = useState<string[]>([]);
   // The reference's reception toolbar acts on a selected row rather than
   // hanging a column of buttons off every one of them.
   const [selectedReceiptUuid, setSelectedReceiptUuid] = useState<string | null>(
@@ -184,6 +187,15 @@ export const PurchaseOrderDetailView = ({
   return (
     <div className="space-y-6">
       {error && <FormError>{error}</FormError>}
+      {warnings.map((warning) => (
+        <p
+          key={warning}
+          role="status"
+          className="whitespace-pre-line rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm"
+        >
+          {warning}
+        </p>
+      ))}
 
       {/* 🔴 The toolbar sits above the document, as it does on every reference
           screen: `Make final · Print… · Send… · Return · Par. return · Confirm
@@ -196,6 +208,7 @@ export const PurchaseOrderDetailView = ({
               type="button"
               onClick={() => {
                 setError(undefined);
+                setWarnings([]);
                 startTransition(async () => {
                   const result = await makePurchaseOrderFinal(
                     purchaseOrder.uuid,
@@ -204,6 +217,7 @@ export const PurchaseOrderDetailView = ({
                     setError(result.error);
                     return;
                   }
+                  setWarnings(result.warnings ?? []);
                   // The reference opens the printed order and then asks
                   // whether to send it (9-10-2026).
                   window.open(
