@@ -458,6 +458,22 @@ export const DOMAIN_TERMS: Record<string, DomainTerm> = {
   "Total qty": { nl: "Totale Hvh", ar: "إجمالي الكمية" },
   "Total length": { nl: "Totale Lengte", ar: "إجمالي الطول" },
   "-empty-": { nl: "-leeg-", ar: "-فارغ-" },
+
+  // ── Voorraad, the stock window, verbatim (404361, 15-10-2026) ────────────
+  "Use selected lines": {
+    nl: "Gebruik geselecteerde regels",
+    ar: "استخدام الأسطر المحددة",
+  },
+  "Use selected article": {
+    nl: "Gebruik geselecteerde artikel",
+    ar: "استخدام المادة المحددة",
+  },
+  "Default settings": { nl: "Standaard instellingen", ar: "الإعدادات الافتراضية" },
+  "Reset dialog": { nl: "Reset dialog", ar: "إعادة تعيين النافذة" },
+  "Only articles with technical stock": {
+    nl: "Alleen artikelen met technische voorraad",
+    ar: "المواد ذات المخزون الفعلي فقط",
+  },
 };
 
 /**

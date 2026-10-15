@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { ListChecks, RotateCcw, Search } from "lucide-react";
+import { ListChecks, RotateCcw, Search, X } from "lucide-react";
 import { searchStockWindow } from "@/app/(dashboard)/orders/actions";
 import {
   getProductGroupsForSelect,
@@ -601,6 +601,28 @@ export const StockSearchDialog = ({
           </div>
 
           <div>
+            {/* The reference shows the tick as a filter chip above the grid. */}
+            {filters.onlyWithTechnicalStock && (
+              <div className="mb-2 flex">
+                <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2 py-0.5 text-xs">
+                  TotalPhysicalStock ≠ 0
+                  <button
+                    type="button"
+                    aria-label="Remove filter"
+                    onClick={() => {
+                      const next = { ...filters, onlyWithTechnicalStock: false };
+                      setFilters(next);
+                      if (hasSearched) {
+                        runSearch(next);
+                      }
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </span>
+              </div>
+            )}
             <div className="max-h-48 overflow-auto rounded-lg border">
               <Table>
                 <TableHeader>
@@ -792,7 +814,10 @@ export const StockSearchDialog = ({
                       className={cn(
                         "cursor-pointer",
                         selectedLot === lot.uuid && "bg-muted",
-                        lot.available <= 0 && "text-destructive",
+                        // Held for something else: red, as the reference
+                        // draws it.
+                        (lot.reserved > 0 || lot.available <= 0) &&
+                          "text-destructive",
                       )}
                     >
                       {onChooseLots && (
@@ -887,6 +912,28 @@ export const StockSearchDialog = ({
               </Table>
             </div>
 
+            {/* `Gebruik geselecteerde regels` under the lot grid, as `Use
+                selected article` sits under the article grid. */}
+            {onChooseLots && (
+              <div className="mt-2 flex justify-end">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={checkedLots.length === 0}
+                  onClick={() =>
+                    onChooseLots(
+                      lots.filter(
+                        (lot) =>
+                          checkedLots.includes(lot.uuid) && lot.available > 0,
+                      ),
+                    )
+                  }
+                >
+                  Use selected lines
+                </Button>
+              </div>
+            )}
+
             {/* The reference's four labels under the lot grid, filled from the
                 lot that is selected. */}
             <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 rounded-lg border bg-muted/30 p-3 text-sm sm:grid-cols-5">
@@ -977,21 +1024,6 @@ export const StockSearchDialog = ({
           >
             Cancel
           </Button>
-          {onChooseLots && (
-            <Button
-              type="button"
-              disabled={checkedLots.length === 0}
-              onClick={() =>
-                onChooseLots(
-                  lots.filter(
-                    (lot) => checkedLots.includes(lot.uuid) && lot.available > 0,
-                  ),
-                )
-              }
-            >
-              Use selected lines
-            </Button>
-          )}
           {/* A purchase line names an article, not a parcel. */}
           {!productOnly && !onChooseLots && (
             <Button
