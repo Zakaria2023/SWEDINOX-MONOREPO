@@ -12,6 +12,9 @@ import {
   settlementAccountFor,
 } from "@/lib/helpers";
 
+// Off: purchase bookkeeping lives in AFAS, so purchase-side stock movements post no journal entries here.
+export const POST_PURCHASE_LEDGER_ENTRIES: boolean = false;
+
 export type PurchasePosting = {
   /** The PurchaseInvoices row being posted — an invoice or a credit note. */
   purchaseInvoiceUuid: string;

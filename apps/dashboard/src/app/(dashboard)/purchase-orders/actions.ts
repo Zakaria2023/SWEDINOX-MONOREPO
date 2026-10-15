@@ -1388,9 +1388,9 @@ export const cancelPurchaseOrder = async (
       return { error: "This purchase order is already cancelled." };
     }
 
-    // A purchase order carries no stock of its own — stock only appears once a
-    // purchase invoice receives it. If any lot already points back to this
-    // order, it has been received and billed, so the order can't be cancelled.
+    // A purchase order carries no stock of its own — stock only appears once
+    // its goods are received. If any lot already points back to this order,
+    // something has arrived, so the order can't be cancelled.
     const stockRows = await db
       .select({ id: Stock.id })
       .from(Stock)
@@ -1398,8 +1398,7 @@ export const cancelPurchaseOrder = async (
 
     if (stockRows.length > 0) {
       return {
-        error:
-          "Cannot cancel: this purchase order has already been received on a purchase invoice.",
+        error: "Stock has already been received on this order.",
       };
     }
 

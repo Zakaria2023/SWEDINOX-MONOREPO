@@ -10,12 +10,10 @@ import {
   MessageSquareWarning,
   PackageX,
   Printer,
-  ReceiptText,
   ShoppingCart,
   Warehouse,
 } from "lucide-react";
 import {
-  creditPurchaseReturnOrder,
   dispatchPurchaseReturnOrder,
   makePurchaseReturnOrderFinal,
   PurchaseReturnOrderActionResult,
@@ -183,18 +181,6 @@ export const PurchaseReturnOrderToolbar = ({ returnOrder }: Props) => {
             >
               <PackageX className="me-1.5 size-4" />
               {isDispatched || isCredited ? "Goods sent back" : "Send goods back"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() =>
-                run(() => creditPurchaseReturnOrder(returnOrder.uuid))
-              }
-              disabled={isPending || !isDispatched}
-              title="Reduces what we owe this supplier once the goods have left."
-            >
-              <ReceiptText className="me-1.5 size-4" />
-              {isCredited ? "Credited" : "Book supplier credit note"}
             </Button>
           </>
         )}

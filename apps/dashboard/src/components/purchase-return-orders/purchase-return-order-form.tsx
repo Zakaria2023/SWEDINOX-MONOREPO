@@ -66,7 +66,6 @@ import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { SurchargesSection } from "./sections/surcharges-section";
 import { TextsSection } from "./sections/texts-section";
 import { ComplaintsSection } from "./sections/complaints-section";
-import { InvoiceLinesSection } from "./sections/invoice-lines-section";
 import {
   PurchaseReturnOrderLines,
   RETURN_LINE_COLUMNS,
@@ -785,7 +784,6 @@ export const PurchaseReturnOrderForm = ({
 
           {existing ? (
             <>
-              <InvoiceLinesSection credits={existing.credits} />
               <ComplaintsSection returnOrder={existing} />
             </>
           ) : (

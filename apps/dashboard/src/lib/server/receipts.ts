@@ -33,7 +33,11 @@ import {
 import { recordFreightMovement } from "@/lib/server/freight";
 import { registerBatchForLot } from "@/lib/server/batches";
 import { recordPurchaseLineReceipt, refreshPurchaseLineStatus } from "@/lib/server/purchase-lines";
-import { buildInventoryMovementEntry, LEDGER_ACCOUNTS } from "@/lib/server/ledger";
+import {
+  buildInventoryMovementEntry,
+  LEDGER_ACCOUNTS,
+  POST_PURCHASE_LEDGER_ENTRIES,
+} from "@/lib/server/ledger";
 import {
   and,
   eq,
@@ -643,7 +647,7 @@ export const applyReceipt = async (
     operator: params.userId,
   });
 
-  if (Math.abs(value) >= 0.005) {
+  if (POST_PURCHASE_LEDGER_ENTRIES && Math.abs(value) >= 0.005) {
     await tx.insert(JournalEntries).values(
       buildInventoryMovementEntry({
         bookingDate: todayDateString(),

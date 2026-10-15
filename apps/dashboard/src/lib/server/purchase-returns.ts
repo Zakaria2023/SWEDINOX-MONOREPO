@@ -22,6 +22,7 @@ import {
 import { recordFreightMovement } from "@/lib/server/freight";
 import {
   buildInventoryMovementEntry,
+  POST_PURCHASE_LEDGER_ENTRIES,
   LEDGER_ACCOUNTS,
 } from "@/lib/server/ledger";
 import { and, count, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
@@ -154,7 +155,7 @@ export const applyPurchaseReturnIssue = async (
   // what they owe us for them is held until their credit note arrives.
   const valueOut = previousValue - nextValue;
 
-  if (Math.abs(valueOut) >= 0.005) {
+  if (POST_PURCHASE_LEDGER_ENTRIES && Math.abs(valueOut) >= 0.005) {
     await tx.insert(JournalEntries).values(
       buildInventoryMovementEntry({
         bookingDate: todayDateString(),

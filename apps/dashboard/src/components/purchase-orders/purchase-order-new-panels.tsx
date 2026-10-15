@@ -177,19 +177,6 @@ export const NEW_ORDER_PANELS_BEFORE_LOGISTICS: NewOrderPanel[] = [
     empty: "No contracts.",
   },
   {
-    title: "Invoice lines",
-    columns: [
-      "Invoice",
-      "Line",
-      "Product code",
-      "Description",
-      "Qty",
-      "Weight",
-      "Amount",
-    ],
-    empty: "Nothing has been invoiced.",
-  },
-  {
     title: "Complaints",
     summary: "0 pending complaint(s)",
     columns: [

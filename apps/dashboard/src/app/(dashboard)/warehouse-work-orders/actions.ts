@@ -61,7 +61,11 @@ import {
 import { applyMove } from "@/lib/server/stock-movements";
 import { breachedTolerance, ToleranceKind } from "@/lib/server/tolerances";
 import { getWorkOrderLineDetail, LineDetail } from "@/lib/server/work-order-line-detail";
-import { buildInventoryMovementEntry, LEDGER_ACCOUNTS } from "@/lib/server/ledger";
+import {
+  buildInventoryMovementEntry,
+  LEDGER_ACCOUNTS,
+  POST_PURCHASE_LEDGER_ENTRIES,
+} from "@/lib/server/ledger";
 import { exportRows } from "@/lib/server/excel";
 import {
   dateRangeFilter,
@@ -1204,7 +1208,13 @@ const applyIssue = async (
     operator: params.userId,
   });
 
-  if (Math.abs(valueRemoved) >= 0.005) {
+  // Sending material to a processor is purchase-side, and posts nothing
+  // while purchase bookkeeping is AFAS's.
+  const postsToLedger =
+    params.reason !== "external_processing_issue" ||
+    POST_PURCHASE_LEDGER_ENTRIES;
+
+  if (postsToLedger && Math.abs(valueRemoved) >= 0.005) {
     await tx.insert(JournalEntries).values(
       buildInventoryMovementEntry({
         bookingDate: todayDateString(),

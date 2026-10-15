@@ -1082,7 +1082,7 @@ export const PurchaseOrderDetailView = ({
           )}
         </CollapsibleSection>
 
-        <PurchaseOrderNewPanels panels={panelsNamed(["Invoice lines","Complaints"])} />
+        <PurchaseOrderNewPanels panels={panelsNamed(["Complaints"])} />
         <CollapsibleSection title="Logistics">
           <dl className="grid grid-cols-2 gap-x-6 gap-y-1 p-3 text-sm sm:grid-cols-4">
             <div>
