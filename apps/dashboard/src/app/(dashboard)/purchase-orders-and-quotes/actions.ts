@@ -30,7 +30,7 @@ import {
   purchaseRequestStatuses,
   openPurchaseOrderStatuses,
 } from "@/lib/enums";
-import { describeError, personInitials } from "@/lib/helpers";
+import { describeError, personInitials, timeFrameOf } from "@/lib/helpers";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
 import { exportRows } from "@/lib/server/excel";
 import {
@@ -244,6 +244,8 @@ type RawRow = Omit<
   consignment: boolean | null;
   /** Only a released document is owed to a supplier at all. */
   isLive: boolean;
+  /** The moment it was raised — what `Time frame` buckets by the half hour. */
+  createdAt: SelectPurchaseOrders["createdAt"];
 };
 
 const DeliveryAddressCompany = alias(Companies, "delivery_address_company");
@@ -433,6 +435,7 @@ const orderQuery = (query: TableQuery) =>
       uuid: PurchaseOrders.uuid,
       number: PurchaseOrders.id,
       creationDate: orderDateSql,
+      createdAt: PurchaseOrders.createdAt,
       purchaserId: PurchaseOrders.purchaser,
       status: sql<string | null>`${PurchaseOrders.status}`,
       convertedRefs: sql<string | null>`(
@@ -494,6 +497,7 @@ const quoteQuery = (query: TableQuery) =>
       uuid: PurchaseQuotes.uuid,
       number: PurchaseQuotes.id,
       creationDate: quoteDateSql,
+      createdAt: PurchaseQuotes.createdAt,
       purchaserId: PurchaseQuotes.purchaser,
       status: sql<string | null>`${PurchaseQuotes.status}`,
       // The other half of the same link: the order this quote turned into —
@@ -565,6 +569,7 @@ const returnQuery = (query: TableQuery) =>
       uuid: PurchaseReturnOrders.uuid,
       number: PurchaseReturnOrders.id,
       creationDate: returnDateSql,
+      createdAt: PurchaseReturnOrders.createdAt,
       purchaserId: PurchaseReturnOrders.purchaser,
       status: sql<string | null>`${PurchaseReturnOrders.status}`,
       convertedRefs: sql<string | null>`NULL`,
@@ -618,6 +623,7 @@ const requestQuery = (query: TableQuery) =>
       uuid: PurchaseRequests.uuid,
       number: PurchaseRequests.id,
       creationDate: requestDateSql,
+      createdAt: PurchaseRequests.createdAt,
       purchaserId: PurchaseRequests.purchaser,
       status: sql<string | null>`${PurchaseRequests.status}`,
       // The quotes this request was turned into — 800010 reads `IQ900001`.
@@ -758,6 +764,7 @@ const purchaseOrderQuoteRows = async (
       isFaxed: _isFaxed,
       sentViaStaalWeb: _sentViaStaalWeb,
       isLive,
+      createdAt,
       ...rest
     } = row;
     void _purchaserId;
@@ -773,12 +780,9 @@ const purchaseOrderQuoteRows = async (
       purchaserInitials: personInitials(purchaser),
       year: date ? date.getFullYear() : null,
       month: date ? date.getMonth() + 1 : null,
-      // The reference groups by year and by month in the two columns before
-      // this one; the quarter is the bucket between them, and the one a buyer
-      // reports a season in.
-      timeFrame: date
-        ? `${date.getFullYear()}-Q${Math.floor(date.getMonth() / 3) + 1}`
-        : null,
+      // The half hour it was raised in — `14:30 - 15:00` — as the reference
+      // prints it and as the sales overview already does.
+      timeFrame: createdAt ? timeFrameOf(createdAt) : null,
       lines: Number(row.lines ?? 0),
       weightKg: Number(row.weightKg ?? 0),
       revenue: Number(row.revenue ?? 0),
