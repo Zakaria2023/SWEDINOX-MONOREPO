@@ -1,9 +1,43 @@
 import { db } from "@/db";
-import { OrderItems } from "@/db/schema/order-items";
+import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
+import { Orders } from "@/db/schema/orders";
+import { Products } from "@/db/schema/products";
+import {
+  InsertPurchaseOrderItems,
+  PurchaseOrderItems,
+} from "@/db/schema/purchase-order-items";
+import {
+  InsertPurchaseOrders,
+  PurchaseOrders,
+} from "@/db/schema/purchase-orders";
+import {
+  InsertPurchaseRequestItems,
+  PurchaseRequestItems,
+} from "@/db/schema/purchase-request-items";
+import {
+  InsertPurchaseRequests,
+  PurchaseRequests,
+} from "@/db/schema/purchase-requests";
 import { Reservations } from "@/db/schema/reservations";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { generateUuid, moneyString, STOCK_QUANTITY_SCALE } from "@/lib/helpers";
-import { and, eq, isNull } from "drizzle-orm";
+import {
+  addLeadTime,
+  articlePieceWeightKg,
+  canEditPurchaseRequestLines,
+  generateUuid,
+  inferArticleQuality,
+  isoWeekOf,
+  moneyString,
+  STOCK_QUANTITY_SCALE,
+  toDateString,
+  todayDateString,
+} from "@/lib/helpers";
+import {
+  refreshPurchaseOrderTotals,
+  syncPurchaseLineReceiptDates,
+  syncPurchaseLineReceipts,
+} from "@/lib/server/purchase-lines";
+import { and, eq, isNull, sql } from "drizzle-orm";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -20,6 +54,76 @@ type ReceivedLot = {
   /** The lot's value, which is the price paid on what was unloaded. */
   value: number;
   unit: SelectStock["unit"];
+};
+
+/**
+ * What a new purchase document takes from its supplier and from us — the
+ * defaults a blank purchase order fills in by itself when the supplier is
+ * typed (404355, 9-10-2026): contact, terms, our yard, the buyer.
+ */
+type CrossDockPurchaseHeader = Pick<
+  InsertPurchaseOrders,
+  | "contactUuid"
+  | "paymentTerms"
+  | "deliveryTerms"
+  | "weightType"
+  | "deliveryAddressUuid"
+  | "purchaser"
+> & {
+  supplierUuid: string;
+};
+
+type CrossDockRequestHeader = Pick<
+  InsertPurchaseRequests,
+  | "companyUuid"
+  | "companyType"
+  | "contactUuid"
+  | "paymentTerms"
+  | "deliveryTerms"
+  | "weightType"
+  | "deliveryAddressUuid"
+  | "purchaser"
+>;
+
+/** The sales line a `CD` purchase is raised for, with its article. */
+type CrossDockSalesLine = Pick<
+  SelectOrderItems,
+  | "uuid"
+  | "orderUuid"
+  | "lineNumber"
+  | "productUuid"
+  | "quantity"
+  | "unit"
+  | "lengthMm"
+  | "widthMm"
+  | "thicknessMm"
+  | "sourceType"
+  | "status"
+  | "purchaseOrderItemUuid"
+> & {
+  /** The line's own delivery date, or the order's when it has none. */
+  deliveryDate: string | null;
+  product: Parameters<typeof articlePieceWeightKg>[0];
+};
+
+type CrossDockPurchaseLineValues = Omit<
+  InsertPurchaseOrderItems,
+  "uuid" | "purchaseOrderUuid"
+>;
+
+type CrossDockRequestLineValues = Omit<
+  InsertPurchaseRequestItems,
+  "uuid" | "purchaseRequestUuid"
+>;
+
+type CreatedPurchaseOrder = {
+  purchaseOrderUuid: string;
+  purchaseOrderId: number;
+};
+
+type CreatedPurchaseRequest = {
+  purchaseRequestUuid: string;
+  purchaseRequestId: number;
 };
 
 /**
@@ -189,4 +293,362 @@ export const reserveReceiptToCoveredSalesLines = async (
   }
 
   return reserved;
+};
+
+/** The `CD` sales line a purchase is about to be raised for, checked. */
+const loadCrossDockSalesLine = async (
+  tx: Transaction,
+  orderItemUuid: string,
+): Promise<CrossDockSalesLine> => {
+  const [row] = await tx
+    .select({
+      uuid: OrderItems.uuid,
+      orderUuid: OrderItems.orderUuid,
+      lineNumber: OrderItems.lineNumber,
+      productUuid: OrderItems.productUuid,
+      quantity: OrderItems.quantity,
+      unit: OrderItems.unit,
+      lengthMm: OrderItems.lengthMm,
+      widthMm: OrderItems.widthMm,
+      thicknessMm: OrderItems.thicknessMm,
+      sourceType: OrderItems.sourceType,
+      status: OrderItems.status,
+      purchaseOrderItemUuid: OrderItems.purchaseOrderItemUuid,
+      lineDeliveryDate: OrderItems.deliveryDate,
+      orderDeliveryDate: Orders.deliveryDate,
+      productCode: Products.productCode,
+      productName: Products.name,
+      dimensionShape: Products.dimensionShape,
+      featuresQuality: Products.featuresQuality,
+      densityKgDm3: Products.densityKgDm3,
+      length: Products.length,
+      widthDiameter: Products.widthDiameter,
+      thickness: Products.thickness,
+      theoreticalThickness: Products.theoreticalThickness,
+      weightTheoretical: Products.weightTheoretical,
+      theoreticalWeight: Products.theoreticalWeight,
+      weightUnit: Products.weightUnit,
+    })
+    .from(OrderItems)
+    .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+    .innerJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+    .where(eq(OrderItems.uuid, orderItemUuid))
+    .limit(1);
+
+  if (!row) {
+    throw new Error("Sales order line not found.");
+  }
+  if (row.sourceType !== "cross_dock") {
+    throw new Error("Only a CD line is purchased for.");
+  }
+  if (row.status === "cancelled") {
+    throw new Error("This sales line has been cancelled.");
+  }
+  if (row.purchaseOrderItemUuid) {
+    throw new Error("This sales line is already covered by a purchase.");
+  }
+
+  const {
+    lineDeliveryDate,
+    orderDeliveryDate,
+    productCode,
+    productName,
+    dimensionShape,
+    featuresQuality,
+    densityKgDm3,
+    length,
+    widthDiameter,
+    thickness,
+    theoreticalThickness,
+    weightTheoretical,
+    theoreticalWeight,
+    weightUnit,
+    ...line
+  } = row;
+
+  return {
+    ...line,
+    deliveryDate:
+      lineDeliveryDate ??
+      (orderDeliveryDate ? toDateString(orderDeliveryDate) : null),
+    product: {
+      productCode,
+      productName,
+      dimensionShape,
+      featuresQuality,
+      densityKgDm3,
+      length,
+      widthDiameter,
+      thickness,
+      theoreticalThickness,
+      weightTheoretical,
+      theoreticalWeight,
+      weightUnit,
+    },
+  };
+};
+
+/**
+ * When the goods have to be in: the working day before the sale goes out.
+ * Sales line O108307/10 for 15-10-2026 raised purchase order 404360 for
+ * 14-10-2026 (13-10-2026). A line with no date is bought for the next working
+ * day, as a blank purchase order is.
+ */
+const crossDockPurchaseDate = (salesDeliveryDate: string | null): string =>
+  (salesDeliveryDate
+    ? addLeadTime(salesDeliveryDate, -1, "working_days")
+    : addLeadTime(todayDateString(), 1, "working_days")) ?? todayDateString();
+
+/**
+ * The purchase line a `CD` sale is bought on: the same article, quantity,
+ * unit, quality and size, `Net Price` € 0 per `TN` until the buyer agrees a
+ * price, and `Kg(p)` the **theoretical** weight — 157 kg on 404360/10 against
+ * the 160 kg trade weight the sale is billed on (13-10-2026).
+ */
+const crossDockPurchaseLineValues = (
+  line: CrossDockSalesLine,
+): CrossDockPurchaseLineValues => {
+  const quantity = Number(line.quantity ?? 0);
+  const pieceWeightKg =
+    articlePieceWeightKg(line.product, {
+      lengthMm: line.lengthMm,
+      widthMm: line.widthMm,
+      thicknessMm: line.thicknessMm,
+    }) ?? 0;
+
+  return {
+    productUuid: line.productUuid,
+    quantity: line.quantity,
+    qtyPlanned: line.quantity,
+    unit: line.unit ?? undefined,
+    status: "provisional",
+    sourceType: "cross_dock",
+    qualityCode:
+      line.product.featuresQuality ??
+      inferArticleQuality(line.product.productCode, line.product.productName),
+    lengthMm: line.lengthMm,
+    widthMm: line.widthMm,
+    thicknessMm: line.thicknessMm,
+    netPrice: "0.0000",
+    priceUnit: "TN",
+    kgPurchased: (pieceWeightKg * quantity).toFixed(2),
+    amount: "0.00",
+  };
+};
+
+/**
+ * `Create purchase order` on the `Purchasing for Cross-docking order line`
+ * dialog: a **Provisional** purchase order for the chosen supplier, with one
+ * line bought for the sales line (O108307/10 → 404360, 13-10-2026). It gets
+ * its reception and its totals as any new order does, and the sales line is
+ * covered — `For line` on the purchase line reads `O108307/10`.
+ */
+export const createCrossDockPurchaseOrder = async (
+  tx: Transaction,
+  orderItemUuid: string,
+  header: CrossDockPurchaseHeader,
+): Promise<CreatedPurchaseOrder> => {
+  const line = await loadCrossDockSalesLine(tx, orderItemUuid);
+  const deliveryDate = crossDockPurchaseDate(line.deliveryDate);
+  const purchaseOrderUuid = generateUuid();
+
+  await tx.insert(PurchaseOrders).values({
+    ...header,
+    uuid: purchaseOrderUuid,
+    status: "provisional",
+    orderDate: todayDateString(),
+    // What a blank purchase order reads (404355, 9-10-2026).
+    purchaseOrderType: "materials",
+    isOverlength: true,
+    deliveryType: "date",
+    deliveryDate: new Date(deliveryDate),
+    deliveryWeek: isoWeekOf(deliveryDate),
+    deliveryYear: Number(deliveryDate.slice(0, 4)),
+  });
+
+  const purchaseOrderItemUuid = generateUuid();
+  await tx.insert(PurchaseOrderItems).values({
+    ...crossDockPurchaseLineValues(line),
+    uuid: purchaseOrderItemUuid,
+    purchaseOrderUuid,
+    lineNumber: 1,
+  });
+
+  await syncPurchaseLineReceiptDates(tx, purchaseOrderUuid);
+  await syncPurchaseLineReceipts(tx, purchaseOrderUuid);
+  await refreshPurchaseOrderTotals(tx, purchaseOrderUuid);
+
+  await coverSalesLineWithPurchase(tx, orderItemUuid, purchaseOrderItemUuid, {
+    amount: 0,
+    quantity: Number(line.quantity ?? 0),
+  });
+
+  const [created] = await tx
+    .select({ id: PurchaseOrders.id })
+    .from(PurchaseOrders)
+    .where(eq(PurchaseOrders.uuid, purchaseOrderUuid))
+    .limit(1);
+  if (!created) {
+    throw new Error("The purchase order could not be read back.");
+  }
+
+  return { purchaseOrderUuid, purchaseOrderId: created.id };
+};
+
+/**
+ * `Add line to a purchase order`: the sales line's purchase line appended to
+ * a supplier's purchase order that is still provisional, numbered after its
+ * last line.
+ */
+export const addCrossDockLineToPurchaseOrder = async (
+  tx: Transaction,
+  orderItemUuid: string,
+  purchaseOrderUuid: string,
+): Promise<CreatedPurchaseOrder> => {
+  const line = await loadCrossDockSalesLine(tx, orderItemUuid);
+
+  const [order] = await tx
+    .select({ id: PurchaseOrders.id, status: PurchaseOrders.status })
+    .from(PurchaseOrders)
+    .where(eq(PurchaseOrders.uuid, purchaseOrderUuid))
+    .limit(1);
+  if (!order) {
+    throw new Error("Purchase order not found.");
+  }
+  if (order.status !== "provisional") {
+    throw new Error(
+      `Purchase order ${order.id} has been made final, so no line can be added to it.`,
+    );
+  }
+
+  const [last] = await tx
+    .select({
+      lineNumber: sql<number | null>`MAX(${PurchaseOrderItems.lineNumber})`,
+    })
+    .from(PurchaseOrderItems)
+    .where(eq(PurchaseOrderItems.purchaseOrderUuid, purchaseOrderUuid));
+
+  const purchaseOrderItemUuid = generateUuid();
+  await tx.insert(PurchaseOrderItems).values({
+    ...crossDockPurchaseLineValues(line),
+    uuid: purchaseOrderItemUuid,
+    purchaseOrderUuid,
+    lineNumber: Number(last?.lineNumber ?? 0) + 1,
+  });
+
+  await syncPurchaseLineReceiptDates(tx, purchaseOrderUuid);
+  await syncPurchaseLineReceipts(tx, purchaseOrderUuid);
+  await refreshPurchaseOrderTotals(tx, purchaseOrderUuid);
+
+  await coverSalesLineWithPurchase(tx, orderItemUuid, purchaseOrderItemUuid, {
+    amount: 0,
+    quantity: Number(line.quantity ?? 0),
+  });
+
+  return { purchaseOrderUuid, purchaseOrderId: order.id };
+};
+
+/** The request line a `CD` sale asks for, `For line` set to it. */
+const crossDockRequestLineValues = (
+  line: CrossDockSalesLine,
+): CrossDockRequestLineValues => {
+  const values = crossDockPurchaseLineValues(line);
+  return {
+    productUuid: line.productUuid,
+    forOrderItemUuid: line.uuid,
+    quantity: values.quantity,
+    unit: values.unit,
+    kg: values.kgPurchased,
+    lengthMm: values.lengthMm,
+    widthMm: values.widthMm,
+    thicknessMm: values.thicknessMm,
+    qualityCode: values.qualityCode,
+    requiredDate: crossDockPurchaseDate(line.deliveryDate),
+  };
+};
+
+/**
+ * `Create purchase request`: a draft request with one line asking for what
+ * the sales line sold. The line keeps `For line`, so the purchase order it
+ * eventually becomes covers the sale (C4).
+ */
+export const createCrossDockPurchaseRequest = async (
+  tx: Transaction,
+  orderItemUuid: string,
+  header: CrossDockRequestHeader,
+): Promise<CreatedPurchaseRequest> => {
+  const line = await loadCrossDockSalesLine(tx, orderItemUuid);
+  const deliveryDate = crossDockPurchaseDate(line.deliveryDate);
+  const purchaseRequestUuid = generateUuid();
+
+  await tx.insert(PurchaseRequests).values({
+    ...header,
+    uuid: purchaseRequestUuid,
+    status: "draft",
+    purchaseOrderType: "materials",
+    deliveryType: "date",
+    deliveryDate: new Date(deliveryDate),
+    deliveryWeek: isoWeekOf(deliveryDate),
+    deliveryYear: Number(deliveryDate.slice(0, 4)),
+  });
+
+  await tx.insert(PurchaseRequestItems).values({
+    ...crossDockRequestLineValues(line),
+    uuid: generateUuid(),
+    purchaseRequestUuid,
+    lineNumber: 1,
+  });
+
+  const [created] = await tx
+    .select({ id: PurchaseRequests.id })
+    .from(PurchaseRequests)
+    .where(eq(PurchaseRequests.uuid, purchaseRequestUuid))
+    .limit(1);
+  if (!created) {
+    throw new Error("The purchase request could not be read back.");
+  }
+
+  return { purchaseRequestUuid, purchaseRequestId: created.id };
+};
+
+/**
+ * `Add a line to a purchase request`: appended to a request whose lines may
+ * still change — one still in draft, before any supplier was asked.
+ */
+export const addCrossDockLineToPurchaseRequest = async (
+  tx: Transaction,
+  orderItemUuid: string,
+  purchaseRequestUuid: string,
+): Promise<CreatedPurchaseRequest> => {
+  const line = await loadCrossDockSalesLine(tx, orderItemUuid);
+
+  const [request] = await tx
+    .select({ id: PurchaseRequests.id, status: PurchaseRequests.status })
+    .from(PurchaseRequests)
+    .where(eq(PurchaseRequests.uuid, purchaseRequestUuid))
+    .limit(1);
+  if (!request) {
+    throw new Error("Purchase request not found.");
+  }
+  if (!canEditPurchaseRequestLines(request.status)) {
+    throw new Error(
+      `Purchase request ${request.id} has already gone to a supplier, so no line can be added to it.`,
+    );
+  }
+
+  const [last] = await tx
+    .select({
+      lineNumber: sql<number | null>`MAX(${PurchaseRequestItems.lineNumber})`,
+    })
+    .from(PurchaseRequestItems)
+    .where(eq(PurchaseRequestItems.purchaseRequestUuid, purchaseRequestUuid));
+
+  await tx.insert(PurchaseRequestItems).values({
+    ...crossDockRequestLineValues(line),
+    uuid: generateUuid(),
+    purchaseRequestUuid,
+    lineNumber: Number(last?.lineNumber ?? 0) + 1,
+  });
+
+  return { purchaseRequestUuid, purchaseRequestId: request.id };
 };

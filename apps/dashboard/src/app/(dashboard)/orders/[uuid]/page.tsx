@@ -23,7 +23,7 @@ import { getClerkUserNames, getClerkUsersForSelect } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
-  searchParams: Promise<{ line?: string }>;
+  searchParams: Promise<{ line?: string; purchasing?: string }>;
 };
 
 /**
@@ -32,7 +32,7 @@ type Props = {
  */
 const OrderDetailPage = async ({ params, searchParams }: Props) => {
   const { uuid } = await params;
-  const { line } = await searchParams;
+  const { line, purchasing } = await searchParams;
   const currentUserId = await requireAuth();
 
   const order = await getOrderDetail(uuid);
@@ -106,6 +106,7 @@ const OrderDetailPage = async ({ params, searchParams }: Props) => {
           communications,
           competitors,
           callOffs,
+          askPurchasing: purchasing === "ask",
         }}
       />
     </div>

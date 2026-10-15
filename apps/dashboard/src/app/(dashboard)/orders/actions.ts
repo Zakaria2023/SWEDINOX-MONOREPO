@@ -212,6 +212,8 @@ export type OrderActionResult = {
   orderUuid?: string;
   error?: string;
   success?: boolean;
+  /** The lines `New` just wrote — a `CD` one asks how it is purchased. */
+  lineUuids?: string[];
 };
 
 export type OrderListItem = SelectOrders & {
@@ -1363,7 +1365,13 @@ export const submitOrder = async (
   if (!result.success || !result.orderUuid) {
     return result;
   }
-  redirect(`/orders/${result.orderUuid}`);
+  // A `CD` line asks how it is to be purchased the moment it is saved
+  // (O108307/10, 13-10-2026), so the new order opens asking.
+  redirect(
+    payload.items.some((item) => item.sourceType === "cross_dock")
+      ? `/orders/${result.orderUuid}?purchasing=ask`
+      : `/orders/${result.orderUuid}`,
+  );
 };
 
 /**
@@ -1389,7 +1397,7 @@ export const addOrderLines = async (
       return { error: preparation.error };
     }
 
-    await db.transaction(async (tx) => {
+    const lineUuids = await db.transaction(async (tx) => {
       await assertWorkPanelFree(tx, "order", orderUuid, userId);
       const [last] = await tx
         .select({
@@ -1397,7 +1405,7 @@ export const addOrderLines = async (
         })
         .from(OrderItems)
         .where(eq(OrderItems.orderUuid, orderUuid));
-      await writeOrderLines(tx, preparation.prepared, {
+      const written = await writeOrderLines(tx, preparation.prepared, {
         orderUuid,
         weightType: order.weightType,
         deliveryDate: order.deliveryDate,
@@ -1409,15 +1417,16 @@ export const addOrderLines = async (
         order.companyUuid,
       );
       await holdForCredit(tx, order, Number(summary.totalExclVat), userId);
+      return written.lineUuids;
     });
+
+    revalidatePath("/orders");
+    revalidatePath(`/orders/${orderUuid}`);
+    revalidatePath("/financially-blocked");
+    return { success: true, orderUuid, lineUuids };
   } catch (error) {
     return { error: describeError(error, "Failed to add the line") };
   }
-
-  revalidatePath("/orders");
-  revalidatePath(`/orders/${orderUuid}`);
-  revalidatePath("/financially-blocked");
-  return { success: true, orderUuid };
 };
 
 /**

@@ -76,11 +76,32 @@ import {
   WarehouseWorkOrders,
 } from "@/db/schema/warehouse-work-orders";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
-import { callOffSchema, CallOffValues } from "@/app/(dashboard)/orders/[uuid]/validation";
+import {
+  callOffSchema,
+  CallOffValues,
+  crossDockPurchasingSchema,
+  CrossDockPurchasingValues,
+} from "@/app/(dashboard)/orders/[uuid]/validation";
+import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
+import {
+  getPurchaseSupplierDefaults,
+  getYardDeliveryAddress,
+} from "@/app/(dashboard)/purchase-orders/actions";
+import {
+  PurchaseRequests,
+  SelectPurchaseRequests,
+} from "@/db/schema/purchase-requests";
 import { requireAuth } from "@/lib/auth";
+import {
+  addCrossDockLineToPurchaseOrder,
+  addCrossDockLineToPurchaseRequest,
+  createCrossDockPurchaseOrder,
+  createCrossDockPurchaseRequest,
+} from "@/lib/server/cross-dock";
 import { revalidatePath } from "next/cache";
 import {
   daysInSystem,
+  describeError,
   discountAmount,
   generateUuid,
   priceCascade,
@@ -319,6 +340,41 @@ export type OrderFormExtras = {
   surcharges: SelectOrderSurcharges[];
   texts: Pick<SelectTexts, "uuid" | "title" | "textBlock" | "textCategoryUuid">[];
   contracts: ContractOption[];
+};
+
+/** What `Purchasing for Cross-docking order line` did, said back. */
+export type CrossDockPurchasingResult = {
+  success?: boolean;
+  error?: string;
+  /** The info message that follows: `A new purchase order has been created with code 404360.` */
+  message?: string;
+};
+
+/** A provisional purchase order a `CD` line can be added to. */
+export type CrossDockPurchaseOrderTarget = Pick<
+  SelectPurchaseOrders,
+  "uuid" | "id" | "reference" | "deliveryDate"
+>;
+
+/** A draft purchase request a `CD` line can be added to. */
+export type CrossDockPurchaseRequestTarget = Pick<
+  SelectPurchaseRequests,
+  "uuid" | "id" | "reference"
+> & {
+  supplierName: SelectCompanies["companyName"] | null;
+};
+
+export type CrossDockPurchasingTargets = {
+  purchaseOrders: CrossDockPurchaseOrderTarget[];
+  purchaseRequests: CrossDockPurchaseRequestTarget[];
+};
+
+type RaiseCrossDockPurchaseInput = Pick<
+  CrossDockPurchasingValues,
+  "orderItemUuid" | "supplierUuid" | "targetUuid"
+> & {
+  action: Exclude<CrossDockPurchasingValues["action"], "task">;
+  userId: string;
 };
 
 const toNumber = (value: string | number | null): number =>
@@ -1087,4 +1143,173 @@ export const getOrderFormExtras = async (
     .orderBy(asc(Contracts.code));
 
   return { surcharges, texts, contracts };
+};
+
+/**
+ * What `Add line to a purchase order` and `Add a line to a purchase request`
+ * can put the line on: the supplier's purchase orders still provisional, and
+ * the requests still in draft — the supplier's when one is chosen.
+ */
+export const getCrossDockPurchasingTargets = async (
+  supplierUuid: string,
+): Promise<CrossDockPurchasingTargets> => {
+  await requireAuth();
+
+  const purchaseOrders = supplierUuid
+    ? await db
+        .select({
+          uuid: PurchaseOrders.uuid,
+          id: PurchaseOrders.id,
+          reference: PurchaseOrders.reference,
+          deliveryDate: PurchaseOrders.deliveryDate,
+        })
+        .from(PurchaseOrders)
+        .where(
+          and(
+            eq(PurchaseOrders.supplierUuid, supplierUuid),
+            eq(PurchaseOrders.status, "provisional"),
+          ),
+        )
+        .orderBy(desc(PurchaseOrders.id))
+    : [];
+
+  const purchaseRequests = await db
+    .select({
+      uuid: PurchaseRequests.uuid,
+      id: PurchaseRequests.id,
+      reference: PurchaseRequests.reference,
+      supplierName: Companies.companyName,
+    })
+    .from(PurchaseRequests)
+    .leftJoin(Companies, eq(PurchaseRequests.companyUuid, Companies.uuid))
+    .where(
+      and(
+        eq(PurchaseRequests.status, "draft"),
+        supplierUuid
+          ? eq(PurchaseRequests.companyUuid, supplierUuid)
+          : undefined,
+      ),
+    )
+    .orderBy(desc(PurchaseRequests.id));
+
+  return { purchaseOrders, purchaseRequests };
+};
+
+/**
+ * `OK` on `Purchasing for Cross-docking order line` (O108307/10, 13-10-2026):
+ * the purchase that covers a `CD` sales line, raised the way the chosen
+ * action says.
+ *
+ * ⚠️ `Arrange purchasing via Task` creates nothing: this app has no task
+ * records — its Tasks screen lists work derived from the data — so the line
+ * stays uncovered, exactly as `Cancel` leaves it.
+ */
+export const arrangeCrossDockPurchasing = async (
+  _prevState: CrossDockPurchasingResult,
+  values: CrossDockPurchasingValues,
+): Promise<CrossDockPurchasingResult> => {
+  const userId = await requireAuth();
+  const parsed = crossDockPurchasingSchema.safeParse(values);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+  const { orderItemUuid, action, supplierUuid, targetUuid } = parsed.data;
+
+  if (action === "task") {
+    return {
+      success: true,
+      message:
+        "No task was created — tasks are not kept as records here, so the line stays without a purchase until one is raised for it.",
+    };
+  }
+
+  try {
+    const [line] = await db
+      .select({ orderUuid: OrderItems.orderUuid })
+      .from(OrderItems)
+      .where(eq(OrderItems.uuid, orderItemUuid))
+      .limit(1);
+    if (!line) {
+      return { error: "Sales order line not found." };
+    }
+
+    const message = await raiseCrossDockPurchase({
+      orderItemUuid,
+      action,
+      supplierUuid,
+      targetUuid,
+      userId,
+    });
+
+    revalidatePath(`/orders/${line.orderUuid}`);
+    revalidatePath("/purchase-orders");
+    revalidatePath("/purchase-requests");
+    return { success: true, message };
+  } catch (error) {
+    return { error: describeError(error, "Failed to arrange the purchase") };
+  }
+};
+
+/** The purchase document each action raises, and the message it ends on. */
+const raiseCrossDockPurchase = async ({
+  orderItemUuid,
+  action,
+  supplierUuid,
+  targetUuid,
+  userId,
+}: RaiseCrossDockPurchaseInput): Promise<string> => {
+  if (action === "create_purchase_order") {
+    // The defaults a blank purchase order takes from its supplier and from
+    // us, read before the transaction: both are plain reads.
+    const defaults = await getPurchaseSupplierDefaults(supplierUuid);
+    if (!defaults) {
+      throw new Error("Supplier not found.");
+    }
+    const yard = await getYardDeliveryAddress();
+    const created = await db.transaction((tx) =>
+      createCrossDockPurchaseOrder(tx, orderItemUuid, {
+        supplierUuid,
+        contactUuid: defaults.contactUuid,
+        paymentTerms: defaults.paymentTerms,
+        deliveryTerms: defaults.deliveryTerms,
+        weightType: defaults.weightType,
+        deliveryAddressUuid: yard?.uuid ?? null,
+        purchaser: userId,
+      }),
+    );
+    return `A new purchase order has been created with code ${created.purchaseOrderId}.`;
+  }
+
+  if (action === "add_to_purchase_order") {
+    const added = await db.transaction((tx) =>
+      addCrossDockLineToPurchaseOrder(tx, orderItemUuid, targetUuid),
+    );
+    return `The line has been added to purchase order ${added.purchaseOrderId}.`;
+  }
+
+  if (action === "create_purchase_request") {
+    const defaults = supplierUuid
+      ? await getPurchaseSupplierDefaults(supplierUuid)
+      : null;
+    const companyType = await resolveCompanyType(supplierUuid || null);
+    const yard = await getYardDeliveryAddress();
+    const created = await db.transaction((tx) =>
+      createCrossDockPurchaseRequest(tx, orderItemUuid, {
+        companyUuid: supplierUuid || null,
+        companyType,
+        contactUuid: defaults?.contactUuid ?? null,
+        paymentTerms: defaults?.paymentTerms ?? null,
+        deliveryTerms: defaults?.deliveryTerms ?? null,
+        weightType: defaults?.weightType ?? null,
+        deliveryAddressUuid: yard?.uuid ?? null,
+        purchaser: userId,
+      }),
+    );
+    return `A new purchase request has been created with code ${created.purchaseRequestId}.`;
+  }
+
+  const added = await db.transaction((tx) =>
+    addCrossDockLineToPurchaseRequest(tx, orderItemUuid, targetUuid),
+  );
+  return `The line has been added to purchase request ${added.purchaseRequestId}.`;
 };

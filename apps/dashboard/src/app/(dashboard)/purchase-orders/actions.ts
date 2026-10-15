@@ -1069,7 +1069,7 @@ export const getPurchaseOrderDetail = async (
       lineDiscountPercent: PurchaseOrderItems.lineDiscountPercent,
       groupDiscountPercent: PurchaseOrderItems.groupDiscountPercent,
       forLine: sql<string | null>`COALESCE(
-        (SELECT CONCAT('O', o.id, '/', oi.line_number)
+        (SELECT CONCAT('O', o.id, '/', oi.line_number * 10)
            FROM OrderItems oi JOIN Orders o ON o.uuid = oi.order_uuid
           WHERE oi.purchase_order_item_uuid = ${PurchaseOrderItems.uuid}
           ORDER BY oi.line_number LIMIT 1),

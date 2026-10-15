@@ -2912,3 +2912,21 @@ export const stockLotViews = [
 ] as const satisfies readonly string[];
 
 export type StockLotView = (typeof stockLotViews)[number];
+
+/**
+ * What saving a `CD` sales line asks next — the reference's `Purchasing for
+ * Cross-docking order line` dialog (O108307/10, 13-10-2026), its five radio
+ * buttons in their order. Each decides where the purchase covering the line
+ * comes from: a new or an existing purchase order, a new or an existing
+ * purchase request, or a task for a buyer.
+ */
+export const crossDockPurchasingActions = [
+  "task",
+  "add_to_purchase_order",
+  "create_purchase_order",
+  "add_to_purchase_request",
+  "create_purchase_request",
+] as const satisfies readonly string[];
+
+export type CrossDockPurchasingAction =
+  (typeof crossDockPurchasingActions)[number];

@@ -1,6 +1,7 @@
 import { clsx, ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
+  CrossDockPurchasingAction,
   AgeingBucket,
   ageingBuckets,
   ArticleGroup,
@@ -11156,3 +11157,31 @@ export const isPurchaseRequestOpenForChanges = (
   status === null ||
   status === "draft" ||
   (status === "sent" && quoteCount === 0);
+
+/**
+ * Which of the `Purchasing for Cross-docking order line` actions ask for a
+ * supplier: a new purchase order is placed with one, and an existing one is
+ * found by its supplier (O108307/10, 13-10-2026).
+ */
+export const crossDockActionNeedsSupplier = (
+  action: CrossDockPurchasingAction | null | undefined,
+): boolean =>
+  action === "create_purchase_order" || action === "add_to_purchase_order";
+
+/** Which of them put the line on a document that already exists. */
+export const crossDockActionNeedsTarget = (
+  action: CrossDockPurchasingAction | null | undefined,
+): boolean =>
+  action === "add_to_purchase_order" || action === "add_to_purchase_request";
+
+/**
+ * A stored date as the reference prints it in running text — `15-10-2026` in
+ * `delivery on 15-10-2026, 1 ST …`. An em dash when there is none.
+ */
+export const formatDayMonthYear = (value: string | Date | null): string => {
+  const iso = formatDateColumn(value);
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) {
+    return iso;
+  }
+  return `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}`;
+};

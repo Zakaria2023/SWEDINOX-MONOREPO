@@ -1,5 +1,6 @@
 import {
   AddressCategory,
+  CrossDockPurchasingAction,
   AgeingBucket,
   ArticleGroup,
   AvailableAt,
@@ -2280,4 +2281,17 @@ export const STOCK_LOT_VIEW_LABELS: Record<StockLotView, string> = {
   controle: "Controle",
   cuvelje: "Cuvelje",
   available_in_house: "availeble stock in house",
+};
+
+// The `Select the desired action` radio buttons, worded as the reference
+// words them.
+export const CROSS_DOCK_PURCHASING_ACTION_LABELS: Record<
+  CrossDockPurchasingAction,
+  string
+> = {
+  task: "Arrange purchasing via Task",
+  add_to_purchase_order: "Add line to a purchase order",
+  create_purchase_order: "Create purchase order",
+  add_to_purchase_request: "Add a line to a purchase request",
+  create_purchase_request: "Create purchase request",
 };

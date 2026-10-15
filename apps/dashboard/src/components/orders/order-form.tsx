@@ -84,6 +84,8 @@ export type SavedOrder = {
   texts: OrderTextRow[];
   communications: OrderCommunicationRow[];
   competitors: OrderCompetitorRow[];
+  /** Saved with `CD` lines just now: ask how each is to be purchased. */
+  askPurchasing?: boolean;
   /** Only on a `Call-off` order. */
   callOffs: {
     rows: OrderCallOffRow[];
@@ -375,6 +377,8 @@ export const OrderForm = ({
               <OrderLines
                 order={order}
                 selectedLineUuid={saved?.linePanels?.orderItemUuid ?? null}
+                companies={companies}
+                askPurchasingOnOpen={saved?.askPurchasing ?? false}
               />
             ) : (
               <OrderNewLines

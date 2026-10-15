@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { KeyboardEvent, useState, useTransition } from "react";
+import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { arrangeCrossDockPurchasing } from "@/app/(dashboard)/orders/[uuid]/actions";
 import {
   addOrderLines,
   deleteOrderLine,
@@ -14,10 +16,15 @@ import {
   OrderLinePick,
   stockChoiceToLinePick,
 } from "@/app/(dashboard)/orders/mappers";
+import {
+  CrossDockPurchasingChoice,
+  CrossDockPurchasingDialog,
+  CrossDockPurchasingOutcome,
+} from "@/components/orders/cross-dock-purchasing-dialog";
 import { StockSearchDialog } from "@/components/orders/stock-search-dialog";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
-import { Select } from "@/components/shadcn/select";
+import { Select, SelectOption } from "@/components/shadcn/select";
 import {
   Table,
   TableBody,
@@ -99,6 +106,10 @@ type Props = {
   order: OrderDetail;
   /** The line the panels below follow — `?line=` on the order's page. */
   selectedLineUuid: string | null;
+  /** Where `Enter the desired supplier` picks from. */
+  companies: CompanyOption[];
+  /** The order was just saved with `CD` lines: ask about each one. */
+  askPurchasingOnOpen: boolean;
 };
 
 /**
@@ -109,7 +120,12 @@ type Props = {
  * selected line off while the order is provisional. Clicking a line selects
  * it, and the panels below follow it.
  */
-export const OrderLines = ({ order, selectedLineUuid }: Props) => {
+export const OrderLines = ({
+  order,
+  selectedLineUuid,
+  companies,
+  askPurchasingOnOpen,
+}: Props) => {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState<PendingLine | null>(null);
@@ -117,6 +133,37 @@ export const OrderLines = ({ order, selectedLineUuid }: Props) => {
   const [isStockOpen, setIsStockOpen] = useState(false);
   // Qty(p) as typed on a saved line, until it is saved.
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  // The `CD` lines still to be asked `Purchasing for Cross-docking order
+  // line` about, first one on screen. An order saved with them asks at once.
+  const [purchasingQueue, setPurchasingQueue] = useState<string[]>(() =>
+    askPurchasingOnOpen
+      ? order.items
+          .filter(
+            (item) =>
+              item.sourceType === "cross_dock" &&
+              !item.purchaseOrderItemUuid &&
+              item.status !== "cancelled",
+          )
+          .map((item) => item.uuid)
+      : [],
+  );
+  // `Don't ask this question again`: the same action for every later `CD`
+  // line of this order, for as long as it is open.
+  const [rememberedChoice, setRememberedChoice] =
+    useState<CrossDockPurchasingChoice | null>(null);
+  const [notices, setNotices] = useState<string[]>([]);
+
+  const supplierOptions: SelectOption[] = companies
+    .filter((company) => company.roles?.includes("supplier"))
+    .map((company) => ({
+      value: company.uuid,
+      label: [company.searchCode1, company.companyName]
+        .filter(Boolean)
+        .join(" "),
+      description: company.companyName ?? "",
+    }));
+  const purchasingLine =
+    order.items.find((item) => item.uuid === purchasingQueue[0]) ?? null;
 
   const isEditable = order.status === "provisional";
   const selected = isPendingSelected ? NEW_LINE : selectedLineUuid;
@@ -130,7 +177,7 @@ export const OrderLines = ({ order, selectedLineUuid }: Props) => {
 
   const run = (
     action: () => Promise<OrderActionResult>,
-    onSuccess?: () => void,
+    onSuccess?: (result: OrderActionResult) => void,
   ) => {
     setError(undefined);
     startTransition(async () => {
@@ -139,9 +186,63 @@ export const OrderLines = ({ order, selectedLineUuid }: Props) => {
         setError(result.error);
         return;
       }
-      onSuccess?.();
+      onSuccess?.(result);
     });
   };
+
+  // The remembered action, applied to each line without asking.
+  const purchaseWithChoice = (
+    lineUuids: string[],
+    choice: CrossDockPurchasingChoice,
+  ) => {
+    if (lineUuids.length === 0) {
+      return;
+    }
+    setError(undefined);
+    startTransition(async () => {
+      for (const lineUuid of lineUuids) {
+        const result = await arrangeCrossDockPurchasing(
+          {},
+          { ...choice, orderItemUuid: lineUuid, dontAskAgain: true },
+        );
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        const message = result.message;
+        if (message) {
+          setNotices((current) => [...current, message]);
+        }
+      }
+    });
+  };
+
+  const askPurchasing = (lineUuids: string[]) => {
+    if (rememberedChoice) {
+      purchaseWithChoice(lineUuids, rememberedChoice);
+      return;
+    }
+    setPurchasingQueue(lineUuids);
+  };
+
+  const finishPurchasing = (outcome: CrossDockPurchasingOutcome) => {
+    const rest = purchasingQueue.slice(1);
+    const message = outcome.message;
+    if (message) {
+      setNotices((current) => [...current, message]);
+    }
+    if (outcome.remember) {
+      setRememberedChoice(outcome.remember);
+      setPurchasingQueue([]);
+      purchaseWithChoice(rest, outcome.remember);
+      return;
+    }
+    setPurchasingQueue(rest);
+  };
+
+  // `Cancel` leaves the line without a purchase.
+  const skipPurchasing = () =>
+    setPurchasingQueue((current) => current.slice(1));
 
   // The blank line is written once it names what it sells and how many.
   const savePendingLine = (line: PendingLine) => {
@@ -160,9 +261,12 @@ export const OrderLines = ({ order, selectedLineUuid }: Props) => {
             sourceType: line.sourceType,
           },
         ]),
-      () => {
+      (result) => {
         setPending(null);
         setIsPendingSelected(false);
+        if (line.sourceType === "cross_dock") {
+          askPurchasing(result.lineUuids ?? []);
+        }
       },
     );
   };
@@ -566,7 +670,25 @@ export const OrderLines = ({ order, selectedLineUuid }: Props) => {
           </TableBody>
         </Table>
       </div>
+      {notices.map((notice, index) => (
+        <p
+          key={`${notice}-${index}`}
+          className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm"
+        >
+          {notice}
+        </p>
+      ))}
       <FormError>{error}</FormError>
+      {purchasingLine && (
+        <CrossDockPurchasingDialog
+          key={purchasingLine.uuid}
+          line={purchasingLine}
+          orderDeliveryDate={order.deliveryDate}
+          suppliers={supplierOptions}
+          onDone={finishPurchasing}
+          onCancel={skipPurchasing}
+        />
+      )}
     </div>
   );
 };
