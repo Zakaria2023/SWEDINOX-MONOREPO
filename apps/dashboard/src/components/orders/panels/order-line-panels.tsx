@@ -42,6 +42,7 @@ import {
 } from "@/lib/helpers";
 import {
   ORDER_LINE_STATUS_LABELS,
+  DELIVERY_STATUS_LABELS,
   STOCK_UNIT_LABELS,
   TRIP_STATUS_LABELS,
   WAREHOUSE_LOCATION_TYPE_LABELS,
@@ -55,6 +56,8 @@ const DELIVERIES_NOT_BUILT =
 type Props = {
   panels: OrderLinePanels;
   lineLabel: string;
+  /** The selected line's article code, for its own delivery row. */
+  productCode: string | null;
   /** The order's text lines; the order has no per-line texts. */
   texts: OrderTextRow[];
 };
@@ -98,9 +101,8 @@ type OptionsProps = {
 
 type DeliveriesProps = {
   rows: OrderTransportWorkOrderRow[];
-  blocked: boolean;
-  options: string | null;
-  unit: OrderLinePanels["line"]["unit"];
+  line: OrderLinePanels["line"];
+  productCode: string | null;
 };
 
 type TextLinesProps = {
@@ -268,7 +270,11 @@ const OptionsPanel = ({ rows }: OptionsProps) => (
  * reference's columns (100629, 8-10-2026). `Blocked`, `Options` and `U` are the
  * line's own; the rest come off the transport line that carries it.
  */
-const DeliveriesPanel = ({ rows, blocked, options, unit }: DeliveriesProps) => (
+const DeliveriesPanel = ({ rows, line, productCode }: DeliveriesProps) => {
+  const blocked = line.transportBlock ?? false;
+  const options = line.options;
+  const unit = line.unit;
+  return (
   <div className="space-y-2">
     <PanelToolbar>
       <Button
@@ -320,25 +326,67 @@ const DeliveriesPanel = ({ rows, blocked, options, unit }: DeliveriesProps) => (
             <TableHead>Product</TableHead>
             <TableHead className="text-right">Length</TableHead>
             <TableHead className="text-right">Width</TableHead>
-            <TableHead className="text-right">Thickness</TableHead>
-            <TableHead className="text-right">Kg (p)</TableHead>
+            <TableHead className="text-right">Thickn.</TableHead>
+            <TableHead className="text-right">Kg(p)</TableHead>
             <TableHead>Options</TableHead>
             <TableHead>U</TableHead>
-            <TableHead className="text-right">Qty (p)</TableHead>
-            <TableHead className="text-right">Qty (a)</TableHead>
-            <TableHead className="text-right">Kg (a)</TableHead>
+            <TableHead className="text-right">Qty(p)</TableHead>
+            <TableHead className="text-right">Qty(ready)</TableHead>
+            <TableHead className="text-right">Qty(a)</TableHead>
+            <TableHead className="text-right">Kg(a)</TableHead>
             <TableHead>Bill of lading</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={14}
-                className="h-16 text-center text-muted-foreground"
-              >
-                No deliveries planned for this line.
+            /* No lorry yet: the line is its own delivery, and its status is
+               the delivery's — `Workorders created` once the picking is
+               raised (O108307/10, 15-10-2026). */
+            <TableRow className="whitespace-nowrap">
+              <TableCell>
+                <BooleanFlag on={blocked} label="Blocked" />
+              </TableCell>
+              <TableCell>{formatDateColumn(line.deliveryDate)}</TableCell>
+              <TableCell>{orDash(productCode)}</TableCell>
+              <TableCell className="text-right tabular-nums">
+                {orDash(line.lengthMm)}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {orDash(line.widthMm)}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {orDash(line.thicknessMm)}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {formatNumber(Number(line.kgPlanned ?? 0))}
+              </TableCell>
+              <TableCell>{orDash(options)}</TableCell>
+              <TableCell>{unit ? STOCK_UNIT_LABELS[unit] : "—"}</TableCell>
+              <TableCell className="text-right tabular-nums">
+                {formatNumber(Number(line.quantity ?? 0))}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {formatNumber(
+                  line.deliveryStatus === "ready" ? Number(line.quantity ?? 0) : 0,
+                )}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {formatNumber(Number(line.qtyActual ?? 0))}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {formatNumber(Number(line.kgActual ?? 0))}
+              </TableCell>
+              <TableCell />
+              <TableCell>
+                <StatusBadge
+                  value={line.deliveryStatus}
+                  label={
+                    line.deliveryStatus
+                      ? DELIVERY_STATUS_LABELS[line.deliveryStatus]
+                      : null
+                  }
+                />
               </TableCell>
             </TableRow>
           ) : (
@@ -369,6 +417,9 @@ const DeliveriesPanel = ({ rows, blocked, options, unit }: DeliveriesProps) => (
                   {formatNumber(Number(row.qtyPlanned ?? 0))}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
+                  {formatNumber(Number(row.qtyLoaded ?? 0))}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
                   {formatNumber(Number(row.qtyActual ?? 0))}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
@@ -388,7 +439,8 @@ const DeliveriesPanel = ({ rows, blocked, options, unit }: DeliveriesProps) => (
       </Table>
     </div>
   </div>
-);
+  );
+};
 
 /** `Text lines` — the texts printed on the order's documents. */
 const TextLinesPanel = ({ rows }: TextLinesProps) => (
@@ -951,6 +1003,7 @@ const PreviousQuotesPanel = ({ rows }: PreviousQuotesProps) => (
 export const OrderLinePanelsView = ({
   panels,
   lineLabel,
+  productCode,
   texts,
 }: Props) => {
   const { revenueAndProfit } = panels;
@@ -983,17 +1036,17 @@ export const OrderLinePanelsView = ({
 
       <CollapsibleSection
         title="Deliveries"
-        summary={`${panels.deliveries.length} ${pluralize(
-          panels.deliveries.length,
+        // A line with no lorry yet is still one delivery: itself.
+        summary={`${Math.max(panels.deliveries.length, 1)} ${pluralize(
+          Math.max(panels.deliveries.length, 1),
           "delivery",
           "deliveries",
         )}`}
       >
         <DeliveriesPanel
           rows={panels.deliveries}
-          blocked={panels.line.transportBlock ?? false}
-          options={panels.line.options}
-          unit={panels.line.unit}
+          line={panels.line}
+          productCode={productCode}
         />
       </CollapsibleSection>
 

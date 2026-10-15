@@ -141,16 +141,16 @@ const WarehouseWorkOrderTable = ({ rows }: WarehouseTableProps) => {
               <TableHead className="text-right">Length</TableHead>
               <TableHead className="text-right">Width</TableHead>
               <TableHead className="text-right">Thickness</TableHead>
-              <TableHead className="text-right">Qty (p)</TableHead>
-              <TableHead className="text-right">Qty (a)</TableHead>
-              <TableHead>U (p)</TableHead>
-              <TableHead className="text-right">Kg (p)</TableHead>
-              <TableHead className="text-right">Kg (a)</TableHead>
+              <TableHead className="text-right">Qty(p)</TableHead>
+              <TableHead className="text-right">Qty(a)</TableHead>
+              <TableHead>U(p)</TableHead>
+              <TableHead className="text-right">Kg(p)</TableHead>
+              <TableHead className="text-right">Kg(a)</TableHead>
               <TableHead>From</TableHead>
               <TableHead>To</TableHead>
               <TableHead>Charge</TableHead>
               <TableHead>Internal charge</TableHead>
-              <TableHead>Purchase order</TableHead>
+              <TableHead>Purchase</TableHead>
               <TableHead>Stock category</TableHead>
               <TableHead>Quality code</TableHead>
               <TableHead className="text-right">Colli</TableHead>
