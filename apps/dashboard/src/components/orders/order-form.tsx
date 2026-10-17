@@ -213,6 +213,7 @@ export const OrderForm = ({
   const contractUuids = watch("contractUuids") ?? [];
   const documents = watch("documents") ?? [];
   const paymentTerms = watch("paymentTerms");
+  const texts = watch("texts") ?? [];
 
   // A cancelled order is a record, not a document anybody edits.
   const isReadOnly = order?.status === "cancelled";
@@ -420,9 +421,18 @@ export const OrderForm = ({
 
           <OrderCompetitorsPanel rows={saved?.competitors ?? []} />
 
+          {/* `1 company contract(s), 0 project contract(s), 0 order
+              contract(s)` (O108309, 16-10-2026). No contract is held on a
+              project here, so that count is always 0. */}
           <CollapsibleSection
             title="Contracts"
-            summary={`${contractUuids.length} order ${pluralize(contractUuids.length, "contract")}`}
+            summary={`${
+              contracts.filter(
+                (contract) => !contractUuids.includes(contract.uuid),
+              ).length
+            } company contract(s), 0 project contract(s), ${
+              contractUuids.length
+            } order contract(s)`}
           >
             <fieldset disabled={isReadOnly} className="min-w-0">
               <ContractsSection contracts={contracts} />
@@ -462,7 +472,10 @@ export const OrderForm = ({
             reason="Not built yet"
           />
 
-          <CollapsibleSection title="Logistics">
+          <CollapsibleSection
+            title="Logistics"
+            summary={header?.deliveryAddress?.country ?? undefined}
+          >
             <fieldset disabled={isReadOnly} className="min-w-0">
               <LogisticsSection />
             </fieldset>
@@ -479,7 +492,10 @@ export const OrderForm = ({
             reason="Not built yet"
           />
 
-          <CollapsibleSection title="Texts">
+          <CollapsibleSection
+            title="Texts"
+            summary={`${texts.length} ${pluralize(texts.length, "text")}`}
+          >
             <fieldset disabled={isReadOnly} className="min-w-0">
               <TextsSection textCategories={textCategories} />
             </fieldset>

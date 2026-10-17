@@ -180,7 +180,7 @@ export const ORDER_PURCHASE_LINES_PANEL: OrderEmptyPanel = {
 
 export const ORDER_COMPLAINTS_PANEL: OrderEmptyPanel = {
   title: "Complaints",
-  summary: "0 pending complaint(s)",
+  summary: "No complaints",
   toolbar: ["New"],
   columns: ["Complaint number", "Report date", "Category", "Status"],
   empty: "Not built: complaints are raised from the complaints screen.",
