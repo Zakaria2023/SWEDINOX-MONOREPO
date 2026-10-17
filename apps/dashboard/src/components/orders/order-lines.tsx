@@ -21,6 +21,7 @@ import {
   CrossDockPurchasingDialog,
   CrossDockPurchasingOutcome,
 } from "@/components/orders/cross-dock-purchasing-dialog";
+import { ProductAvailabilityDialog } from "@/components/orders/product-availability-dialog";
 import { StockSearchDialog } from "@/components/orders/stock-search-dialog";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
@@ -34,7 +35,11 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { FormError } from "@/components/ui/form-error";
-import { OrderSourceType, orderSourceTypes } from "@/lib/enums";
+import {
+  OrderSourceType,
+  orderSourceTypes,
+  ProductAvailabilityAction,
+} from "@/lib/enums";
 import {
   cn,
   formatDateColumn,
@@ -101,6 +106,9 @@ type PendingLine = {
   pick: OrderLinePick | null;
   quantity: string;
   sourceType: OrderSourceType;
+  /** What `Use selected article` found free of it, for the availability
+   *  check — all matching stock. */
+  available: { quantity: number; unit: string | null; kg: number } | null;
 };
 
 type Props = {
@@ -132,6 +140,15 @@ export const OrderLines = ({
   const [pending, setPending] = useState<PendingLine | null>(null);
   const [isPendingSelected, setIsPendingSelected] = useState(false);
   const [isStockOpen, setIsStockOpen] = useState(false);
+  // 🔑 A Stk line named by its article asks for its stock when it is saved:
+  // the `Voorraad` window opens on the article to tick its lot, and closing
+  // it without one asks `Product availability check` (O108309/10,
+  // 16-10-2026).
+  const [isLotStageOpen, setIsLotStageOpen] = useState(false);
+  const [isAvailabilityOpen, setIsAvailabilityOpen] = useState(false);
+  // `Don't ask this question again`, for the rest of this order's lines.
+  const [rememberedAvailability, setRememberedAvailability] =
+    useState<ProductAvailabilityAction | null>(null);
   // Qty(p) as typed on a saved line, until it is saved.
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   // The `CD` lines still to be asked `Purchasing for Cross-docking order
@@ -245,19 +262,34 @@ export const OrderLines = ({
   const skipPurchasing = () =>
     setPurchasingQueue((current) => current.slice(1));
 
-  // The blank line is written once it names what it sells and how many.
-  const savePendingLine = (line: PendingLine) => {
+  // The blank line is written once it names what it sells and how many. A
+  // Stk line that names only its article asks for its lot first; `null` is
+  // `Leave delivery…`, the line kept without stock.
+  const savePendingLine = (line: PendingLine, stockUuid?: string | null) => {
     const quantity = line.quantity.trim().replace(",", ".");
     if (!line.pick || !(Number(quantity) > 0) || isPending) {
       return;
     }
     const pick = line.pick;
+    const lotUuid = stockUuid === undefined ? pick.stockUuid : stockUuid;
+    if (
+      stockUuid === undefined &&
+      !lotUuid &&
+      line.sourceType !== "cross_dock"
+    ) {
+      if (rememberedAvailability === "leave_delivery") {
+        savePendingLine(line, null);
+        return;
+      }
+      setIsLotStageOpen(true);
+      return;
+    }
     run(
       () =>
         addOrderLines(order.uuid, [
           {
-            stockUuid: pick.stockUuid,
-            productUuid: pick.stockUuid ? null : pick.productUuid,
+            stockUuid: lotUuid,
+            productUuid: lotUuid ? null : pick.productUuid,
             quantity,
             sourceType: line.sourceType,
           },
@@ -274,7 +306,12 @@ export const OrderLines = ({
 
   const addBlankLine = () => {
     setError(undefined);
-    setPending({ pick: null, quantity: "0", sourceType: "stock" });
+    setPending({
+      pick: null,
+      quantity: "0",
+      sourceType: "stock",
+      available: null,
+    });
     setIsPendingSelected(true);
   };
 
@@ -385,9 +422,13 @@ export const OrderLines = ({
           if (!pending) {
             return;
           }
+          // `Use selected article` on a Stk line names the article; its lot
+          // is asked for when the line is saved, as the reference does.
+          const isArticle =
+            choice.kind === "variant" && pending.sourceType !== "cross_dock";
           const pick = stockChoiceToLinePick(
             choice,
-            pending.sourceType === "cross_dock",
+            pending.sourceType === "cross_dock" || isArticle,
           );
           if (!pick) {
             setError(
@@ -395,12 +436,90 @@ export const OrderLines = ({
             );
             return;
           }
-          const next = { ...pending, pick };
+          const next: PendingLine = {
+            ...pending,
+            pick,
+            available:
+              choice.kind === "variant"
+                ? {
+                    quantity: choice.variant.available,
+                    unit: choice.variant.unit,
+                    kg: choice.variant.kgAvailable,
+                  }
+                : null,
+          };
           setPending(next);
           // A quantity typed before the product was chosen saves the line now.
           savePendingLine(next);
         }}
       />
+      {/* The stock a saved Stk line is cut from: tick its lot and `Use
+          selected lines`. Closed without one, the availability check asks. */}
+      <StockSearchDialog
+        open={isLotStageOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            return;
+          }
+          setIsLotStageOpen(false);
+          if (rememberedAvailability !== "customize_delivery") {
+            setIsAvailabilityOpen(true);
+          }
+        }}
+        sources={["stock"]}
+        initialProductCode={pending?.pick?.productCode ?? null}
+        // `Use selected article` here takes the article's fullest lot.
+        onChoose={(choice) => {
+          if (!pending || !choice.lot) {
+            return;
+          }
+          setIsLotStageOpen(false);
+          savePendingLine(pending, choice.lot.uuid);
+        }}
+        onChooseLots={(lots) => {
+          const [lot] = lots;
+          if (!pending || !lot) {
+            return;
+          }
+          if (lots.length > 1) {
+            setError("A line is cut from one lot — tick one.");
+            return;
+          }
+          setIsLotStageOpen(false);
+          savePendingLine(pending, lot.uuid);
+        }}
+      />
+      {isAvailabilityOpen && pending?.pick && (
+        <ProductAvailabilityDialog
+          line={{
+            code: nextCode,
+            deliveryDate: order.deliveryDate,
+            quantity: Number(pending.quantity.replace(",", ".") || 0),
+            unit: pending.pick.unit ? pending.pick.unit.toUpperCase() : null,
+            description:
+              pending.pick.productName ?? pending.pick.productCode ?? "",
+            lengthMm: pending.pick.lengthMm,
+            widthMm: pending.pick.widthMm,
+            availableQuantity: pending.available?.quantity ?? 0,
+            availableUnit: pending.available?.unit ?? pending.pick.unit,
+            availableKg: pending.available?.kg ?? 0,
+          }}
+          onCancel={() => setIsAvailabilityOpen(false)}
+          onChoose={(action, remember) => {
+            setIsAvailabilityOpen(false);
+            if (remember) {
+              setRememberedAvailability(action);
+            }
+            if (action === "customize_delivery") {
+              setIsLotStageOpen(true);
+              return;
+            }
+            if (action === "leave_delivery") {
+              savePendingLine(pending, null);
+            }
+          }}
+        />
+      )}
       <div className="overflow-x-auto rounded-lg border">
         <Table>
           <TableHeader>
@@ -586,7 +705,12 @@ export const OrderLines = ({
                         (type) => type === next,
                       );
                       if (sourceType) {
-                        setPending({ ...pending, pick: null, sourceType });
+                        setPending({
+                          ...pending,
+                          pick: null,
+                          sourceType,
+                          available: null,
+                        });
                       }
                     }}
                   />

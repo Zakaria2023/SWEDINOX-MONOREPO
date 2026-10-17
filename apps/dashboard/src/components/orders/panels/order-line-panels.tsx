@@ -1,12 +1,6 @@
 import { ReactNode } from "react";
 import Link from "next/link";
-import {
-  ArrowDown,
-  ArrowUp,
-  PackageSearch,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, Eye, ListChecks, Plus, Trash2 } from "lucide-react";
 import {
   OrderLineOptionRow,
   OrderLinePanels,
@@ -17,6 +11,7 @@ import {
   OrderTextRow,
   OrderTransportWorkOrderRow,
 } from "@/app/(dashboard)/orders/[uuid]/actions";
+import { DeliverySelectStock } from "@/components/orders/panels/delivery-select-stock";
 import { Button } from "@/components/shadcn/button";
 import {
   Table,
@@ -44,7 +39,6 @@ import {
   ORDER_LINE_STATUS_LABELS,
   DELIVERY_STATUS_LABELS,
   STOCK_UNIT_LABELS,
-  TRIP_STATUS_LABELS,
   WAREHOUSE_LOCATION_TYPE_LABELS,
 } from "@/lib/labels";
 
@@ -60,6 +54,7 @@ type Props = {
   productCode: string | null;
   /** The order's text lines; the order has no per-line texts. */
   texts: OrderTextRow[];
+  isProvisional: boolean;
 };
 
 type PricingProps = {
@@ -105,6 +100,8 @@ type DeliveriesProps = {
   rows: OrderTransportWorkOrderRow[];
   line: OrderLinePanels["line"];
   productCode: string | null;
+  /** `Select stock` gives a lot while the order is provisional. */
+  isProvisional: boolean;
 };
 
 type TextLinesProps = {
@@ -269,178 +266,215 @@ const OptionsPanel = ({ rows }: OptionsProps) => (
 
 /**
  * `Deliveries` — how the selected line goes out, one row per drop, in the
- * reference's columns (100629, 8-10-2026). `Blocked`, `Options` and `U` are the
- * line's own; the rest come off the transport line that carries it.
+ * reference's columns (O108309/10, 16-10-2026). `Blocked`, `Options`, `U`
+ * and the status are the line's own; the rest come off the transport line
+ * that carries it, once `Make final` has raised one.
+ *
+ * 🔑 A Stk delivery with no lot chosen is Blocked; `Select stock` gives it
+ * one. Its status reads `New`, then `Workorders created` at Make final, and
+ * `Qty(ready)` stays 0 until the picking is reported.
  */
-const DeliveriesPanel = ({ rows, line, productCode }: DeliveriesProps) => {
-  const blocked = line.transportBlock ?? false;
+const DeliveriesPanel = ({
+  rows,
+  line,
+  productCode,
+  isProvisional,
+}: DeliveriesProps) => {
+  const isWithoutStock = line.sourceType === "stock" && !line.stockUuid;
+  const blocked = (line.transportBlock ?? false) || isWithoutStock;
   const options = line.options;
   const unit = line.unit;
+  const status = (
+    <StatusBadge
+      value={line.deliveryStatus}
+      label={
+        line.deliveryStatus ? DELIVERY_STATUS_LABELS[line.deliveryStatus] : null
+      }
+    />
+  );
   return (
-  <div className="space-y-2">
-    <PanelToolbar>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        disabled
-        title={DELIVERIES_NOT_BUILT}
-      >
-        <Plus className="size-4" />
-        New
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        disabled
-        title={DELIVERIES_NOT_BUILT}
-      >
-        <Trash2 className="size-4" />
-        Delete
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        disabled
-        title="Not built: PAC"
-      >
-        PAC
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        disabled
-        title="Not built: stock is chosen when the line is entered"
-      >
-        <PackageSearch className="size-4" />
-        Select stock
-      </Button>
-    </PanelToolbar>
-    <div className="overflow-x-auto rounded-lg border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Blocked</TableHead>
-            <TableHead>Delivery date</TableHead>
-            <TableHead>Product</TableHead>
-            <TableHead className="text-right">Length</TableHead>
-            <TableHead className="text-right">Width</TableHead>
-            <TableHead className="text-right">Thickn.</TableHead>
-            <TableHead className="text-right">Kg(p)</TableHead>
-            <TableHead>Options</TableHead>
-            <TableHead>U</TableHead>
-            <TableHead className="text-right">Qty(p)</TableHead>
-            <TableHead className="text-right">Qty(ready)</TableHead>
-            <TableHead className="text-right">Qty(a)</TableHead>
-            <TableHead className="text-right">Kg(a)</TableHead>
-            <TableHead>Bill of lading</TableHead>
-            <TableHead>Status</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
-            /* No lorry yet: the line is its own delivery, and its status is
-               the delivery's — `Workorders created` once the picking is
-               raised (O108307/10, 15-10-2026). */
+    <div className="space-y-2">
+      <PanelToolbar>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled
+          title={DELIVERIES_NOT_BUILT}
+        >
+          <Plus className="size-4" />
+          New
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled
+          title={DELIVERIES_NOT_BUILT}
+        >
+          <Trash2 className="size-4" />
+          Delete
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled
+          aria-label="Reservations"
+          title="Not built: the delivery's reservations"
+        >
+          <ListChecks className="size-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled
+          title="Not built: PAC"
+        >
+          PAC
+        </Button>
+        <DeliverySelectStock
+          orderUuid={line.orderUuid}
+          orderItemUuid={line.uuid}
+          productCode={productCode}
+          disabledReason={
+            !isWithoutStock
+              ? "This delivery already has its stock"
+              : !isProvisional
+                ? "Stock is chosen while the order is provisional"
+                : null
+          }
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled
+          title="Not built: the delivery's own window"
+        >
+          <Eye className="size-4" />
+          View
+        </Button>
+      </PanelToolbar>
+      <div className="overflow-x-auto rounded-lg border">
+        <Table>
+          <TableHeader>
             <TableRow className="whitespace-nowrap">
-              <TableCell>
-                <BooleanFlag on={blocked} label="Blocked" />
-              </TableCell>
-              <TableCell>{formatDateColumn(line.deliveryDate)}</TableCell>
-              <TableCell>{orDash(productCode)}</TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(line.lengthMm)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(line.widthMm)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(line.thicknessMm)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatNumber(Number(line.kgPlanned ?? 0))}
-              </TableCell>
-              <TableCell>{orDash(options)}</TableCell>
-              <TableCell>{unit ? STOCK_UNIT_LABELS[unit] : "—"}</TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatNumber(Number(line.quantity ?? 0))}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatNumber(
-                  line.deliveryStatus === "ready" ? Number(line.quantity ?? 0) : 0,
-                )}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatNumber(Number(line.qtyActual ?? 0))}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatNumber(Number(line.kgActual ?? 0))}
-              </TableCell>
-              <TableCell />
-              <TableCell>
-                <StatusBadge
-                  value={line.deliveryStatus}
-                  label={
-                    line.deliveryStatus
-                      ? DELIVERY_STATUS_LABELS[line.deliveryStatus]
-                      : null
-                  }
-                />
-              </TableCell>
+              <TableHead>Blocked</TableHead>
+              <TableHead>Delivery date</TableHead>
+              <TableHead>Product</TableHead>
+              <TableHead className="text-right">Length</TableHead>
+              <TableHead className="text-right">Width</TableHead>
+              <TableHead className="text-right">Thickn.</TableHead>
+              <TableHead className="text-right">Kg(p)</TableHead>
+              <TableHead>Options</TableHead>
+              <TableHead>U</TableHead>
+              <TableHead className="text-right">Qty(p)</TableHead>
+              <TableHead className="text-right">Qty(ready)</TableHead>
+              <TableHead className="text-right">Qty(a)</TableHead>
+              <TableHead className="text-right">Kg(a)</TableHead>
+              <TableHead>Bill of lading</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Customer ref call-off</TableHead>
+              <TableHead>Customer ref consumption</TableHead>
             </TableRow>
-          ) : (
-            rows.map((row) => (
-              <TableRow key={row.uuid} className="whitespace-nowrap">
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
+              /* No lorry yet: the line is its own delivery. */
+              <TableRow className="whitespace-nowrap">
                 <TableCell>
                   <BooleanFlag on={blocked} label="Blocked" />
                 </TableCell>
-                <TableCell>{formatDateColumn(row.tripDate)}</TableCell>
-                <TableCell>
-                  {orDash(row.productCodeResolved ?? row.productCode)}
+                <TableCell>{formatDateColumn(line.deliveryDate)}</TableCell>
+                <TableCell>{orDash(productCode)}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(line.lengthMm)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {orDash(row.lengthMm)}
+                  {orDash(line.widthMm)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {orDash(row.widthMm)}
+                  {orDash(line.thicknessMm)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {orDash(row.thicknessMm)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(Number(row.kgPlanned ?? 0))}
+                  {formatNumber(Number(line.kgPlanned ?? 0))}
                 </TableCell>
                 <TableCell>{orDash(options)}</TableCell>
                 <TableCell>{unit ? STOCK_UNIT_LABELS[unit] : "—"}</TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {formatNumber(Number(row.qtyPlanned ?? 0))}
+                  {formatNumber(Number(line.quantity ?? 0))}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {formatNumber(Number(row.qtyLoaded ?? 0))}
+                  {formatNumber(0)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {formatNumber(Number(row.qtyActual ?? 0))}
+                  {formatNumber(Number(line.qtyActual ?? 0))}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {formatNumber(Number(row.kgActual ?? 0))}
+                  {formatNumber(Number(line.kgActual ?? 0))}
                 </TableCell>
-                <TableCell>{orDash(row.billOfLading)}</TableCell>
-                <TableCell>
-                  <StatusBadge
-                    value={row.status}
-                    label={TRIP_STATUS_LABELS[row.status]}
-                  />
-                </TableCell>
+                <TableCell />
+                <TableCell>{status}</TableCell>
+                <TableCell />
+                <TableCell />
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ) : (
+              rows.map((row) => (
+                <TableRow key={row.uuid} className="whitespace-nowrap">
+                  <TableCell>
+                    <BooleanFlag on={blocked} label="Blocked" />
+                  </TableCell>
+                  <TableCell>
+                    {formatDateColumn(line.deliveryDate ?? row.tripDate)}
+                  </TableCell>
+                  <TableCell>
+                    {orDash(row.productCodeResolved ?? row.productCode)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {orDash(row.lengthMm)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {orDash(row.widthMm)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {orDash(row.thicknessMm)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatNumber(Number(row.kgPlanned ?? 0))}
+                  </TableCell>
+                  <TableCell>{orDash(options)}</TableCell>
+                  <TableCell>{unit ? STOCK_UNIT_LABELS[unit] : "—"}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatNumber(Number(row.qtyPlanned ?? 0))}
+                  </TableCell>
+                  {/* Picked onto `Laad`: ready for the lorry. */}
+                  <TableCell className="text-right tabular-nums">
+                    {formatNumber(Number(row.qtyActual ?? 0))}
+                  </TableCell>
+                  {/* Gone: what the lorry loaded. */}
+                  <TableCell className="text-right tabular-nums">
+                    {formatNumber(Number(row.qtyLoaded ?? 0))}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatNumber(
+                      Number(row.qtyLoaded ?? 0) > 0
+                        ? Number(row.kgActual ?? 0)
+                        : 0,
+                    )}
+                  </TableCell>
+                  <TableCell>{orDash(row.billOfLading)}</TableCell>
+                  <TableCell>{status}</TableCell>
+                  <TableCell />
+                  <TableCell />
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
-  </div>
   );
 };
 
@@ -1018,6 +1052,7 @@ export const OrderLinePanelsView = ({
   lineLabel,
   productCode,
   texts,
+  isProvisional,
 }: Props) => {
   const { revenueAndProfit } = panels;
   const totalRevenue = revenueAndProfit.revenue + revenueAndProfit.optionsRevenue;
@@ -1063,6 +1098,7 @@ export const OrderLinePanelsView = ({
           rows={panels.deliveries}
           line={panels.line}
           productCode={productCode}
+          isProvisional={isProvisional}
         />
       </CollapsibleSection>
 

@@ -18,7 +18,11 @@ import {
   ORDER_LINE_TOOLBAR_NOT_BUILT,
   SOURCE_TYPE_OPTIONS,
 } from "@/components/orders/order-lines";
-import { StockSearchDialog } from "@/components/orders/stock-search-dialog";
+import { ProductAvailabilityDialog } from "@/components/orders/product-availability-dialog";
+import {
+  StockSearchChoice,
+  StockSearchDialog,
+} from "@/components/orders/stock-search-dialog";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
@@ -41,6 +45,13 @@ import {
   lineSpecificationLabel,
   orDash,
 } from "@/lib/helpers";
+import type { StockSearchVariant } from "@/lib/server/stock-search";
+
+type AvailabilityAsk = {
+  index: number;
+  choice: StockSearchChoice;
+  variant: StockSearchVariant;
+};
 
 type Props = {
   itemFields: FieldArrayWithId<OrderFormValues, "items", "id">[];
@@ -80,6 +91,9 @@ export const OrderNewLines = ({
   const [searchingLine, setSearchingLine] = useState<number | null>(null);
   const [selectedLine, setSelectedLine] = useState<number | null>(null);
   const [lineError, setLineError] = useState<string | undefined>();
+  // A Stk article chosen with nothing free on the shelf, being asked about.
+  const [availabilityAsk, setAvailabilityAsk] =
+    useState<AvailabilityAsk | null>(null);
 
   const searchingIsCrossDock =
     searchingLine !== null && lines[searchingLine]?.sourceType === "cross_dock";
@@ -93,6 +107,25 @@ export const OrderNewLines = ({
       return message ? `Line ${(index + 1) * 10}: ${message}` : null;
     })
     .find((message) => message !== null);
+
+  // What a line takes from the stock window: its lot — or, left without
+  // stock, only its article.
+  const applyPick = (index: number, pick: OrderLinePick) => {
+    const field = itemFields[index];
+    if (!field) {
+      return;
+    }
+    setLineError(undefined);
+    onPick(field.id, pick);
+    setValue(`items.${index}.stockUuid`, pick.stockUuid ?? "", {
+      shouldValidate: true,
+    });
+    setValue(`items.${index}.productUuid`, pick.productUuid);
+    setValue(
+      `items.${index}.productLabel`,
+      [pick.productCode, pick.productName].filter(Boolean).join(" — "),
+    );
+  };
 
   const addBlankLine = () => {
     setLineError(undefined);
@@ -192,23 +225,63 @@ export const OrderNewLines = ({
             return;
           }
           if (!pick) {
+            // An article with nothing free on the shelf: the reference's
+            // `Product availability check` (O108309/10, 16-10-2026).
+            if (choice.kind === "variant") {
+              setAvailabilityAsk({
+                index: searchingLine,
+                choice,
+                variant: choice.variant,
+              });
+              return;
+            }
             setLineError(
               "That article has no lot on the shelf to sell from — pick a lot, or make the line a CD line.",
             );
             return;
           }
-          setLineError(undefined);
-          onPick(field.id, pick);
-          setValue(`items.${searchingLine}.stockUuid`, pick.stockUuid ?? "", {
-            shouldValidate: true,
-          });
-          setValue(`items.${searchingLine}.productUuid`, pick.productUuid);
-          setValue(
-            `items.${searchingLine}.productLabel`,
-            [pick.productCode, pick.productName].filter(Boolean).join(" — "),
-          );
+          applyPick(searchingLine, pick);
         }}
       />
+      {availabilityAsk && (
+        <ProductAvailabilityDialog
+          line={{
+            code: (availabilityAsk.index + 1) * 10,
+            deliveryDate: deliveryDate || null,
+            quantity: Number(
+              (lines[availabilityAsk.index]?.quantity ?? "0").replace(
+                ",",
+                ".",
+              ),
+            ),
+            unit: availabilityAsk.variant.articleUnit
+              ? availabilityAsk.variant.articleUnit.toUpperCase()
+              : null,
+            description:
+              availabilityAsk.variant.productName ??
+              availabilityAsk.variant.productCode ??
+              "",
+            lengthMm: availabilityAsk.variant.lengthMm,
+            widthMm: availabilityAsk.variant.widthMm,
+            availableQuantity: availabilityAsk.variant.available,
+            availableUnit: availabilityAsk.variant.unit,
+            availableKg: availabilityAsk.variant.kgAvailable,
+          }}
+          onCancel={() => setAvailabilityAsk(null)}
+          onChoose={(action) => {
+            const { index, choice } = availabilityAsk;
+            setAvailabilityAsk(null);
+            if (action === "customize_delivery") {
+              setSearchingLine(index);
+              return;
+            }
+            const article = stockChoiceToLinePick(choice, true);
+            if (action === "leave_delivery" && article) {
+              applyPick(index, article);
+            }
+          }}
+        />
+      )}
 
       <div className="overflow-x-auto rounded-lg border">
         <Table>

@@ -593,10 +593,20 @@ const prepareOrderLines = async (
         "Every line needs a stock lot — or, for a CD line, the article to be bought.",
     };
   }
-  if (crossDockItems.some((item) => item.sourceType !== "cross_dock")) {
+  // 🔑 A Stk line may name only its article: `Leave delivery…` on the
+  // `Product availability check` keeps it, unreserved and Blocked, until
+  // `Select stock` gives it a lot (O108309/10, 16-10-2026).
+  if (
+    crossDockItems.some(
+      (item) =>
+        item.sourceType !== undefined &&
+        item.sourceType !== "cross_dock" &&
+        item.sourceType !== "stock",
+    )
+  ) {
     return {
       ok: false,
-      error: "Only a CD line can be entered without a stock lot.",
+      error: "Only a CD or a Stk line can be entered without a stock lot.",
     };
   }
 
@@ -917,8 +927,10 @@ const writeOrderLines = async (
   // reservation — the line is held by the purchase line raised for it, and the
   // receipt of that purchase gives it its lot (C3). Until a purchase covers
   // it, it is costed at the article's replacement price; once one does, at the
-  // purchase price (C11).
+  // purchase price (C11). A Stk line left without stock is written the same
+  // way, and is costed on its lot once `Select stock` names one.
   for (const [offset, item] of crossDockItems.entries()) {
+    const sourceType = item.sourceType === "cross_dock" ? "cross_dock" : "stock";
     const quantity = Number(item.quantity);
     const product = pricingContext.productByUuid.get(item.productUuid);
     if (!product) {
@@ -964,7 +976,7 @@ const writeOrderLines = async (
       widthMm: lineWidthMm,
       thicknessMm: lineThicknessMm,
       priceUnit: product.priceUnit,
-      minProfitMargin: minimumMarginFor(product, "cross_dock"),
+      minProfitMargin: minimumMarginFor(product, sourceType),
     });
 
     const orderItemUuid = generateUuid();
@@ -975,7 +987,7 @@ const writeOrderLines = async (
       stockUuid: null,
       productUuid: item.productUuid,
       quantity: item.quantity,
-      sourceType: "cross_dock",
+      sourceType,
       qtyPlanned: item.quantity,
       qtyReserved: "0.000",
       kgPlanned: financials.weightKg.toFixed(2),
@@ -1491,6 +1503,63 @@ export const deleteOrderLine = async (
 };
 
 /**
+ * A saved line of a provisional order entered again — at a new quantity, or
+ * on the lot `Select stock` chose — re-reserved and re-priced the way `New`
+ * writes one, under the same code. Its options and the purchase requests and
+ * quotes raised for it follow it. Returns the line's new uuid.
+ */
+const reenterOrderLine = async (
+  tx: Transaction,
+  order: Awaited<ReturnType<typeof loadProvisionalOrder>>,
+  item: SelectOrderItems,
+  contractUuid: string | null,
+  next: Pick<OrderItemInput, "stockUuid" | "quantity">,
+): Promise<string | null> => {
+  // Give the old quantity back first, so raising a line can count the
+  // pieces it already held.
+  await releaseOrderLine(tx, item);
+  const preparation = await prepareOrderLines(
+    tx,
+    [
+      {
+        stockUuid: next.stockUuid,
+        productUuid: next.stockUuid ? null : item.productUuid,
+        quantity: next.quantity,
+        sourceType: item.sourceType,
+      },
+    ],
+    contractUuid,
+  );
+  if (!preparation.ok) {
+    throw new Error(preparation.error);
+  }
+  const written = await writeOrderLines(tx, preparation.prepared, {
+    orderUuid: order.uuid,
+    weightType: order.weightType,
+    deliveryDate: order.deliveryDate,
+    firstLineNumber: item.lineNumber ?? 1,
+  });
+  const [replacement] = written.lineUuids;
+  if (replacement) {
+    await tx
+      .update(OrderItemOptions)
+      .set({ orderItemUuid: replacement })
+      .where(eq(OrderItemOptions.orderItemUuid, item.uuid));
+    // A purchase request or quote raised for this line follows it.
+    await tx
+      .update(PurchaseRequestItems)
+      .set({ forOrderItemUuid: replacement })
+      .where(eq(PurchaseRequestItems.forOrderItemUuid, item.uuid));
+    await tx
+      .update(PurchaseQuoteItems)
+      .set({ forOrderItemUuid: replacement })
+      .where(eq(PurchaseQuoteItems.forOrderItemUuid, item.uuid));
+  }
+  await tx.delete(OrderItems).where(eq(OrderItems.uuid, item.uuid));
+  return replacement ?? null;
+};
+
+/**
  * `Qty(p)` typed on a saved line of a provisional order. The line is entered
  * again at the new quantity — re-reserved and re-priced the way `New` writes
  * one — under the same code, and its options follow it.
@@ -1526,47 +1595,10 @@ export const updateOrderLineQuantity = async (
 
     await db.transaction(async (tx) => {
       await assertWorkPanelFree(tx, "order", orderUuid, userId);
-      // Give the old quantity back first, so raising a line can count the
-      // pieces it already held.
-      await releaseOrderLine(tx, item);
-      const preparation = await prepareOrderLines(
-        tx,
-        [
-          {
-            stockUuid: item.stockUuid,
-            productUuid: item.stockUuid ? null : item.productUuid,
-            quantity: Number(quantity).toFixed(3),
-            sourceType: item.sourceType,
-          },
-        ],
-        contractUuid,
-      );
-      if (!preparation.ok) {
-        throw new Error(preparation.error);
-      }
-      const written = await writeOrderLines(tx, preparation.prepared, {
-        orderUuid,
-        weightType: order.weightType,
-        deliveryDate: order.deliveryDate,
-        firstLineNumber: item.lineNumber ?? 1,
+      await reenterOrderLine(tx, order, item, contractUuid, {
+        stockUuid: item.stockUuid,
+        quantity: Number(quantity).toFixed(3),
       });
-      const [replacement] = written.lineUuids;
-      if (replacement) {
-        await tx
-          .update(OrderItemOptions)
-          .set({ orderItemUuid: replacement })
-          .where(eq(OrderItemOptions.orderItemUuid, item.uuid));
-        // A purchase request or quote raised for this line follows it.
-        await tx
-          .update(PurchaseRequestItems)
-          .set({ forOrderItemUuid: replacement })
-          .where(eq(PurchaseRequestItems.forOrderItemUuid, item.uuid));
-        await tx
-          .update(PurchaseQuoteItems)
-          .set({ forOrderItemUuid: replacement })
-          .where(eq(PurchaseQuoteItems.forOrderItemUuid, item.uuid));
-      }
-      await tx.delete(OrderItems).where(eq(OrderItems.uuid, item.uuid));
       const summary = await refreshOrderTotals(
         tx,
         orderUuid,
@@ -1581,6 +1613,101 @@ export const updateOrderLineQuantity = async (
   revalidatePath("/orders");
   revalidatePath(`/orders/${orderUuid}`);
   return { success: true, orderUuid };
+};
+
+/**
+ * The lot `Select stock` chose, reserved to a Stk line left without stock
+ * and the line re-costed on it. Answers the line's new uuid.
+ */
+const reserveOrderLineLot = async (
+  userId: string,
+  orderUuid: string,
+  orderItemUuid: string,
+  stockUuid: string,
+): Promise<OrderActionResult> => {
+  try {
+    const order = await loadProvisionalOrder(orderUuid);
+    const [item] = await db
+      .select()
+      .from(OrderItems)
+      .where(
+        and(
+          eq(OrderItems.uuid, orderItemUuid),
+          eq(OrderItems.orderUuid, orderUuid),
+        ),
+      )
+      .limit(1);
+    if (!item) {
+      return { error: "Line not found." };
+    }
+    if (item.sourceType !== "stock" || item.stockUuid) {
+      return { error: "Only a Stk delivery without stock can be given a lot." };
+    }
+    if (item.status !== "reserved") {
+      return { error: "This line has moved on and can no longer be changed." };
+    }
+    const [lot] = await db
+      .select({ productUuid: Stock.productUuid })
+      .from(Stock)
+      .where(eq(Stock.uuid, stockUuid))
+      .limit(1);
+    if (!lot) {
+      return { error: "That lot could not be found." };
+    }
+    if (lot.productUuid !== item.productUuid) {
+      return { error: "That lot holds another article than the line sells." };
+    }
+    const contractUuid = await orderContractUuid(orderUuid);
+
+    const lineUuid = await db.transaction(async (tx) => {
+      await assertWorkPanelFree(tx, "order", orderUuid, userId);
+      const replacement = await reenterOrderLine(
+        tx,
+        order,
+        item,
+        contractUuid,
+        { stockUuid, quantity: item.quantity },
+      );
+      const summary = await refreshOrderTotals(
+        tx,
+        orderUuid,
+        order.companyUuid,
+      );
+      await holdForCredit(tx, order, Number(summary.totalExclVat), userId);
+      return replacement;
+    });
+    return { success: true, orderUuid, lineUuids: lineUuid ? [lineUuid] : [] };
+  } catch (error) {
+    return { error: describeError(error, "Failed to reserve the lot") };
+  }
+};
+
+/**
+ * `Deliveries → Select stock`: the lot chosen for a Stk line left without
+ * stock. Choosing it reserves it to the line and clears `Blocked`
+ * (O108309/10, 16-10-2026); the line is re-costed on the lot's valuation.
+ * Opens the order on the line again, under its new identity.
+ */
+export const assignOrderLineStock = async (
+  orderUuid: string,
+  orderItemUuid: string,
+  stockUuid: string,
+): Promise<OrderActionResult> => {
+  const userId = await requireAuth();
+  const result = await reserveOrderLineLot(
+    userId,
+    orderUuid,
+    orderItemUuid,
+    stockUuid,
+  );
+  if (result.error) {
+    return result;
+  }
+  const [lineUuid] = result.lineUuids ?? [];
+  revalidatePath("/orders");
+  redirect(
+    lineUuid ? `/orders/${orderUuid}?line=${lineUuid}` : `/orders/${orderUuid}`,
+  );
 };
 
 export const getOrderDetail = async (

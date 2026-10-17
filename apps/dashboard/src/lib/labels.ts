@@ -1,6 +1,7 @@
 import {
   AddressCategory,
   CrossDockPurchasingAction,
+  ProductAvailabilityAction,
   AgeingBucket,
   ArticleGroup,
   AvailableAt,
@@ -2285,6 +2286,15 @@ export const STOCK_LOT_VIEW_LABELS: Record<StockLotView, string> = {
 
 // The `Select the desired action` radio buttons, worded as the reference
 // words them.
+export const PRODUCT_AVAILABILITY_ACTION_LABELS: Record<
+  ProductAvailabilityAction,
+  string
+> = {
+  customize_delivery: "Customize delivery yourself",
+  leave_delivery: "Leave delivery…",
+  add_shear_cut: "Add ShearCut",
+};
+
 export const CROSS_DOCK_PURCHASING_ACTION_LABELS: Record<
   CrossDockPurchasingAction,
   string

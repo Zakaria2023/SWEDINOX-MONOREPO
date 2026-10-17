@@ -2930,3 +2930,20 @@ export const crossDockPurchasingActions = [
 
 export type CrossDockPurchasingAction =
   (typeof crossDockPurchasingActions)[number];
+
+/**
+ * What the reference's `Product availability check order line` offers when a
+ * Stk line's stock window is closed without a lot (O108309/10, 16-10-2026),
+ * its three buttons in their order. `customize_delivery` reopens the window,
+ * `leave_delivery` keeps the line without stock — Blocked until `Select
+ * stock` — and `add_shear_cut` would cut the line from bigger stock, which
+ * nothing here can plan yet.
+ */
+export const productAvailabilityActions = [
+  "customize_delivery",
+  "leave_delivery",
+  "add_shear_cut",
+] as const satisfies readonly string[];
+
+export type ProductAvailabilityAction =
+  (typeof productAvailabilityActions)[number];

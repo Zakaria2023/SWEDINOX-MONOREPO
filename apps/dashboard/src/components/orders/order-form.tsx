@@ -405,6 +405,7 @@ export const OrderForm = ({
               lineLabel={selectedLineLabel}
               productCode={selectedLine?.productCode ?? null}
               texts={saved.texts}
+              isProvisional={order?.status === "provisional"}
             />
           ) : (
             <OrderEmptyPanels

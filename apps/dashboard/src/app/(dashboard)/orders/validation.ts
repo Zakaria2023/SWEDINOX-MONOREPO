@@ -38,13 +38,18 @@ export const orderItemSchema = z
     // sold ex works. It picks the margin floor the line is held to.
     sourceType: z.enum(orderSourceTypes).optional(),
   })
+  // A Stk line left without a lot (`Leave delivery…`) names its article
+  // and waits, Blocked, for `Select stock` (O108309/10, 16-10-2026).
   .refine(
     (item) =>
       Boolean(item.stockUuid) ||
-      (item.sourceType === "cross_dock" && Boolean(item.productUuid)),
+      ((item.sourceType === undefined ||
+        item.sourceType === "stock" ||
+        item.sourceType === "cross_dock") &&
+        Boolean(item.productUuid)),
     {
       message:
-        "Choose a stock lot — or, for a CD line, the article to be bought",
+        "Choose a stock lot — or the article, for a CD line or a delivery left without stock",
       path: ["stockUuid"],
     },
   );
