@@ -58,6 +58,7 @@ import {
   computeQuoteSummary,
   formatDateColumn,
   orderSummaryFromSnapshot,
+  orderTheoreticalWeightKg,
   pluralize,
   todayDateString,
 } from "@/lib/helpers";
@@ -224,7 +225,10 @@ export const OrderForm = ({
   // A saved order prints what it stored; a new one what is typed, with its
   // weight from the lots picked and its money struck when it is created.
   const summary = order
-    ? orderSummaryFromSnapshot(order)
+    ? {
+        ...orderSummaryFromSnapshot(order),
+        theoreticalWeightKg: orderTheoreticalWeightKg(order.items),
+      }
     : computeQuoteSummary({
         lines: itemFields.map((field, index) => {
           const quantity = Number(

@@ -243,6 +243,16 @@ export type OrderLineRevenueAndProfit = {
   /** The line's options, summed — the `Options` row of the panel. */
   optionsRevenue: number;
   optionsProfit: number;
+  /**
+   * The price the collapsed header names: a `Stk` line's lot valuation per
+   * tonne (`CURRENT APP: € 2.499,47`), a `CD` line's purchase price
+   * (`PURCHASE PRICE: € 3.050,00`). Computed from the lot or purchase line.
+   */
+  headerPrice: number;
+  /** Whether the header reads `PURCHASE PRICE` rather than `CURRENT APP`. */
+  isPurchasePriceBasis: boolean;
+  /** The FSP the line was measured against, in its price unit; 0 for none. */
+  fspPrice: number;
 };
 
 /**
@@ -620,6 +630,42 @@ export const getOrderLinePanels = async (
   const amount = toNumber(item.amount);
   const costAmount = toNumber(item.costAmount);
 
+  // `CURRENT APP` is the lot's valuation as the reference prints it, per
+  // tonne for a weighed lot — the same restatement Stock on location makes.
+  // A `CD` line with no lot of its own reads the price it was bought at.
+  const [lot] = item.stockUuid
+    ? await db
+        .select({
+          valuationPrice: Stock.valuationPrice,
+          quantity: Stock.quantity,
+          quantityKg: Stock.quantityKg,
+        })
+        .from(Stock)
+        .where(eq(Stock.uuid, item.stockUuid))
+        .limit(1)
+    : [];
+  const [purchaseLine] =
+    !item.stockUuid && item.purchaseOrderItemUuid
+      ? await db
+          .select({ netPrice: PurchaseOrderItems.netPrice })
+          .from(PurchaseOrderItems)
+          .where(eq(PurchaseOrderItems.uuid, item.purchaseOrderItemUuid))
+          .limit(1)
+      : [];
+  const isPurchasePriceBasis =
+    !item.stockUuid &&
+    (item.sourceType === "cross_dock" ||
+      item.sourceType === "stock_and_cross_dock");
+  const lotKg = toNumber(lot?.quantityKg ?? null);
+  const lotQuantity = toNumber(lot?.quantity ?? null);
+  const headerPrice = lot
+    ? lotKg > 0 && lotQuantity > 0
+      ? (toNumber(lot.valuationPrice) * lotQuantity * 1000) / lotKg
+      : toNumber(lot.valuationPrice)
+    : isPurchasePriceBasis
+      ? toNumber(purchaseLine?.netPrice ?? item.costPrice)
+      : toNumber(item.costPrice);
+
   const revenueAndProfit: OrderLineRevenueAndProfit = {
     revenue: amount,
     costPrice: toNumber(item.costPrice),
@@ -638,6 +684,17 @@ export const getOrderLinePanels = async (
       (sum, option) => sum + toNumber(option.profit),
       0,
     ),
+    headerPrice,
+    isPurchasePriceBasis,
+    // The FSP cost is what the FSP profit leaves of the revenue, spread over
+    // the same measure the line's cost was taken on.
+    fspPrice:
+      toNumber(item.profitFsp) !== 0 &&
+      toNumber(item.costPrice) > 0 &&
+      costAmount > 0
+        ? (amount - toNumber(item.profitFsp)) /
+          (costAmount / toNumber(item.costPrice))
+        : 0,
   };
 
   const stockRows = await db

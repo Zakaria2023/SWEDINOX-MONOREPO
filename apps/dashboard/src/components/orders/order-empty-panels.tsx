@@ -71,7 +71,7 @@ export const ORDER_LINE_EMPTY_PANELS: OrderEmptyPanel[] = [
     empty: "No text lines.",
   },
   {
-    title: "Revenue + Profit",
+    title: "Revenue+Profit",
     columns: [
       "",
       "Revenue",

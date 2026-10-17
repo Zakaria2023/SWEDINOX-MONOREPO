@@ -90,8 +90,10 @@ type RevenueRowProps = {
   label: string;
   revenue: number;
   app: number;
-  fsp: number | null;
+  fsp: number;
   repl: number;
+  /** LIP has no price behind it here, so it reads as the revenue. */
+  lip: number;
   emphasis?: boolean;
 };
 
@@ -644,6 +646,7 @@ const RevenueRow = ({
   app,
   fsp,
   repl,
+  lip,
   emphasis = false,
 }: RevenueRowProps) => (
   <TableRow className={cn(emphasis && "border-t-2 font-medium")}>
@@ -660,10 +663,8 @@ const RevenueRow = ({
     <TableCell className="text-right">
       <ProfitFigure profit={repl} revenue={revenue} />
     </TableCell>
-    {/* LIP: what it stands for is still unknown (K4), and a column of zeros
-        would read as an answer — so the cell says nothing is known. */}
     <TableCell className="text-right">
-      <ProfitFigure profit={null} revenue={revenue} />
+      <ProfitFigure profit={lip} revenue={revenue} />
     </TableCell>
   </TableRow>
 );
@@ -671,15 +672,18 @@ const RevenueRow = ({
 /**
  * `Revenue+Profit` for the selected line — the reference's 5-column grid
  * (316, order 100785): `Revenue · Profit w.r.t. APP · FSP · Repl. price · LIP`
- * against `Materials · Options · Total`.
+ * against `Materials · Options · Total`, each basis captioned with its price.
+ *
+ * A basis with no price reads € 0,00 and its profit is the whole revenue,
+ * 100,00 % — as O108309/10 printed FSP, Repl. price and LIP (16-10-2026). LIP
+ * has no price here (K4), so it always reads that way.
  *
  * An option is charged at one agreed cost, so its profit is the same figure
- * whichever basis the material is measured against.
+ * whichever priced basis the material is measured against.
  */
 const RevenueAndProfitPanel = ({ revenueAndProfit }: RevenueProps) => {
   const {
     revenue,
-    costPrice,
     profit,
     profitFsp,
     profitReplPrice,
@@ -687,10 +691,12 @@ const RevenueAndProfitPanel = ({ revenueAndProfit }: RevenueProps) => {
     optionsRevenue,
     optionsProfit,
     profitTooLow,
+    headerPrice,
+    fspPrice,
   } = revenueAndProfit;
-  // A product with no settlement price reads € 0,00 on the reference; here it
-  // is a dash, so a missing FSP is not mistaken for a zero margin.
-  const materialsFsp = profitFsp ? profitFsp : null;
+  const hasFsp = fspPrice > 0;
+  const materialsFsp = hasFsp ? profitFsp : revenue;
+  const optionsFsp = hasFsp ? optionsProfit : optionsRevenue;
 
   return (
     <div className="space-y-3">
@@ -701,13 +707,17 @@ const RevenueAndProfitPanel = ({ revenueAndProfit }: RevenueProps) => {
               <TableHead />
               <TableHead className="text-right">Revenue</TableHead>
               <TableHead className="text-right">
-                Profit w.r.t. APP ({formatMoney(costPrice)})
+                Profit w.r.t. APP ({formatMoney(headerPrice)})
               </TableHead>
-              <TableHead className="text-right">Profit w.r.t. FSP</TableHead>
+              <TableHead className="text-right">
+                Profit w.r.t. FSP ({formatMoney(fspPrice)})
+              </TableHead>
               <TableHead className="text-right">
                 Profit w.r.t. Repl. price ({formatMoney(replacementCost)})
               </TableHead>
-              <TableHead className="text-right">Profit w.r.t. LIP</TableHead>
+              <TableHead className="text-right">
+                Profit w.r.t. LIP ({formatMoney(0)})
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -717,20 +727,23 @@ const RevenueAndProfitPanel = ({ revenueAndProfit }: RevenueProps) => {
               app={profit}
               fsp={materialsFsp}
               repl={profitReplPrice}
+              lip={revenue}
             />
             <RevenueRow
               label="Options"
               revenue={optionsRevenue}
               app={optionsProfit}
-              fsp={materialsFsp === null ? null : optionsProfit}
+              fsp={optionsFsp}
               repl={optionsProfit}
+              lip={optionsRevenue}
             />
             <RevenueRow
               label="Total"
               revenue={revenue + optionsRevenue}
               app={profit + optionsProfit}
-              fsp={materialsFsp === null ? null : materialsFsp + optionsProfit}
+              fsp={materialsFsp + optionsFsp}
               repl={profitReplPrice + optionsProfit}
+              lip={revenue + optionsRevenue}
               emphasis
             />
           </TableBody>
@@ -1009,6 +1022,9 @@ export const OrderLinePanelsView = ({
   const { revenueAndProfit } = panels;
   const totalRevenue = revenueAndProfit.revenue + revenueAndProfit.optionsRevenue;
   const totalProfit = revenueAndProfit.profit + revenueAndProfit.optionsProfit;
+  const basisCaption = revenueAndProfit.isPurchasePriceBasis
+    ? "PURCHASE PRICE"
+    : "CURRENT APP";
 
   return (
     <div className="space-y-3">
@@ -1064,11 +1080,13 @@ export const OrderLinePanelsView = ({
         <TextLinesPanel rows={texts} />
       </CollapsibleSection>
 
+      {/* `CURRENT APP: € 2.499,47 Profit w.r.t. CURRENT APP: € 35,03
+          (18,24 %)` on a Stk line; `PURCHASE PRICE` on a CD one. */}
       <CollapsibleSection
-        title="Revenue + Profit"
-        summary={`CURRENT APP: ${formatMoney(
-          revenueAndProfit.costPrice,
-        )}  Profit w.r.t. CURRENT APP: ${formatMoney(totalProfit)} (${formatPercent(
+        title="Revenue+Profit"
+        summary={`${basisCaption}: ${formatMoney(
+          revenueAndProfit.headerPrice,
+        )} Profit w.r.t. ${basisCaption}: ${formatMoney(totalProfit)} (${formatPercent(
           totalRevenue === 0 ? 0 : (totalProfit / totalRevenue) * 100,
         )})`}
       >

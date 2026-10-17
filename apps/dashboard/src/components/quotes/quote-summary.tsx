@@ -110,7 +110,15 @@ export const QuoteSummaryPanel = ({ summary, note }: Props) => (
 
         <SummaryRow label="Tot. excl. VAT" block={summary.total} emphasis />
 
-        <dt className="py-1 text-sm">VAT</dt>
+        {/* `VAT 21 %`: the rate the amount was taken at. */}
+        <dt className="py-1 text-sm">
+          VAT{" "}
+          {summary.total.revenue > 0
+            ? `${formatNumber(
+                Math.round((summary.vatAmount / summary.total.revenue) * 100),
+              )} %`
+            : ""}
+        </dt>
         <dd className="py-1 text-right text-sm tabular-nums">
           {formatMoney(summary.vatAmount)}
         </dd>

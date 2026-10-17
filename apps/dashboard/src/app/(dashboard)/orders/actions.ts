@@ -42,6 +42,7 @@ import {
   getQuoteVatRatePercent,
   moneyString,
   pieceWeightForBasis,
+  lotCostInPriceUnit,
   lotPieceWeightKg,
   quoteLineFinancials,
   quoteOrderPolicy,
@@ -228,6 +229,9 @@ export type OrderItemDetail = SelectOrderItems & {
   lotLengthMm: SelectStock["lengthMm"] | null;
   lotWidthMm: SelectStock["widthMm"] | null;
   lotThicknessMm: SelectStock["thicknessMm"] | null;
+  /** The lot's pieces and kilos — its theoretical weight per piece. */
+  lotQuantity: SelectStock["quantity"] | null;
+  lotQuantityKg: SelectStock["quantityKg"] | null;
 };
 
 export type OrderDetail = SelectOrders & {
@@ -783,30 +787,44 @@ const writeOrderLines = async (
         ? Number(stockRow.thicknessMm)
         : Number(product?.thickness ?? 0);
 
+    // `theoreticalWeight` is a density when the weight unit says M3, so it is
+    // only ever read through the helper that checks the unit.
+    const theoreticalPieceKg =
+      lotPieceWeightKg(
+        {
+          weightTheoretical: product?.weightTheoretical,
+          theoreticalWeight: product?.theoreticalWeight,
+          weightUnit: product?.weightUnit,
+          lengthMm: Number(product?.length ?? 0),
+          widthMm: Number(product?.widthDiameter ?? 0),
+          thicknessMm: Number(product?.thickness ?? 0),
+        },
+        {
+          lengthMm: lineLengthMm,
+          widthMm: lineWidthMm,
+          thicknessMm: lineThicknessMm,
+        },
+      ) ?? 0;
+
     const financials = quoteLineFinancials({
       netPrice,
       quantity,
-      purchasePrice: Number(stockRow.valuationPrice ?? 0),
+      // The lot's valuation is per counting unit; the line's cost is that
+      // times the pieces it takes, in whatever unit the sale is struck.
+      purchasePrice: lotCostInPriceUnit(
+        Number(stockRow.valuationPrice ?? 0),
+        product?.priceUnit,
+        {
+          quantity,
+          weightKg: quantity * theoreticalPieceKg,
+          lengthMm: lineLengthMm,
+          widthMm: lineWidthMm,
+          thicknessMm: lineThicknessMm,
+        },
+      ),
       replacementPrice: Number(product?.replacementPrice ?? 0),
       fspPrice: product?.fsp ?? 0,
-      // `theoreticalWeight` is a density when the weight unit says M3, so it
-      // is only ever read through the helper that checks the unit.
-      theoreticalWeight:
-        lotPieceWeightKg(
-          {
-            weightTheoretical: product?.weightTheoretical,
-            theoreticalWeight: product?.theoreticalWeight,
-            weightUnit: product?.weightUnit,
-            lengthMm: Number(product?.length ?? 0),
-            widthMm: Number(product?.widthDiameter ?? 0),
-            thicknessMm: Number(product?.thickness ?? 0),
-          },
-          {
-            lengthMm: lineLengthMm,
-            widthMm: lineWidthMm,
-            thicknessMm: lineThicknessMm,
-          },
-        ) ?? 0,
+      theoreticalWeight: theoreticalPieceKg,
       // What the customer is billed on, which is not what the line costs.
       // The order's weight type — inherited from the customer — picks which of
       // the product's weights bills it.
@@ -1595,6 +1613,8 @@ export const getOrderDetail = async (
       lotLengthMm: Stock.lengthMm,
       lotWidthMm: Stock.widthMm,
       lotThicknessMm: Stock.thicknessMm,
+      lotQuantity: Stock.quantity,
+      lotQuantityKg: Stock.quantityKg,
     })
     .from(OrderItems)
     .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))

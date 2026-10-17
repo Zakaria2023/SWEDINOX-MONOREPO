@@ -10032,6 +10032,49 @@ export const priceMeasureFor = (
 };
 
 /**
+ * A lot's valuation restated in the price unit a sales line is struck in.
+ *
+ * A lot keeps its cost per counting unit (receipts.ts), so what the share a
+ * line takes costs is `valuation × pieces`, whatever unit the sale is priced
+ * in. Watched on O108309/10, 16-10-2026: 2 × PK304L20021 off a lot valued at
+ * € 2 499,47 / TN costs € 156,97 — the lot's price on its 0,0628 theoretical
+ * tonnes — while the line bills 64 trade kg at € 3,00. Turned into the sale's
+ * unit on the theoretical measure, so the line's `Costs` is that figure.
+ */
+export const orderTheoreticalWeightKg = (
+  lines: readonly {
+    status: string | null;
+    quantity: string | null;
+    kgPlanned: string | null;
+    lotQuantity: string | null;
+    lotQuantityKg: string | null;
+  }[],
+): number =>
+  lines
+    .filter((line) => line.status !== "cancelled")
+    .reduce((total, line) => {
+      // `Theor. wt.` beside `Total weight`: 62,8 Kg against 64 on O108309,
+      // the lot's own kilos per piece rather than the trade weight billed.
+      const lotQuantity = Number(line.lotQuantity ?? 0);
+      const lotKg = Number(line.lotQuantityKg ?? 0);
+      return (
+        total +
+        (lotQuantity > 0 && lotKg > 0
+          ? (Number(line.quantity ?? 0) * lotKg) / lotQuantity
+          : Number(line.kgPlanned ?? 0))
+      );
+    }, 0);
+
+export const lotCostInPriceUnit = (
+  valuationPrice: number,
+  priceUnit: string | null | undefined,
+  line: PriceMeasureLine,
+): number => {
+  const measure = priceMeasureFor(priceUnit, line) ?? line.quantity;
+  return measure > 0 ? (valuationPrice * line.quantity) / measure : valuationPrice;
+};
+
+/**
  * How much of a line an option is charged against.
  *
  * An option's basis comes from the `Per` column on the option row rather than
