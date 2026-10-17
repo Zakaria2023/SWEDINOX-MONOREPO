@@ -439,6 +439,10 @@ export const DOMAIN_TERMS: Record<string, DomainTerm> = {
   To: { nl: "Naar", ar: "إلى" },
   Ready: { nl: "Gereed", ar: "جاهز" },
   "#Lines": { nl: "#Regels", ar: "#الأسطر" },
+  // The work panel's footer and tree on a sales picking (O108309, 16-10-2026).
+  Customer: { nl: "Klant", ar: "العميل" },
+  Rush: { nl: "Spoed", ar: "عاجل" },
+  "#Colli": { nl: "#Colli", ar: "#الطرود" },
   Pieces: { nl: "Stuks", ar: "قطع" },
 
   // ── Gereedmelden: the report dialogs, verbatim (327402, 327410, 327411) ──

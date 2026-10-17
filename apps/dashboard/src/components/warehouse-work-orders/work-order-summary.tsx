@@ -41,6 +41,10 @@ export const WorkOrderSummary = ({ rows }: Props) => {
     );
   }
 
+  // `Klant` on a sales work order, `Leverancier` on a purchase one
+  // (O108309 picking against 327402 unloading, 16-10-2026).
+  const isSales = first.type !== "unloading" && first.orderItemUuid !== null;
+
   const bySupplier = rows.reduce((totals, row) => {
     const key = row.companyName ?? "";
     const current = totals.get(key) ?? {
@@ -86,7 +90,7 @@ export const WorkOrderSummary = ({ rows }: Props) => {
               </TableHead>
             </TableRow>
             <TableRow>
-              <TableHead>Supplier</TableHead>
+              <TableHead>{isSales ? "Customer" : "Supplier"}</TableHead>
               <TableHead className="text-right">#Lines</TableHead>
               <TableHead className="text-right">Weight</TableHead>
               <TableHead className="text-right">Meters</TableHead>

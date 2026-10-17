@@ -120,6 +120,34 @@ const STOCK_LIMIT = 50;
 // captured — the move that takes metal off the shelf and onto the loading area.
 const FromLocation = alias(Warehouses, "FromLocation");
 const ToLocation = alias(Warehouses, "ToLocation");
+// The purchase a picked lot came in on — `Purchase` on a picking line whose
+// lot was bought for stock rather than for this sale (O108309, 16-10-2026).
+const LotPurchaseOrders = alias(PurchaseOrders, "LotPurchaseOrders");
+
+// One transport row as the order's `Transport workorders` panel and the
+// line's `Deliveries` both read it: the line's article, lot and dates beside
+// the trip. `Charge` is the lot's once its picking is reported.
+const TRANSPORT_ROW_FIELDS = {
+  ...getTableColumns(TransportWorkOrderLines),
+  tripNumber: TransportWorkOrders.tripNumber,
+  tripDate: TransportWorkOrders.date,
+  vehicle: TransportWorkOrders.vehicle,
+  orderLineNumber: OrderItems.lineNumber,
+  productCodeResolved: Products.productCode,
+  productName: Products.name,
+  lineDeliveryDate: OrderItems.deliveryDate,
+  lineUnit: OrderItems.unit,
+  quality: Stock.quality,
+  stockCategory: Stock.stockCategory,
+  charge: sql<string | null>`(
+    SELECT ${WarehouseWorkOrderLines.charge}
+    FROM ${WarehouseWorkOrderLines}
+    WHERE ${WarehouseWorkOrderLines.orderItemUuid} = ${TransportWorkOrderLines.orderItemUuid}
+      AND ${WarehouseWorkOrderLines.status} = 'approved'
+    ORDER BY ${WarehouseWorkOrderLines.id} DESC
+    LIMIT 1
+  )`,
+};
 
 /**
  * One row of the `Warehouse workorders` panel.
@@ -161,6 +189,12 @@ export type OrderTransportWorkOrderRow = SelectTransportWorkOrderLines & {
   vehicle: SelectTransportWorkOrders["vehicle"] | null;
   orderLineNumber: SelectOrderItems["lineNumber"] | null;
   productCodeResolved: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  lineDeliveryDate: SelectOrderItems["deliveryDate"] | null;
+  lineUnit: SelectOrderItems["unit"] | null;
+  quality: SelectStock["quality"] | null;
+  stockCategory: SelectStock["stockCategory"] | null;
+  charge: SelectWarehouseWorkOrderLines["charge"];
 };
 
 export type OrderWorkOrders = {
@@ -413,7 +447,9 @@ export const getOrderWorkOrders = async (
       fromLocationName: FromLocation.name,
       toLocationName: ToLocation.name,
       stockUnit: Products.stockUnit,
-      purchaseOrderId: PurchaseOrders.id,
+      purchaseOrderId: sql<
+        SelectPurchaseOrders["id"] | null
+      >`COALESCE(${PurchaseOrders.id}, ${LotPurchaseOrders.id})`,
       stockCategory: Stock.stockCategory,
       dateFinished: sql<Date | null>`(
         SELECT MAX(${WarehouseWorkOrderPicks.executedAt})
@@ -448,6 +484,10 @@ export const getOrderWorkOrders = async (
       eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
     )
     .leftJoin(Stock, eq(WarehouseWorkOrderLines.stockUuid, Stock.uuid))
+    .leftJoin(
+      LotPurchaseOrders,
+      eq(Stock.purchaseOrderUuid, LotPurchaseOrders.uuid),
+    )
     .where(eq(OrderItems.orderUuid, orderUuid))
     .orderBy(OrderItems.lineNumber);
 
@@ -477,14 +517,7 @@ export const getOrderWorkOrders = async (
     .orderBy(OrderItems.lineNumber);
 
   const transport = await db
-    .select({
-      ...getTableColumns(TransportWorkOrderLines),
-      tripNumber: TransportWorkOrders.tripNumber,
-      tripDate: TransportWorkOrders.date,
-      vehicle: TransportWorkOrders.vehicle,
-      orderLineNumber: OrderItems.lineNumber,
-      productCodeResolved: Products.productCode,
-    })
+    .select(TRANSPORT_ROW_FIELDS)
     .from(TransportWorkOrderLines)
     .innerJoin(
       TransportWorkOrders,
@@ -495,6 +528,7 @@ export const getOrderWorkOrders = async (
       eq(TransportWorkOrderLines.orderItemUuid, OrderItems.uuid),
     )
     .leftJoin(Products, eq(TransportWorkOrderLines.productUuid, Products.uuid))
+    .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
     .where(eq(OrderItems.orderUuid, orderUuid))
     .orderBy(OrderItems.lineNumber);
 
@@ -720,14 +754,7 @@ export const getOrderLinePanels = async (
   }));
 
   const deliveries = await db
-    .select({
-      ...getTableColumns(TransportWorkOrderLines),
-      tripNumber: TransportWorkOrders.tripNumber,
-      tripDate: TransportWorkOrders.date,
-      vehicle: TransportWorkOrders.vehicle,
-      orderLineNumber: OrderItems.lineNumber,
-      productCodeResolved: Products.productCode,
-    })
+    .select(TRANSPORT_ROW_FIELDS)
     .from(TransportWorkOrderLines)
     .innerJoin(
       TransportWorkOrders,
@@ -738,6 +765,7 @@ export const getOrderLinePanels = async (
       eq(TransportWorkOrderLines.orderItemUuid, OrderItems.uuid),
     )
     .leftJoin(Products, eq(TransportWorkOrderLines.productUuid, Products.uuid))
+    .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
     .where(eq(TransportWorkOrderLines.orderItemUuid, orderItemUuid));
 
   // "What did we charge THIS customer for THIS article last time." Same

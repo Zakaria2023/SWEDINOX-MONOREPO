@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Box, Plus, Trash2 } from "lucide-react";
+import { Box, Eye, Plus, Trash2 } from "lucide-react";
 import {
   OrderProductionWorkOrderRow,
   OrderTransportWorkOrderRow,
@@ -64,6 +64,8 @@ type TransportTableProps = {
 type WorkOrderToolbarProps = {
   /** The selected row's product, which `Show product` opens. */
   productUuid: string | null;
+  /** `View` after `Show product`, as the transport panel has it. */
+  withView?: boolean;
 };
 
 /**
@@ -71,7 +73,10 @@ type WorkOrderToolbarProps = {
  * are greyed on the reference's order as well (100629, 8-10-2026); Show product
  * opens the article of the selected row.
  */
-const WorkOrderToolbar = ({ productUuid }: WorkOrderToolbarProps) => (
+const WorkOrderToolbar = ({
+  productUuid,
+  withView = false,
+}: WorkOrderToolbarProps) => (
   <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-muted/30 px-2 py-1">
     <Button
       type="button"
@@ -113,6 +118,18 @@ const WorkOrderToolbar = ({ productUuid }: WorkOrderToolbarProps) => (
       >
         <Box className="size-4" />
         Show product
+      </Button>
+    )}
+    {withView && (
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled
+        title="Not built: the transport line's own window"
+      >
+        <Eye className="size-4" />
+        View
       </Button>
     )}
   </div>
@@ -276,22 +293,21 @@ const ProductionWorkOrderTable = ({ rows }: ProductionTableProps) => {
               <TableHead className="text-right">Length</TableHead>
               <TableHead className="text-right">Width</TableHead>
               <TableHead className="text-right">Thickness</TableHead>
-              <TableHead className="text-right">Qty (p)</TableHead>
-              <TableHead className="text-right">Qty (a)</TableHead>
-              <TableHead>U (p)</TableHead>
-              <TableHead className="text-right">Kg (p)</TableHead>
-              <TableHead className="text-right">Kg (a)</TableHead>
+              <TableHead className="text-right">Qty(p)</TableHead>
+              <TableHead className="text-right">Qty(a)</TableHead>
+              <TableHead>U(p)</TableHead>
+              <TableHead className="text-right">Kg(p)</TableHead>
+              <TableHead className="text-right">Kg(a)</TableHead>
               <TableHead>Date finished</TableHead>
               <TableHead>Charge</TableHead>
-              <TableHead>Purchase order</TableHead>
-              <TableHead>Receipt date</TableHead>
+              <TableHead>Purchase</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={20}
+                  colSpan={19}
                   className="h-16 text-center text-muted-foreground"
                 >
                   {EMPTY_PRODUCTION}
@@ -371,7 +387,6 @@ const ProductionWorkOrderTable = ({ rows }: ProductionTableProps) => {
                       ? "—"
                       : `IO${row.purchaseOrderId}`}
                   </TableCell>
-                  <TableCell>{formatDateColumn(row.receiptDate)}</TableCell>
                 </TableRow>
               ))
             )}
@@ -388,79 +403,133 @@ const ProductionWorkOrderTable = ({ rows }: ProductionTableProps) => {
  * Those two are not the same thing and the capture is what settled it: three
  * lines of order `100742` share bill of lading `300804` on one journey. The
  * trip is the lorry's day; the bill of lading is the paperwork for one drop on
- * it. `Qty (loaded)` is a third quantity again, and reads zero until the goods
- * are actually on the vehicle.
+ * it. Columns and toolbar as O108309 printed them (16-10-2026): a row raised
+ * at Make final reads its delivery date as its `Trip` until a trip is
+ * planned, Qty(a) and Kg(a) what its picking put on `Laad`, and the lot's
+ * charge once picked.
  */
-export const TransportWorkOrderTable = ({ rows }: TransportTableProps) => (
-  <Table>
-    <TableHeader>
-      <TableRow>
-        <TableHead>Item</TableHead>
-        <TableHead>Product</TableHead>
-        <TableHead>Delivery date</TableHead>
-        <TableHead>Trip</TableHead>
-        <TableHead>Status</TableHead>
-        <TableHead>Vehicle</TableHead>
-        <TableHead>Direction</TableHead>
-        <TableHead>Bill of lading</TableHead>
-        <TableHead className="text-right">Qty (p)</TableHead>
-        <TableHead className="text-right">Qty (a)</TableHead>
-        <TableHead className="text-right">Qty (loaded)</TableHead>
-        <TableHead className="text-right">Kg (p)</TableHead>
-        <TableHead className="text-right">Kg (a)</TableHead>
-      </TableRow>
-    </TableHeader>
-    <TableBody>
-      {rows.length === 0 ? (
-        <TableRow>
-          <TableCell
-            colSpan={13}
-            className="h-16 text-center text-muted-foreground"
-          >
-            {EMPTY_TRANSPORT}
-          </TableCell>
-        </TableRow>
-      ) : (
-        rows.map((row) => (
-          <TableRow key={row.uuid}>
-            <TableCell className="font-medium">
-              {row.orderLineNumber === null ? "—" : row.orderLineNumber * 10}
-            </TableCell>
-            <TableCell>
-              {row.productCodeResolved ?? row.productCode ?? "—"}
-            </TableCell>
-            <TableCell>{formatDateColumn(row.tripDate)}</TableCell>
-            <TableCell>{row.tripNumber ?? "—"}</TableCell>
-            <TableCell>
-              <StatusBadge
-                value={row.status}
-                label={TRIP_STATUS_LABELS[row.status]}
-              />
-            </TableCell>
-            <TableCell>{row.vehicle ?? "—"}</TableCell>
-            <TableCell>{TRANSPORT_DIRECTION_LABELS[row.direction]}</TableCell>
-            <TableCell>{row.billOfLading ?? "—"}</TableCell>
-            <TableCell className="text-right tabular-nums">
-              {row.qtyPlanned ?? "—"}
-            </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {row.qtyActual ?? "—"}
-            </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {row.qtyLoaded ?? "—"}
-            </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {row.kgPlanned ?? "—"}
-            </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {row.kgActual ?? "—"}
-            </TableCell>
-          </TableRow>
-        ))
-      )}
-    </TableBody>
-  </Table>
-);
+export const TransportWorkOrderTable = ({ rows }: TransportTableProps) => {
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+  const selected = rows.find((row) => row.uuid === selectedUuid) ?? null;
+
+  return (
+    <div className="space-y-2">
+      <WorkOrderToolbar productUuid={selected?.productUuid ?? null} withView />
+      <div className="overflow-x-auto rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow className="whitespace-nowrap">
+              <TableHead>Item</TableHead>
+              <TableHead>Product</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Quality code</TableHead>
+              <TableHead>Stock category</TableHead>
+              <TableHead className="text-right">Length</TableHead>
+              <TableHead className="text-right">Width</TableHead>
+              <TableHead className="text-right">Thickness</TableHead>
+              <TableHead>Delivery date</TableHead>
+              <TableHead>Trip</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Vehicle</TableHead>
+              <TableHead>Direction</TableHead>
+              <TableHead>Bill of lading</TableHead>
+              <TableHead className="text-right">Qty(p)</TableHead>
+              <TableHead className="text-right">Qty(a)</TableHead>
+              <TableHead className="text-right">Qty(loaded)</TableHead>
+              <TableHead>U(p)</TableHead>
+              <TableHead className="text-right">Kg(p)</TableHead>
+              <TableHead className="text-right">Kg(a)</TableHead>
+              <TableHead>U(loaded)</TableHead>
+              <TableHead>Charge</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={22}
+                  className="h-16 text-center text-muted-foreground"
+                >
+                  {EMPTY_TRANSPORT}
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((row) => {
+                const unit = row.lineUnit ? STOCK_UNIT_LABELS[row.lineUnit] : "—";
+                return (
+                  <TableRow
+                    key={row.uuid}
+                    onClick={() => setSelectedUuid(row.uuid)}
+                    className={cn(
+                      "cursor-pointer whitespace-nowrap",
+                      row.uuid === selectedUuid && "bg-accent",
+                    )}
+                  >
+                    <TableCell className="font-medium">
+                      {row.orderLineNumber === null
+                        ? "—"
+                        : row.orderLineNumber * 10}
+                    </TableCell>
+                    <TableCell>
+                      {row.productCodeResolved ?? row.productCode ?? "—"}
+                    </TableCell>
+                    <TableCell>{orDash(row.productName)}</TableCell>
+                    <TableCell>{orDash(row.quality)}</TableCell>
+                    <TableCell>{orDash(row.stockCategory)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {orDash(row.lengthMm)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {orDash(row.widthMm)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {orDash(row.thicknessMm)}
+                    </TableCell>
+                    <TableCell>
+                      {formatDateColumn(row.lineDeliveryDate ?? row.tripDate)}
+                    </TableCell>
+                    <TableCell>
+                      {row.tripNumber ?? formatDateColumn(row.tripDate)}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge
+                        value={row.status}
+                        label={TRIP_STATUS_LABELS[row.status]}
+                      />
+                    </TableCell>
+                    <TableCell>{row.vehicle ?? "—"}</TableCell>
+                    <TableCell>
+                      {TRANSPORT_DIRECTION_LABELS[row.direction]}
+                    </TableCell>
+                    <TableCell>{row.billOfLading ?? "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(Number(row.qtyPlanned ?? 0))}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(Number(row.qtyActual ?? 0))}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(Number(row.qtyLoaded ?? 0))}
+                    </TableCell>
+                    <TableCell>{unit}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(Number(row.kgPlanned ?? 0))}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(Number(row.kgActual ?? 0))}
+                    </TableCell>
+                    <TableCell>{unit}</TableCell>
+                    <TableCell>{orDash(row.charge)}</TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+};
 
 /**
  * `Workorders` — three panels, and the only place the order says how it reaches

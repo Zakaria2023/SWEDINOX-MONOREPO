@@ -26,6 +26,7 @@ import {
 import { LocationOption } from "@/app/(dashboard)/locations/actions";
 import { Button } from "@/components/shadcn/button";
 import { Checkbox } from "@/components/shadcn/checkbox";
+import { BooleanFlag } from "@/components/ui/boolean-flag";
 import { FormError } from "@/components/ui/form-error";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -125,6 +126,32 @@ const COLUMNS: TreeColumn<WarehouseTreeRow>[] = [
     sum: (row) => num(row.kgActual),
   },
   { key: "charge", header: "Charge", cell: (row) => orDash(row.charge) },
+  // Then `#Colli · Verpakking · Prioriteit · Spoed · Kwaliteitscode ·
+  // Kwaliteit`, as the work panel prints them (O108309, 16-10-2026).
+  {
+    key: "colli",
+    header: "#Colli",
+    align: "right",
+    cell: (row) => orDash(row.colliCount),
+  },
+  { key: "packaging", header: "Packaging", cell: (row) => orDash(row.packaging) },
+  {
+    key: "priority",
+    header: "Priority",
+    align: "right",
+    cell: (row) => orDash(row.priority),
+  },
+  {
+    key: "rush",
+    header: "Rush",
+    cell: (row) => <BooleanFlag on={row.rush} label="Rush" />,
+  },
+  {
+    key: "qualityCode",
+    header: "Quality code",
+    cell: (row) => orDash(row.qualityCode),
+  },
+  { key: "lineQuality", header: "Quality", cell: (row) => orDash(row.quality) },
 ];
 
 export const WarehouseWorkOrdersTable = ({
