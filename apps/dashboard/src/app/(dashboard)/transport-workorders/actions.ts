@@ -8,8 +8,8 @@ import {
   TransportWorkOrders,
 } from "@/db/schema/transport-work-orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { OrderItems } from "@/db/schema/order-items";
-import { Orders } from "@/db/schema/orders";
+import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
+import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
 import { and, desc, eq, getTableColumns, max } from "drizzle-orm";
@@ -28,6 +28,18 @@ export type TransportWorkOrderLineItem = SelectTransportWorkOrderLines & {
   productName: SelectProducts["name"] | null;
 };
 
+/**
+ * One row of the overview's tree: the transport line with the sales line and
+ * order it carries — its line code, unit and options, and whether the order
+ * asks for a lorry with a crane.
+ */
+export type TransportOverviewRow = TransportWorkOrderLineItem & {
+  orderLineNumber: SelectOrderItems["lineNumber"] | null;
+  lineUnit: SelectOrderItems["unit"] | null;
+  lineOptions: SelectOrderItems["options"] | null;
+  vehicleWithCrane: SelectOrders["vehicleWithCrane"] | null;
+};
+
 export type TransportWorkOrderLineDetail = TransportWorkOrderLineItem & {
   workOrderId: SelectTransportWorkOrders["id"] | null;
   workOrderStatus: SelectTransportWorkOrders["status"] | null;
@@ -40,7 +52,7 @@ export type TransportWorkOrderLineDetail = TransportWorkOrderLineItem & {
  */
 export const getTransportWorkOrderLines = async (
   companyUuid?: string,
-): Promise<TransportWorkOrderLineItem[]> => {
+): Promise<TransportOverviewRow[]> => {
   try {
     return await db
       .select({
@@ -50,6 +62,10 @@ export const getTransportWorkOrderLines = async (
         vehicle: TransportWorkOrders.vehicle,
         destinationName: Companies.companyName,
         productName: Products.name,
+        orderLineNumber: OrderItems.lineNumber,
+        lineUnit: OrderItems.unit,
+        lineOptions: OrderItems.options,
+        vehicleWithCrane: Orders.vehicleWithCrane,
       })
       .from(TransportWorkOrderLines)
       .innerJoin(
@@ -64,6 +80,11 @@ export const getTransportWorkOrderLines = async (
         Products,
         eq(TransportWorkOrderLines.productUuid, Products.uuid),
       )
+      .leftJoin(
+        OrderItems,
+        eq(TransportWorkOrderLines.orderItemUuid, OrderItems.uuid),
+      )
+      .leftJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
       .where(
         companyUuid
           ? eq(TransportWorkOrderLines.destinationCompanyUuid, companyUuid)

@@ -96,6 +96,7 @@ import {
   stockCorrectableAttributes,
   StockCorrectionReason,
   StockMovementType,
+  TransportPeriod,
   TripStatus,
   tripStatuses,
   ReceiptStatus,
@@ -2564,6 +2565,35 @@ export const addLeadTime = (
     stepWorkingDays(Math.trunc(amount));
   }
   return date.toISOString().split("T")[0];
+};
+
+/**
+ * The `yyyy-MM-dd` window a Transport work orders `Periode` keeps, both ends
+ * included; null for `All`. `Last week` is the seven days before today.
+ */
+export const transportPeriodRange = (
+  period: TransportPeriod,
+  today: string,
+): { from: string; to: string } | null => {
+  const day = (offset: number): string => {
+    const date = new Date(`${today}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + offset);
+    return date.toISOString().slice(0, 10);
+  };
+  switch (period) {
+    case "all":
+      return null;
+    case "last_week":
+      return { from: day(-7), to: day(-1) };
+    case "yesterday":
+      return { from: day(-1), to: day(-1) };
+    case "today":
+      return { from: today, to: today };
+    case "tomorrow":
+      return { from: day(1), to: day(1) };
+    case "day_after_tomorrow":
+      return { from: day(2), to: day(2) };
+  }
 };
 
 /**

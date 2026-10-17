@@ -2,6 +2,7 @@ import {
   AddressCategory,
   CrossDockPurchasingAction,
   ProductAvailabilityAction,
+  TransportPeriod,
   AgeingBucket,
   ArticleGroup,
   AvailableAt,
@@ -1852,6 +1853,15 @@ export const WORKORDER_PROCESSING_METHOD_LABELS: Record<
   string
 > = {
   order_picking: "Order Picking",
+};
+
+export const TRANSPORT_PERIOD_LABELS: Record<TransportPeriod, string> = {
+  all: "All",
+  last_week: "Last week",
+  yesterday: "Yesterday",
+  today: "Today",
+  tomorrow: "Tomorrow",
+  day_after_tomorrow: "Day after tomorrow",
 };
 
 export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {

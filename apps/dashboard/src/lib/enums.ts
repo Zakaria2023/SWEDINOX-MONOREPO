@@ -2109,6 +2109,22 @@ export const tripStatuses = [
 
 export type TripStatus = (typeof tripStatuses)[number];
 
+/**
+ * The `Periode` filter over the Transport work orders overview (Logistiek →
+ * Transport opdrachten, 16-10-2026), in its order. Each narrows the rows to
+ * the trips dated in that window; `all` keeps every trip.
+ */
+export const transportPeriods = [
+  "all",
+  "last_week",
+  "yesterday",
+  "today",
+  "tomorrow",
+  "day_after_tomorrow",
+] as const satisfies readonly string[];
+
+export type TransportPeriod = (typeof transportPeriods)[number];
+
 // Where a reception has got to, which is a different question from where its
 // goods have got to. Taken verbatim from the reference's own "Receipt status"
 // column across a 151-row export of the Purchase receivals screen.

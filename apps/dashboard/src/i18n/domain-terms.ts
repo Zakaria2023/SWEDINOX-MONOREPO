@@ -443,6 +443,15 @@ export const DOMAIN_TERMS: Record<string, DomainTerm> = {
   Customer: { nl: "Klant", ar: "العميل" },
   Rush: { nl: "Spoed", ar: "عاجل" },
   "#Colli": { nl: "#Colli", ar: "#الطرود" },
+
+  // ── Transport opdrachten, verbatim (Logistiek, 16-10-2026) ───────────────
+  "Trip / Destination / Line": {
+    nl: "Rit / Bestemming / Regel",
+    ar: "الرحلة / الوجهة / السطر",
+  },
+  "Deviation reason": { nl: "Afwijkingsreden", ar: "سبب الانحراف" },
+  "Crane co.": { nl: "Kraan-Bedr.", ar: "شركة الرافعة" },
+  "Forklift co.": { nl: "Heftr-Bedr.", ar: "شركة الرافعة الشوكية" },
   Pieces: { nl: "Stuks", ar: "قطع" },
 
   // ── Gereedmelden: the report dialogs, verbatim (327402, 327410, 327411) ──
