@@ -5,7 +5,12 @@ import {
   WarehouseWorkOrders,
 } from "@/db/schema/warehouse-work-orders";
 import { Warehouses } from "@/db/schema/warehouses";
-import { generateUuid, toDateString, todayDateString } from "@/lib/helpers";
+import {
+  addLeadTime,
+  generateUuid,
+  toDateString,
+  todayDateString,
+} from "@/lib/helpers";
 import { nextWorkOrderNumber } from "@/lib/server/work-order-numbers";
 import { eq, inArray, sql } from "drizzle-orm";
 
@@ -43,6 +48,15 @@ type RaisePickingInput = {
   order: PickingOrder;
   lines: PickingLine[];
   userId: string | null;
+};
+
+/** The picking's work order date: a working day ahead of the delivery. */
+const pickingDateFor = (deliveryDate: Date | null): string => {
+  const today = todayDateString();
+  const dayBefore = deliveryDate
+    ? addLeadTime(toDateString(deliveryDate), -1, "working_days")
+    : null;
+  return dayBefore && dayBefore > today ? dayBefore : today;
 };
 
 /**
@@ -126,9 +140,9 @@ export const raisePickingWorkOrder = async (
     number,
     warehouseUuid,
     type: "picking",
-    plannedDate: order.deliveryDate
-      ? toDateString(order.deliveryDate)
-      : todayDateString(),
+    // One working day before the delivery: 19-10 for a delivery on 20-10
+    // (O108309, 16-10-2026) — never before today.
+    plannedDate: pickingDateFor(order.deliveryDate),
     status: "new",
   });
 

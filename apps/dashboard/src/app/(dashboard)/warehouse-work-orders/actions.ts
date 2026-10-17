@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { refreshOrderStatusForLine } from "@/lib/server/order-status";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderItems } from "@/db/schema/order-items";
+import { TransportWorkOrderLines } from "@/db/schema/transport-work-orders";
 import { SelectPurchaseOrders } from "@/db/schema/purchase-orders";
 import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
@@ -1039,8 +1040,10 @@ export const releaseWarehouseWorkOrder = async (
         .set({ status: "released" })
         .where(eq(WarehouseWorkOrderLines.workOrderUuid, uuid));
 
-      // The order line is now being worked on, and it names the job doing it —
-      // which is what cancelling later has to put back.
+      // The order line names the job doing it — which is what cancelling
+      // later has to put back. Its own status stays `Released`: a sales line
+      // turns `In progress` when its first picking is reported (O108309/10,
+      // 16-10-2026), not when the slip is printed.
       const orderItemUuids = lines
         .map((line) => line.orderItemUuid)
         .filter((value): value is string => value !== null);
@@ -1049,7 +1052,6 @@ export const releaseWarehouseWorkOrder = async (
         await tx
           .update(OrderItems)
           .set({
-            lineStatus: "in_progress",
             deliveryStatus: "released",
             lastWarehouseWorkOrder: String(workOrder.number),
           })
@@ -1781,6 +1783,44 @@ export const reportWarehouseWorkOrderLineCompletion = async (
           tx,
           line.purchaseReturnOrderItemUuid,
         );
+      }
+
+      // 🔑 A sales line's picking reported: the metal is on `Laad`. The line
+      // and its order turn `In progress`, and the transport row waiting for
+      // it reads what is ready to load — Qty(a) and Kg(a) — while it stays
+      // `New` for the trip (O108309/10, 16-10-2026).
+      if (
+        meta.stockEffect === "move" &&
+        line.orderItemUuid &&
+        !line.purchaseOrderSupplyUuid &&
+        !line.purchaseReturnOrderItemUuid
+      ) {
+        await tx
+          .update(OrderItems)
+          .set({ lineStatus: "in_progress" })
+          .where(
+            and(
+              eq(OrderItems.uuid, line.orderItemUuid),
+              inArray(OrderItems.lineStatus, ["released", "checked"]),
+            ),
+          );
+        await tx
+          .update(OrderItems)
+          .set({ deliveryStatus: "ready" })
+          .where(eq(OrderItems.uuid, line.orderItemUuid));
+        await tx
+          .update(TransportWorkOrderLines)
+          .set({
+            qtyActual: sql`COALESCE(${TransportWorkOrderLines.qtyActual}, 0) + ${qtyActual.toFixed(3)}`,
+            kgActual: sql`COALESCE(${TransportWorkOrderLines.kgActual}, 0) + ${kgActual.toFixed(2)}`,
+          })
+          .where(
+            and(
+              eq(TransportWorkOrderLines.orderItemUuid, line.orderItemUuid),
+              ne(TransportWorkOrderLines.status, "completed"),
+            ),
+          );
+        await refreshOrderStatusForLine(tx, line.orderItemUuid);
       }
 
       // The goods have physically gone to the customer, so the order line has

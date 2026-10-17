@@ -2081,6 +2081,20 @@ export const makeOrderFinal = async (
         .set({ status: "released", isPrinted: true })
         .where(eq(Orders.uuid, orderUuid));
 
+      // A line with its picking raised reads `Workorders created` in its
+      // Deliveries (O108309/10, 16-10-2026).
+      if (pickable.length > 0) {
+        await tx
+          .update(OrderItems)
+          .set({ deliveryStatus: "workorders_created" })
+          .where(
+            inArray(
+              OrderItems.uuid,
+              pickable.map((item) => item.uuid),
+            ),
+          );
+      }
+
       // The lines go with it: line 10 of 102191 turned `Released` on the same
       // press.
       await tx
