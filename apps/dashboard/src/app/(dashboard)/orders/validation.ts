@@ -9,7 +9,11 @@ import {
   orderWeightTypes,
   orderSourceTypes,
 } from "@/lib/enums";
-import { currentYear, todayDateString } from "@/lib/helpers";
+import {
+  currentYear,
+  defaultSalesDeliveryDate,
+  todayDateString,
+} from "@/lib/helpers";
 import { z } from "zod";
 
 export const orderItemSchema = z
@@ -197,7 +201,7 @@ export const DEFAULT_ORDER: OrderFormValues = {
   deliveryTerms: undefined,
   deliveryAddressUuid: "",
   deliveryType: "date",
-  deliveryDate: todayDateString(),
+  deliveryDate: defaultSalesDeliveryDate(),
   deliveryWeek: undefined,
   deliveryYear: currentYear(),
   deliveryRemark: "",

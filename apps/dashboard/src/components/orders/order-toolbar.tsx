@@ -23,6 +23,8 @@ import { FormError } from "@/components/ui/form-error";
 
 const SAVE_FIRST = "Save the order first";
 const NOT_BUILT = "Not built yet";
+const NOTHING_DELIVERED =
+  "Nothing to invoice yet: an order is invoiced once its goods are delivered, and no line of this order has been delivered.";
 
 type Props = {
   /** The saved order; null on a new one, where every action waits for Save. */
@@ -63,6 +65,10 @@ export const OrderToolbar = ({ order, pickingWorkOrderUuid }: Props) => {
   const canCancel = isSaved && !isCancelled && !isFullyInvoiced;
   const canFollowUp =
     isSaved && !isCancelled && !isProvisional && !isFullyInvoiced;
+  // An order is billed for what has gone out: `Invoice` did nothing on
+  // O108309 before its delivery (16-10-2026), so here it says why.
+  const hasDeliveredLine =
+    isSaved && order.items.some((item) => item.status === "delivered");
 
   const handleCancel = () => {
     if (!order) {
@@ -179,15 +185,14 @@ export const OrderToolbar = ({ order, pickingWorkOrderUuid }: Props) => {
           <XCircle className="me-1.5 size-4" />
           Cancel
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled
-          title={isSaved ? NOT_BUILT : SAVE_FIRST}
-        >
-          <Wand2 className="me-1.5 size-4" />
-          Optimize
-        </Button>
+        {/* `Optimize` and `Workorder` join the toolbar at Make final
+            (O108309, 16-10-2026). */}
+        {!isProvisional && (
+          <Button type="button" variant="outline" disabled title={NOT_BUILT}>
+            <Wand2 className="me-1.5 size-4" />
+            Optimize
+          </Button>
+        )}
         <Button
           type="button"
           variant="outline"
@@ -197,7 +202,7 @@ export const OrderToolbar = ({ order, pickingWorkOrderUuid }: Props) => {
           <Copy className="me-1.5 size-4" />
           Copy
         </Button>
-        {pickingWorkOrderUuid ? (
+        {isProvisional ? null : pickingWorkOrderUuid ? (
           <Button
             variant="outline"
             nativeButton={false}
@@ -213,15 +218,13 @@ export const OrderToolbar = ({ order, pickingWorkOrderUuid }: Props) => {
             type="button"
             variant="outline"
             disabled
-            title={
-              isSaved ? "Make the order final to raise its picking" : SAVE_FIRST
-            }
+            title="No picking has been raised for this order"
           >
             <ClipboardList className="me-1.5 size-4" />
             Workorder
           </Button>
         )}
-        {order && canFollowUp ? (
+        {order && canFollowUp && hasDeliveredLine ? (
           <Button
             variant="outline"
             nativeButton={false}
@@ -236,7 +239,8 @@ export const OrderToolbar = ({ order, pickingWorkOrderUuid }: Props) => {
           <Button
             type="button"
             variant="outline"
-            disabled
+            onClick={() => setError(NOTHING_DELIVERED)}
+            disabled={!isSaved || isCancelled || isFullyInvoiced}
             title={isSaved ? undefined : SAVE_FIRST}
           >
             <FileText className="me-1.5 size-4" />

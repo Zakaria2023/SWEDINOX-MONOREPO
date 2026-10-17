@@ -41,6 +41,7 @@ import {
   formatMoney,
   formatNumber,
   formatPercent,
+  lineSpecificationLabel,
   orDash,
   runningMeters,
 } from "@/lib/helpers";
@@ -79,9 +80,9 @@ export const ORDER_LINE_COLUMNS = [
   "Profit too low",
 ];
 
-// The line toolbar's buttons that are not built, greyed in its order.
+// The line toolbar's buttons that are not built, greyed in its order — after
+// the specification button, whose caption follows the selected line's type.
 export const ORDER_LINE_TOOLBAR_NOT_BUILT = [
-  "Sawing specifications",
   "PAC",
   "New…",
   "Price correction",
@@ -352,7 +353,14 @@ export const OrderLines = ({
         >
           Delete
         </Button>
-        {ORDER_LINE_TOOLBAR_NOT_BUILT.map((label) => (
+        {[
+          lineSpecificationLabel(
+            selected === NEW_LINE
+              ? pending?.sourceType
+              : order.items.find((item) => item.uuid === selected)?.sourceType,
+          ),
+          ...ORDER_LINE_TOOLBAR_NOT_BUILT,
+        ].map((label) => (
           <Button
             key={label}
             type="button"

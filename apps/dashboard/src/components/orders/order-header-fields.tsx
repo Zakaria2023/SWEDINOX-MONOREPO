@@ -18,6 +18,8 @@ import { ClerkUserOption } from "@/lib/server/clerk";
 // it on an order, so it is drawn greyed.
 const CONSIGNMENT_UNIT_OPTIONS: SelectOption[] = [{ value: "", label: "u/i" }];
 
+const KEUZEHULP_TITLE = "Show other open orders for this customer (F8)";
+
 // Printing, mailing and faxing the document tick these, never the seller —
 // greyed on the reference.
 const SENT_FLAGS = [
@@ -85,6 +87,7 @@ export const OrderHeaderFields = ({
     formState: { errors },
   } = useFormContext<OrderFormValues>();
   const orderType = watch("orderType");
+  const companyUuid = watch("companyUuid");
 
   return (
     <div className="grid gap-x-10 gap-y-6 xl:grid-cols-2">
@@ -323,17 +326,36 @@ export const OrderHeaderFields = ({
                 </>
               )}
 
-              {/* The reference's delivery-date helper. */}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled
-                title="Not built: the delivery date helper"
-                className="mb-1"
-              >
-                Keuzehulp
-              </Button>
+              {/* `Keuzehulp`: the customer's other open orders, to deliver
+                  with (O108309, 16-10-2026). */}
+              {companyUuid ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  nativeButton={false}
+                  title={KEUZEHULP_TITLE}
+                  className="mb-1"
+                  render={
+                    <Link
+                      href={`/orders?company=${companyUuid}`}
+                      target="_blank"
+                    />
+                  }
+                >
+                  Keuzehulp
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled
+                  title={KEUZEHULP_TITLE}
+                  className="mb-1"
+                >
+                  Keuzehulp
+                </Button>
+              )}
             </div>
           )}
 

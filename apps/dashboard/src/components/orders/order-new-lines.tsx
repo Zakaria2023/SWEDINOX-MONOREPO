@@ -38,6 +38,7 @@ import {
   formatMoney,
   formatNumber,
   formatPercent,
+  lineSpecificationLabel,
   orDash,
 } from "@/lib/helpers";
 
@@ -150,7 +151,12 @@ export const OrderNewLines = ({
         >
           Delete
         </Button>
-        {ORDER_LINE_TOOLBAR_NOT_BUILT.map((label) => (
+        {[
+          lineSpecificationLabel(
+            selectedLine === null ? undefined : lines[selectedLine]?.sourceType,
+          ),
+          ...ORDER_LINE_TOOLBAR_NOT_BUILT,
+        ].map((label) => (
           <Button
             key={label}
             type="button"

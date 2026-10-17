@@ -2567,6 +2567,24 @@ export const addLeadTime = (
 };
 
 /**
+ * The order-line toolbar's specification button, which names the work the
+ * line's type implies: `Cutting specification` on a Stk line, `Sawing
+ * specifications` on a CD one (O108307 / O108309, 16-10-2026).
+ */
+export const lineSpecificationLabel = (
+  sourceType: OrderSourceType | null | undefined,
+): string =>
+  sourceType === "cross_dock" ? "Sawing specifications" : "Cutting specification";
+
+/**
+ * The delivery date a new sales order and its lines open on: two working days
+ * out. Made on Friday 16-10-2026, O108309's new line read Tuesday 20-10-2026,
+ * and `Delivery planned` followed it. No setting carries the lead time.
+ */
+export const defaultSalesDeliveryDate = (): string =>
+  addLeadTime(todayDateString(), 2, "working_days") ?? todayDateString();
+
+/**
  * Computes a transport cost from a transporter's price unit and rate:
  *   - amount: a flat charge (the rate itself)
  *   - per_km: rate × distance
